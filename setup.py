@@ -14,6 +14,4 @@ except ImportError:
     
 from Cython.Build import cythonize
 
-setup(
-    ext_modules = cythonize("hello_world.pyx")
-)
+setup(name="cython-ncc", packages=["cython-ncc", "cython-ncc.core"], ext_modules=cythonize("**/*.pyx"),)
