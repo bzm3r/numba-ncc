@@ -8,12 +8,12 @@ Created on Sat Jun  6 12:21:52 2015
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mrk
-import analysis
+import analysis.utilities as analysis_utils
 import os
 import colors
-import general
+import general.general as general
 import scipy.spatial as space
-import geometry
+import core.geometry as geometry
 
 # ==============================================================================
 
@@ -30,7 +30,7 @@ def graph_delaunay_triangulation_area_over_time(cells, save_dir=None, save_name=
     # ------------------------
     
     for ci, a_cell in enumerate(cells):
-        cell_centroids_per_tstep = analysis.calculate_cell_centroids_until_tstep(a_cell, max_tstep)
+        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
@@ -91,7 +91,7 @@ def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=
     for ci, a_cell in enumerate(cells):
         L = a_cell.L
         
-        cell_centroids_per_tstep = analysis.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*(L/1e-6)
+        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*(L/1e-6)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
@@ -151,7 +151,7 @@ def graph_cell_velocity_over_time(cells, save_dir=None, save_name=None, max_tste
     for ci, a_cell in enumerate(cells):
         T = a_cell.T
         num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
-        timepoints, cell_speeds = analysis.calculate_cell_speeds_until_tstep(a_cell, max_tstep=max_tstep)
+        timepoints, cell_speeds = analysis_utils.calculate_cell_speeds_until_tstep(a_cell, max_tstep=max_tstep)
         
         chunky_timepoints = general.chunkify_numpy_array(timepoints, num_timesteps_to_average_over)
         chunky_cell_speeds = general.chunkify_numpy_array(cell_speeds, num_timesteps_to_average_over)
@@ -187,23 +187,23 @@ def graph_cell_velocity_over_time(cells, save_dir=None, save_name=None, max_tste
 def graph_important_cell_variables_over_time(a_cell, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    #randomization_kicks = analysis.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
+    #randomization_kicks = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
     #randomization_kicks = np.any(randomization_kicks, axis=1)
     
-    rac_mem_active = analysis.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_active')
+    rac_mem_active = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_active')
     sum_rac_act_over_nodes = np.sum(rac_mem_active, axis=1)
     
-    rac_mem_inactive = analysis.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_inactive')
+    rac_mem_inactive = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_inactive')
     sum_rac_inact_over_nodes = np.sum(rac_mem_inactive, axis=1)
     
-    rho_mem_active = analysis.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_active')
+    rho_mem_active = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_active')
     sum_rho_act_over_nodes = np.sum(rho_mem_active, axis=1)
     
-    rho_mem_inactive = analysis.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_inactive')
+    rho_mem_inactive = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_inactive')
     sum_rho_inact_over_nodes = np.sum(rho_mem_inactive, axis=1)
     
-    rac_cyt_gdi = analysis.get_data_until_timestep(a_cell, max_tstep, 'rac_cytosolic_gdi_bound')[:, 0]
-    rho_cyt_gdi = analysis.get_data_until_timestep(a_cell, max_tstep, 'rho_cytosolic_gdi_bound')[:, 0]
+    rac_cyt_gdi = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_cytosolic_gdi_bound')[:, 0]
+    rho_cyt_gdi = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_cytosolic_gdi_bound')[:, 0]
     
     time_points = a_cell.T*np.arange(rac_mem_active.shape[0])/60.0
     
@@ -240,7 +240,7 @@ def graph_important_cell_variables_over_time(a_cell, polarity_scores=None, save_
 def graph_strains(a_cell, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    average_strains = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'local_strains'), axis=1)*100
+    average_strains = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'local_strains'), axis=1)*100
     time_points = a_cell.T*np.arange(average_strains.shape[0])/60.0
     
     ax.plot(time_points, average_strains, 'k', label='avg_strains')
@@ -268,15 +268,15 @@ def graph_strains(a_cell, save_dir=None, save_name=None, max_tstep=None):
 def graph_rates(a_cell, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    average_kgtp_rac = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rac'), axis=1)/a_cell.kgtp_rac_baseline
+    average_kgtp_rac = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rac'), axis=1)/a_cell.kgtp_rac_baseline
     avg_average_kgtp_rac = np.average(average_kgtp_rac)
-    average_kgtp_rho = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rho'), axis=1)/a_cell.kgtp_rho_baseline
+    average_kgtp_rho = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rho'), axis=1)/a_cell.kgtp_rho_baseline
     avg_average_kgtp_rho = np.average(average_kgtp_rho)
-    average_kdgtp_rac = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rac'), axis=1)/a_cell.kdgtp_rac_baseline
+    average_kdgtp_rac = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rac'), axis=1)/a_cell.kdgtp_rac_baseline
     avg_average_kdgtp_rac = np.average(average_kdgtp_rac)
-    average_kdgtp_rho = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rho'), axis=1)/a_cell.kdgtp_rho_baseline
+    average_kdgtp_rho = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rho'), axis=1)/a_cell.kdgtp_rho_baseline
     avg_average_kdgtp_rho = np.average(average_kdgtp_rho)
-    average_coa_signal = np.average(analysis.get_data_until_timestep(a_cell, max_tstep, 'coa_signal'), axis=1) + 1.0
+    average_coa_signal = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'coa_signal'), axis=1) + 1.0
     
     time_points = a_cell.T*np.arange(average_kgtp_rac.shape[0])/60.0
     
@@ -302,7 +302,7 @@ def graph_rates(a_cell, save_dir=None, save_name=None, max_tstep=None):
         plt.close("all")
         
 def graph_run_and_tumble_statistics(a_cell, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2):
-    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = analysis.calculate_run_and_tumble_statistics(a_cell, significant_difference=significant_difference)
+    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = analysis_utils.calculate_run_and_tumble_statistics(a_cell, significant_difference=significant_difference)
     
     num_run_and_tumble_periods = len(tumble_periods)
     
@@ -405,7 +405,7 @@ def autolabel(rects):
 # ==============================================================================
     
 def graph_data_label_over_time(ax, a_cell, data_label):            
-    data = analysis.get_data(a_cell, None, data_label)
+    data = analysis_utils.get_data(a_cell, None, data_label)
     sum_data_over_nodes = np.sum(data, axis=1)
     
     ax.plot(sum_data_over_nodes, label=data_label)
@@ -415,7 +415,7 @@ def graph_data_label_over_time(ax, a_cell, data_label):
 # ==============================================================================
     
 def graph_data_label_average_node_over_time(ax, a_cell, data_label):            
-    data = analysis.get_data(a_cell, None, data_label)
+    data = analysis_utils.get_data(a_cell, None, data_label)
     average_data_over_nodes = np.average(data, axis=1)
     
     ax.plot(average_data_over_nodes, label=data_label)
@@ -463,26 +463,26 @@ def graph_pre_post_contact_cell_kinematics(a_cell, save_dir=None, save_name=None
     delta_tsteps = np.ceil(timeperiod_in_seconds_over_which_to_calculate_kinematics/T)
     min_tsteps_needed_to_calculate_kinematics = 2*delta_tsteps
     
-    cell_centroids_per_tstep = analysis.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*a_cell.L/1e-6
+    cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*a_cell.L/1e-6
     
     data_max_tstep = cell_centroids_per_tstep.shape[0] - 1
     
-    ic_contact_data = analysis.get_ic_contact_data(a_cell, max_tstep)
+    ic_contact_data = analysis_utils.get_ic_contact_data(a_cell, max_tstep)
     
-    contact_start_end_arrays = analysis.determine_contact_start_ends(ic_contact_data)
+    contact_start_end_arrays = analysis_utils.determine_contact_start_ends(ic_contact_data)
     #print "contact_start_end_arrays: ", contact_start_end_arrays
     
-    smoothened_contact_start_end_arrays = analysis.smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1)
+    smoothened_contact_start_end_arrays = analysis_utils.smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1)
     #print "smoothened_contact_start_end_arrays: ", smoothened_contact_start_end_arrays
     
-    assessable_contact_start_end_arrays = analysis.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
+    assessable_contact_start_end_arrays = analysis_utils.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
     #print "assessable_contact_start_end_arrays: ", assessable_contact_start_end_arrays
     
-    pre_velocities, post_velocities, pre_accelerations, post_accelerations = analysis.calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, T)
+    pre_velocities, post_velocities, pre_accelerations, post_accelerations = analysis_utils.calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, T)
     
-    aligned_pre_velocities, aligned_post_velocities = analysis.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_velocities, post_velocities, np.array([1, 0]))
+    aligned_pre_velocities, aligned_post_velocities = analysis_utils.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_velocities, post_velocities, np.array([1, 0]))
     
-    aligned_pre_accelerations, aligned_post_accelerations = analysis.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_accelerations, post_accelerations, np.array([1, 0]))
+    aligned_pre_accelerations, aligned_post_accelerations = analysis_utils.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_accelerations, post_accelerations, np.array([1, 0]))
     
     null_h_prob_velocities = 0
     null_h_prob_accelerations = 0
@@ -490,9 +490,9 @@ def graph_pre_post_contact_cell_kinematics(a_cell, save_dir=None, save_name=None
     max_data_lim_ax1 = 1
         
     if assessable_contact_start_end_arrays.shape[0] != 0:
-        null_h_prob_velocities = np.round(analysis.calculate_null_hypothesis_probability(aligned_post_velocities), decimals=3)
+        null_h_prob_velocities = np.round(analysis_utils.calculate_null_hypothesis_probability(aligned_post_velocities), decimals=3)
         
-        null_h_prob_accelerations = np.round(analysis.calculate_null_hypothesis_probability(aligned_post_accelerations), decimals=3)
+        null_h_prob_accelerations = np.round(analysis_utils.calculate_null_hypothesis_probability(aligned_post_accelerations), decimals=3)
     
         max_data_lim_ax0 = np.max([np.max(np.abs(aligned_pre_velocities)), np.max(np.abs(aligned_post_velocities))])
         max_data_lim_ax1 = np.max([np.max(np.abs(aligned_pre_accelerations)), np.max(np.abs(aligned_post_accelerations))])

@@ -516,6 +516,16 @@ def is_point_in_polygon(test_point, num_vertices, polygon):
         return 0
     else:
         return is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon)
+        
+# -----------------------------------------------------------------
+     
+def is_point_in_polygon_given_bb(test_point, num_vertices, polygon, min_x, max_x, min_y, max_y):
+    is_test_point_in_poly_bb = is_point_in_polygon_given_bounding_box(test_point, min_x, max_x, min_y, max_y)
+    
+    if is_test_point_in_poly_bb == 0:
+        return 0
+    else:
+        return is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon)
 
 # -----------------------------------------------------------------       
 
@@ -848,7 +858,7 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
                     close_points_exist[ni][ci] = 1
                     continue
                 
-                if are_nodes_inside_other_cells[ci][ni] == 1:
+                if are_nodes_inside_other_cells[ni][ci] == 1:
                     close_points_exist[ni][ci] = 1
                     continue
         

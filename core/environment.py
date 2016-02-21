@@ -5,7 +5,7 @@ from parameterorg import *
 import geometry
 import os
 import visualization.datavis as datavis
-import analysis
+import analysis.utilities as analysis_utils
 import visualization.animator as animator
 import cPickle as pickling_package
 import gzip
@@ -304,7 +304,7 @@ class Environment():
                 if not os.path.exists(save_dir_for_cell):
                     os.makedirs(save_dir_for_cell)
                 
-                averaged_score, scores_per_tstep = analysis.calculate_rgtpase_polarity_score(a_cell, significant_difference=0.2, max_tstep=t)
+                averaged_score, scores_per_tstep = analysis_utils.calculate_rgtpase_polarity_score(a_cell, significant_difference=0.2, max_tstep=t)
         
                 datavis.graph_important_cell_variables_over_time(a_cell, polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_rates(a_cell, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)

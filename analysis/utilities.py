@@ -8,8 +8,6 @@ Created on Sat Jun  6 12:21:52 2015
 from __future__ import division
 import numpy as np
 import geometry
-#import general.experiment_executor as expexec
-import visualization.datavis as datavis
 import os
 import multiprocessing as mp
 import math

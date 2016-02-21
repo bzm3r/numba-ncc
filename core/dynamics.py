@@ -234,8 +234,8 @@ def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointin
     num_poly_vertices = polygon.shape[0]
     min_x, max_x, min_y, max_y = geometry.calculate_polygon_bounding_box(num_poly_vertices, polygon)
     
-    old_coord_status = geometry.is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
-    new_coord_status = geometry.is_point_in_polygon(new_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
+    old_coord_status = geometry.is_point_in_polygon_given_bb(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
+    new_coord_status = geometry.is_point_in_polygon_given_bb(new_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
     
     # if the new coord is in polygon, then just use the new coord
     if new_coord_status == success_exclusion_condition:
@@ -243,7 +243,7 @@ def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointin
         
     # we know that the new coord is not in the polygon, now, so we test the old_coord
     if old_coord_status == fail_exclusion_condition:
-        while geometry.is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == fail_exclusion_condition:
+        while geometry.is_point_in_polygon_given_bb(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == fail_exclusion_condition:
             old_coord = old_coord + max_movement_mag*unit_inside_pointing_vector
             num_bisection_iterations = int(num_bisection_iterations*1.5)
 
@@ -255,7 +255,7 @@ def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointin
     for i in range(num_bisection_iterations):
         test_coord = 0.5*(a + b)
         
-        if geometry.is_point_in_polygon(test_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == success_exclusion_condition:
+        if geometry.is_point_in_polygon_given_bb(test_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == success_exclusion_condition:
             a = test_coord
         else:
             b = test_coord

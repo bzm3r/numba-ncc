@@ -26,7 +26,7 @@ coa_strength = 0.1
 
 CELL_DIAMETER = 40
 NUM_BOXES = 2
-NUM_CELLS_IN_BOXES = [2, 0]
+NUM_CELLS_IN_BOXES = [15, 0]
 
 boxes = np.arange(NUM_BOXES)
 box_heights = [3*CELL_DIAMETER, 2*CELL_DIAMETER]

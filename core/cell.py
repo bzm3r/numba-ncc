@@ -9,7 +9,7 @@ import mechanics
 import dynamics
 import general.general as general
 
-import analysis.analysis as analysis
+import analysis.utilities as analysis_utils
 
 """
 Cell.
@@ -519,7 +519,7 @@ class Cell():
             
     def calculate_when_randomization_event_occurs_polarization_sensitive(self, rac_membrane_active, rho_membrane_active, num_nodes, polarization_score=None):
         if polarization_score == None:
-            polarization_score = analysis.calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=0.2)
+            polarization_score = analysis_utils.calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=0.2)
         
         if polarization_score <= 0.5:
             next_shift_step = None
