@@ -8,7 +8,7 @@ Created on Fri Nov 06 16:53:39 2015
 from __future__ import division
 import parameterorg
 import numpy as np
-import datavis
+import visualization.datavis as datavis
 import os
 import time
 import copy

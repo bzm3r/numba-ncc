@@ -7,21 +7,19 @@ Created on Sat Jun  6 12:21:52 2015
 
 from __future__ import division
 import numpy as np
-import numba as nb
 import geometry
-import expexec
-import datavis
+#import general.experiment_executor as expexec
+import visualization.datavis as datavis
 import os
 import multiprocessing as mp
 import math
 import moore_data_table
-import colors
+import visualization.colors as colors
 import matplotlib.pyplot as plt
 
 
 # ==============================================================================
 
-@nb.jit(nopython=True)
 def calculate_centroids_per_tstep(node_coords_per_tstep):
     num_tsteps = node_coords_per_tstep.shape[0]
     num_nodes = node_coords_per_tstep.shape[1]
@@ -122,7 +120,6 @@ def get_data_until_timestep(a_cell, max_tstep, data_label):
 
 # ==============================================================================
 
-@nb.jit(nopython=True)
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=2.5e-2):
 
     sum_rac = 0.0
@@ -480,7 +477,6 @@ def determine_probability_given_N_Rstar(N, Rstar):
     
 # ==============================================================================
 
-@nb.jit(nopython=True)
 def calculate_polar_velocities(velocities):
     polar_velocities = np.empty_like(velocities)
     
@@ -527,7 +523,6 @@ def get_ic_contact_data(a_cell, max_tstep=None):
 
 # =================================================================================
  
-@nb.jit(nopython=True)
 def determine_contact_start_ends(ic_contact_data):
     num_ic_data = ic_contact_data.shape[0]
     contact_start_end_arrays = np.zeros((num_ic_data, 2), dtype=np.int64)
@@ -557,7 +552,6 @@ def determine_contact_start_ends(ic_contact_data):
 
 # =================================================================================
    
-@nb.jit(nopython=True)
 def smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1):
     smoothened_contact_start_end_arrays = np.zeros_like(contact_start_end_arrays)
     num_start_end_arrays = contact_start_end_arrays.shape[0]
@@ -585,8 +579,7 @@ def smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_betwe
     return smoothened_contact_start_end_arrays[:num_smoothened_contact_start_end_arrays]
     
 # =================================================================================
-
-@nb.jit(nopython=True)    
+    
 def get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep,  min_tsteps_needed_to_calculate_kinematics=2):
     
     
@@ -627,7 +620,7 @@ def get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays,
     return assessable_contact_start_end_arrays[:num_assessable_arrays]
 
 # =================================================================================
-@nb.jit(nopython=True)
+
 def calculate_3_point_kinematics(last_centroid, next_centroid, delta_tsteps, tstep_length):
     delta_centroid = (next_centroid - last_centroid)
     
@@ -639,8 +632,7 @@ def calculate_3_point_kinematics(last_centroid, next_centroid, delta_tsteps, tst
     return acceleration, velocity
     
 # =================================================================================
-
-@nb.jit(nopython=True)    
+    
 def calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, tstep_length):
     num_start_end_tuples = assessable_contact_start_end_arrays.shape[0]
     
@@ -671,8 +663,7 @@ def calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, c
     return pre_velocities, post_velocities, pre_accelerations, post_accelerations
     
 # =================================================================================
- 
-@nb.jit(nopython=True)   
+    
 def rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_data, post_data, given_vector):
     
     num_elements = pre_data.shape[0]
@@ -711,7 +702,6 @@ def analyze_single_cell_motion(experiment_dir, subexperiment_index, rpt_number, 
 
 # ===========================================================================
 
-@nb.jit(nopython=True)
 def determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period_polarization_threshold):
     num_tsteps = polarization_score_per_tstep.shape[0]
     

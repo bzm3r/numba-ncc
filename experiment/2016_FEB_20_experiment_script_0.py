@@ -3,20 +3,20 @@ import numpy as np
 import os
 import shutil
 import time
-from expexec import *
+from general.experiment_executor import *
 import analysis
 import general
-import datavis
+import visualization.datavis as datavis
 
-EXPERIMENT_NUMBER = 2
+EXPERIMENT_NUMBER = 0
 experiment_description = "15 cells in a corridor"
 
-BASE_OUTPUT_DIR = "A:\\cncell_output\\"
-DATE_STR = "2016_FEB_19"
+BASE_OUTPUT_DIR = "A:\\cython-ncc\\output\\"
+DATE_STR = "2016_FEB_20"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
-TOTAL_TIME = 32000#(60*60)*3
+TOTAL_TIME = 50#(60*60)*3
 TIMESTEP_LENGTH = (1/0.5)                                                                                                                                                                                                                                                                                                                                           
 NUM_TIMESTEPS = int(TOTAL_TIME/TIMESTEP_LENGTH)
 NUM_NODES_PER_CELL = 16
@@ -26,7 +26,7 @@ coa_strength = 0.1
 
 CELL_DIAMETER = 40
 NUM_BOXES = 2
-NUM_CELLS_IN_BOXES = [15, 0]
+NUM_CELLS_IN_BOXES = [2, 0]
 
 boxes = np.arange(NUM_BOXES)
 box_heights = [3*CELL_DIAMETER, 2*CELL_DIAMETER]
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         
         animation_settings = dict([('global_scale', 1), ('plate_height_in_micrometers', plate_width), ('plate_width_in_micrometers', plate_height), ('velocity_scale', 1), ('rgtpase_scale', global_scale*625), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', True), ('show_coa', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 2000.0*TIMESTEP_LENGTH), ('short_video_duration', 20.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True), ('sequential', True), ('num_processes', 4)])
     
-        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=8000, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=False)
+        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=8000, animation_settings=animation_settings, produce_intermediate_visuals=False, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True)
         
     if RUN_ANALYSIS == True:
         # ================================================================

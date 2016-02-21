@@ -7,13 +7,9 @@ import geometry
 import chemistry
 import mechanics
 import dynamics
-import general
+import general.general as general
 
-import analysis
-
-import numba as nb
-
-import gc
+import analysis.analysis as analysis
 
 """
 Cell.

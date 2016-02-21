@@ -1,13 +1,12 @@
 from __future__ import division
 import numpy as np
-import numba as nb
 import cell
 from parameterorg import *
-import geometry as geometry
+import geometry
 import os
-import datavis
+import visualization.datavis as datavis
 import analysis
-import animator
+import visualization.animator as animator
 import cPickle as pickling_package
 import gzip
 import shutil
@@ -16,7 +15,6 @@ import shutil
 Environment of cells.
 """
 
-@nb.jit(nb.int64(nb.float64, nb.float64), nopython=True)
 def custom_floor(fp_number, roundoff_distance):
     a = int(fp_number)
     b = a + 1
@@ -27,7 +25,6 @@ def custom_floor(fp_number, roundoff_distance):
         return a 
 # -----------------------------------------------------------------
 
-@nb.jit(nb.float64(nb.float64[:], nb.float64[:]), nopython=True)
 def calc_dist_squared_bw_points(p1, p2):
     x_disp = p1[0] - p2[0]
     y_disp = p1[1] - p2[1]

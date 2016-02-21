@@ -12,8 +12,9 @@ import numba as nb
 # ----------------------------------------------------------------
 def calculate_cluster_centroid(points):
     return np.array([np.average(points[:,0]), np.average(points[:,1])])
-    
-@nb.jit(nopython=True)
+
+# ----------------------------------------------------------------
+
 def calculate_centroid(num_vertices, polygon_coords):
     A = calculate_polygon_area(num_vertices, polygon_coords)
     
@@ -42,7 +43,6 @@ def calculate_centroid(num_vertices, polygon_coords):
         
 # ----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def determine_rotation_matrix_to_rotate_vector1_to_lie_along_vector2(vector1, vector2):
     mag1 = calculate_2D_vector_mag(vector1)
     mag2 = calculate_2D_vector_mag(vector2)
@@ -68,7 +68,6 @@ def determine_rotation_matrix_to_rotate_vector1_to_lie_along_vector2(vector1, ve
 
 # ----------------------------------------------------------------
  
-@nb.jit(nopython=True)
 def rotate_vector(theta, vector):
     sin_theta = math.sin(theta)
     cos_theta = math.cos(theta)
@@ -86,7 +85,6 @@ def rotate_vector(theta, vector):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def rotate_2D_vector_CCW(vector):
     x = vector[0]
     y = vector[1]
@@ -100,8 +98,6 @@ def rotate_2D_vector_CCW(vector):
     
 # -----------------------------------------------------------------
     
-    
-@nb.jit(nopython=True)
 def rotate_2D_vectors_CCW(num_vectors, vectors):
     rotated_vectors = np.empty_like(vectors)
     
@@ -114,7 +110,6 @@ def rotate_2D_vectors_CCW(num_vectors, vectors):
         
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_2D_vector_mag(vector):
     x = vector[0]
     y = vector[1]
@@ -123,7 +118,6 @@ def calculate_2D_vector_mag(vector):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_2D_vector_mags(num_vectors, vectors):
     vector_mags = np.empty(num_vectors)
     
@@ -134,7 +128,6 @@ def calculate_2D_vector_mags(num_vectors, vectors):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_2D_vector_direction(vector):
     x = vector[0]
     y = vector[1]
@@ -163,7 +156,6 @@ def calculate_2D_vector_direction(vector):
             
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_2D_vector_directions(num_vectors, vectors):
     vector_dirns = np.empty(num_vectors)
     
@@ -174,7 +166,6 @@ def calculate_2D_vector_directions(num_vectors, vectors):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def normalize_2D_vector(vector):
     normalized_vector = np.empty(2, dtype=np.float64)
 
@@ -187,8 +178,7 @@ def normalize_2D_vector(vector):
     return normalized_vector
     
 # -----------------------------------------------------------------
-    
-@nb.jit(nopython=True)    
+        
 def normalize_vectors(num_vectors, vectors):
     normalized_vectors = np.empty((num_vectors, 2), dtype=np.float64)
     
@@ -205,7 +195,6 @@ def normalize_vectors(num_vectors, vectors):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_edge_vectors(num_nodes, node_coords):
     edge_displacement_vectors = np.empty((num_nodes, 2), dtype=np.float64)
     for i in range(num_nodes):
@@ -221,7 +210,6 @@ def calculate_edge_vectors(num_nodes, node_coords):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def get_vector_normals(num_vectors, vectors):
     normal_to_vectors = np.empty((num_vectors, 2), dtype=np.float64)
     
@@ -234,7 +222,6 @@ def get_vector_normals(num_vectors, vectors):
 
 # -----------------------------------------------------------------     
 
-@nb.jit(nopython=True)
 def roll_2D_vectors(roll_number, num_vectors, vectors):
     rolled_vectors = np.empty((num_vectors, 2), dtype=np.float64)
     
@@ -248,7 +235,6 @@ def roll_2D_vectors(roll_number, num_vectors, vectors):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def sum_2D_vectors(num_elements, v1s, v2s):
     result = np.empty((num_elements, 2), dtype=np.float64)
     
@@ -266,7 +252,6 @@ def sum_2D_vectors(num_elements, v1s, v2s):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def difference_2D_vectors(num_elements, v1s, v2s):
     result = np.empty((num_elements, 2), dtype=np.float64)
     
@@ -284,7 +269,6 @@ def difference_2D_vectors(num_elements, v1s, v2s):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_unit_inside_pointing_vecs(num_nodes, node_coords):
 
     unit_inside_pointing_vecs = np.empty((num_nodes, 2), dtype=np.float64)
@@ -314,7 +298,6 @@ def calculate_unit_inside_pointing_vecs(num_nodes, node_coords):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_tangent_vecs_and_inside_pointing_vecs(num_nodes, node_coords):
 
     unit_inside_pointing_vecs = np.empty((num_nodes, 2), dtype=np.float64)
@@ -345,7 +328,6 @@ def calculate_tangent_vecs_and_inside_pointing_vecs(num_nodes, node_coords):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def check_sign_projection_of_a_on_b(a, b):
     '''
     The magnitude of the projection of a on b is given by:
@@ -361,7 +343,7 @@ def check_sign_projection_of_a_on_b(a, b):
         return 0
     
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)           
+           
 def is_left(p0, p1, p2):
     '''
     Input:  three points P0, P1, and P2
@@ -377,7 +359,6 @@ def is_left(p0, p1, p2):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_polygon_bounding_box(num_vertices, polygon):
     min_x = 0.0
     max_x = 0.0
@@ -410,7 +391,6 @@ def calculate_polygon_bounding_box(num_vertices, polygon):
 
 # -----------------------------------------------------------------
    
-@nb.jit(nopython=True)
 def calculate_bounding_box_polygon(polygon):
     num_vertices = polygon.shape[0]
     
@@ -461,8 +441,7 @@ def calculate_bounding_box_polygon(polygon):
     return bounding_box_polygon
 
 # -----------------------------------------------------------------
- 
-@nb.jit(nopython=True)   
+    
 def create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, environment_cells_node_coords):
     bounding_box_polygon_array = np.zeros((num_cells, 4, 2), dtype=np.float64)
 
@@ -473,7 +452,6 @@ def create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, env
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def is_point_in_polygon_given_bounding_box(test_point, min_x, max_x, min_y, max_y):                
     tp_x = test_point[0]
     tp_y = test_point[1]
@@ -485,7 +463,6 @@ def is_point_in_polygon_given_bounding_box(test_point, min_x, max_x, min_y, max_
         
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def is_point_in_polygon_bounding_box(test_point, num_vertices, polygon):
     
     min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(num_vertices, polygon)
@@ -493,8 +470,7 @@ def is_point_in_polygon_bounding_box(test_point, num_vertices, polygon):
     return is_point_in_polygon_given_bounding_box(test_point, min_x, max_x, min_y, max_y)
         
 # -----------------------------------------------------------------
-
-@nb.jit(nopython=True)     
+     
 def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
     wn = 0
     test_point_y = test_point[1]
@@ -532,8 +508,7 @@ def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
         return 1
 
 # -----------------------------------------------------------------
-
-@nb.jit(nopython=True)     
+     
 def is_point_in_polygon(test_point, num_vertices, polygon):
     is_test_point_in_poly_bb = is_point_in_polygon_bounding_box(test_point, num_vertices, polygon)
     
@@ -544,7 +519,6 @@ def is_point_in_polygon(test_point, num_vertices, polygon):
 
 # -----------------------------------------------------------------       
 
-@nb.jit(nopython=True)
 def is_point_in_polygons(point, polygons):
     num_polygons = polygons.shape[0]
     if num_polygons != 0:
@@ -560,8 +534,7 @@ def is_point_in_polygons(point, polygons):
     return 0
     
 # -----------------------------------------------------------------
-
-@nb.jit(nopython=True) 
+ 
 def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
     results = np.zeros(num_points, dtype=np.int64)
     
@@ -577,7 +550,6 @@ def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def check_if_nodes_inside_other_cells(this_cell_index, num_nodes, num_cells, all_cells_node_coords):
     are_nodes_inside_other_cells = np.zeros((num_nodes, num_cells), dtype=np.int64)
     
@@ -593,7 +565,6 @@ def check_if_nodes_inside_other_cells(this_cell_index, num_nodes, num_cells, all
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def are_nodes_inside_physical_boundary(this_cell_index, num_nodes, all_cells_node_coords, exists_space_physical_bdry_polygon, space_physical_bdry_polygon):
     
     if exists_space_physical_bdry_polygon:
@@ -603,7 +574,6 @@ def are_nodes_inside_physical_boundary(this_cell_index, num_nodes, all_cells_nod
         
 # -----------------------------------------------------------------
         
-@nb.jit(nopython=True)
 def calculate_polygon_area(num_vertices, vertex_coords):
     '''
     http://geomalgorithms.com/a01-_area.html
@@ -618,8 +588,6 @@ def calculate_polygon_area(num_vertices, vertex_coords):
     
 # -----------------------------------------------------------------
     
-    
-@nb.jit(nopython=True)
 def calculate_edgeplus_lengths(num_nodes, node_coords):
     edgeplus_lengths = np.zeros(num_nodes, dtype=np.float64)
     
@@ -633,7 +601,6 @@ def calculate_edgeplus_lengths(num_nodes, node_coords):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_edgeminus_lengths(num_nodes, node_coords):
     edgeminus_lengths = np.zeros(num_nodes, dtype=np.float64)
     
@@ -646,8 +613,7 @@ def calculate_edgeminus_lengths(num_nodes, node_coords):
     return edgeminus_lengths
 
 # -----------------------------------------------------------------
-  
-@nb.jit(nopython=True)
+
 def calculate_average_edge_lengths(num_nodes, node_coords):
     edgeplus_lengths = calculate_edgeplus_lengths(num_nodes, node_coords)
     edgeminus_lengths = calculate_edgeminus_lengths(num_nodes, node_coords)
@@ -661,8 +627,6 @@ def calculate_average_edge_lengths(num_nodes, node_coords):
     
 # -----------------------------------------------------------------
     
-    
-@nb.jit(nopython=True)
 def calculate_perimeter(num_nodes, node_coords):
     edgeplus_lengths  = calculate_edgeplus_lengths(num_nodes, node_coords)
 
@@ -674,7 +638,6 @@ def calculate_perimeter(num_nodes, node_coords):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def multiply_vectors_by_scalars(num_elements, vectors, scalars):
     result = np.empty((num_elements, 2))
     for i in range(num_elements):
@@ -687,7 +650,6 @@ def multiply_vectors_by_scalars(num_elements, vectors, scalars):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def multiply_vectors_by_scalar(num_elements, vectors, scalar):
     result = np.empty((num_elements, 2))
     
@@ -700,7 +662,6 @@ def multiply_vectors_by_scalar(num_elements, vectors, scalar):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_squared_dist(p1, p2):
     dx = p1[0] - p2[0]
     dy = p1[1] - p2[1]
@@ -709,7 +670,6 @@ def calculate_squared_dist(p1, p2):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, init_all_cells_node_coords):
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
@@ -735,7 +695,6 @@ def create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, init_a
 
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def update_distance_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
     
     # 1 if info has been updated, 0 otherwise
@@ -761,7 +720,6 @@ def update_distance_squared_matrix(last_updated_cell_index, num_cells, num_nodes
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_vector_from_p1_to_p2_given_vectors(p1, p2):
     p1x = p1[0]
     p1y = p1[1]
@@ -778,7 +736,6 @@ def calculate_vector_from_p1_to_p2_given_vectors(p1, p2):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_vector_from_p1_to_p2_given_coords(p1x, p1y, p2x, p2y):
     
     result = np.empty(2, dtype=np.float64)
@@ -790,7 +747,6 @@ def calculate_vector_from_p1_to_p2_given_coords(p1x, p1y, p2x, p2y):
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
 def calculate_projection_of_a_on_b(a, b):
     b_mag = calculate_2D_vector_mag(b)
     
@@ -798,7 +754,6 @@ def calculate_projection_of_a_on_b(a, b):
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_dist_between_points_given_vectors(p1, p2):
     displacement_vector = p2 - p1
     distance = calculate_2D_vector_mag(displacement_vector)
@@ -807,7 +762,6 @@ def calculate_dist_between_points_given_vectors(p1, p2):
 
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def calculate_dist_between_points_given_coords(p1x, p1y, p2x, p2y):
     displacement_vector = calculate_vector_from_p1_to_p2_given_coords(p1x, p1y, p2x, p2y)
     distance = calculate_2D_vector_mag(displacement_vector)
@@ -816,8 +770,7 @@ def calculate_dist_between_points_given_coords(p1x, p1y, p2x, p2y):
     
     
 # -----------------------------------------------------------------
-
-@nb.jit(nopython=True)        
+        
 def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array):
     closest_nodes_on_other_cells = -1*np.ones((num_nodes, num_cells), dtype=np.int64)
     
@@ -841,8 +794,7 @@ def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_n
     return closest_nodes_on_other_cells
     
 # -----------------------------------------------------------------
-
-@nb.jit(nopython=True)                          
+                          
 def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni):
     closest_ni_plus1 = (closest_ni + 1)%num_nodes  
     closest_ni_minus1 = (closest_ni - 1)%num_nodes
@@ -869,9 +821,7 @@ def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coo
     return -1
     
 # -----------------------------------------------------------------
-        
-
-@nb.jit(nopython=True)               
+    
 def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria, all_cells_node_coords, are_nodes_inside_other_cells):
     close_points_exist = np.zeros((num_nodes, num_cells), dtype=np.int64)
     
@@ -906,7 +856,6 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
     
 # -----------------------------------------------------------------
 
-@nb.jit(nopython=True)
 def check_if_line_segment_intersects_polygon(a, b, normal_to_line_segment, polygon, ignore_vertex_index):
     num_vertices = polygon.shape[0]
 
@@ -949,7 +898,8 @@ def check_if_line_segment_intersects_polygon(a, b, normal_to_line_segment, polyg
             
     return False
     
-@nb.jit(nopython=True) 
+# -----------------------------------------------------------------
+    
 def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords):
     coords_a = all_polygon_coords[pi_a, vi_a]
     coords_b = all_polygon_coords[pi_b, vi_b]

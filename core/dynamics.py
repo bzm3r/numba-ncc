@@ -10,15 +10,17 @@ import numpy as np
 import chemistry
 import geometry
 import mechanics
-import general
-import numba as nb
-import math
+import general.general as general
+
+# ----------------------------------------------------------------------------------------
 
 def pack_state_array(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info_at_tstep):
     nodal_phase_var_array = (np.transpose(system_info_at_tstep[:, nodal_phase_var_indices])).flatten()
     ode_cellwide_phase_var_array = system_info_at_tstep[0, ode_cellwide_phase_var_indices]
     
     return np.append(nodal_phase_var_array, ode_cellwide_phase_var_array)
+
+# ----------------------------------------------------------------------------------------
   
 def unpack_state_array(num_nodal_phase_var_indices, num_nodes, state_array):
     # reversing append
@@ -31,6 +33,8 @@ def unpack_state_array(num_nodal_phase_var_indices, num_nodes, state_array):
     nodal_phase_vars = np.split(node_phase_var_array, num_nodal_phase_var_indices)
     
     return nodal_phase_vars, ode_cellwide_phase_vars
+
+# ----------------------------------------------------------------------------------------
      
 def pack_state_array_from_system_info(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info, tstep):
     system_info_at_tstep = system_info[tstep]
@@ -38,7 +42,8 @@ def pack_state_array_from_system_info(nodal_phase_var_indices, ode_cellwide_phas
     
     return state_array
 
-@nb.jit(nopython=True)
+# ----------------------------------------------------------------------------------------
+    
 def calculate_sum(num_elements, sequence):
     result = 0
     for i in range(num_elements):
@@ -46,26 +51,29 @@ def calculate_sum(num_elements, sequence):
         
     return result
 
-@nb.jit(nopython=True)
+# ----------------------------------------------------------------------------------------
+
 def insert_derivatives_into_ode_array(num_nodes, offset, derivatives, ode_array):
     for i in range(num_nodes):
         ode_array[i + offset] = derivatives[i]
 
-@nb.jit(nopython=True)
+# ----------------------------------------------------------------------------------------
+
 def stack_derivatives_into_ode_array(num_nodes, num_derivatives, derivatives_list, ode_array):
     for i in range(num_derivatives):
         insert_derivatives_into_ode_array(num_nodes, num_nodes*i, derivatives_list[i], ode_array)
 
-@nb.jit(nopython=True)
+# ----------------------------------------------------------------------------------------
+
 def check_if_any_true(num_elements, boolean_array):
     for ni in range(num_elements):
         if boolean_array[ni] == 1:
             return 1
     
     return 0
-        
-    
-@nb.jit(nopython=True)     
+
+# ----------------------------------------------------------------------------------------
+
 def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes, num_nodal_phase_vars, num_ode_cellwide_phase_vars, nodal_rac_membrane_active_index, length_edge_resting, nodal_rac_membrane_inactive_index, nodal_rho_membrane_active_index, nodal_rho_membrane_inactive_index, nodal_x_index, nodal_y_index, kgtp_rac_baseline, kdgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rho_baseline, kgtp_rac_autoact_baseline, kgtp_rho_autoact_baseline, kdgtp_rho_mediated_rac_inhib_baseline, kdgtp_rac_mediated_rho_inhib_baseline, kgdi_rac, kdgdi_rac, kgdi_rho, kdgdi_rho, threshold_rac_autoact, threshold_rho_autoact, threshold_rho_mediated_rac_inhib, threshold_rac_mediated_rho_inhib, exponent_rac_autoact, exponent_rho_autoact, exponent_rho_mediated_rac_inhib, exponent_rac_mediated_rho_inhib, diffusion_const_active, diffusion_const_inactive, nodal_intercellular_contact_factor_magnitudes_index, nodal_migr_bdry_contact_index, space_at_node_factor_rac, space_at_node_factor_rho, eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic, transduced_coa_signals, space_physical_bdry_polygon, exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, intercellular_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier,  tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, tension_fn_type):
       
     nodal_phase_vars = state_array
@@ -217,191 +225,17 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
         
     return ode_array
 
-# ======================================================
-
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)
-def rotate_2D_vector_CCW(vector):
-    x = vector[0]
-    y = vector[1]
-    
-    result_vector = np.empty(2, dtype=np.float64)
-    
-    result_vector[0] = -1*y
-    result_vector[1] = x
-        
-    return result_vector
-    
-# -----------------------------------------------------------------
-
-@nb.jit(nopython=True)
-def calculate_2D_vector_mag(vector):
-    x = vector[0]
-    y = vector[1]
-    
-    return math.sqrt(x*x + y*y)
-    
-# -----------------------------------------------------------------
-
-@nb.jit(nopython=True)
-def calculate_projection_of_a_on_b(a, b):
-    b_mag = calculate_2D_vector_mag(b)
-    
-    return (a[0]*b[0] + a[1]*b[1])/b_mag
-    
-    
-# -----------------------------------------------------------------
-    
-@nb.jit(nopython=True)
-def calculate_vector_from_p1_to_p2_given_vectors(p1, p2):
-    p1x = p1[0]
-    p1y = p1[1]
-    
-    p2x = p2[0]
-    p2y = p2[1]
-    
-    result = np.empty(2, dtype=np.float64)
-    
-    result[0] = p2x - p1x
-    result[1] = p2y - p1y
-    
-    return result
-    
-# -----------------------------------------------------------------
-
-
-@nb.jit(nopython=True)   
-def is_left(test_point, p0, p1):
-    '''
-    Let there be an infinite line L.
-    
-    Let p0 and p1 be points on L.
-    
-    Let L have a direction that is the same as the direction of the vector from p0 to p1.
-    
-    Then, test_point is "to the left of" L if in some coordinate system where the positive y-axis is aligned along the direction of L, test_point has a negative x-coordinate.
-    '''
-    dirn_L = calculate_vector_from_p1_to_p2_given_vectors(p0, p1)
-    
-    v1 = rotate_2D_vector_CCW(dirn_L)
-    
-    v2 = calculate_vector_from_p1_to_p2_given_vectors(test_point, p0)
-    
-    proj_v1_on_normal = calculate_projection_of_a_on_b(v2, v1)
-    
-    if proj_v1_on_normal < 0:
-        return 1
-    else:
-        return 0
-
-    
-# -----------------------------------------------------------------
-
-@nb.jit(nopython=True)
-def calculate_polygon_bounding_box(num_vertices, polygon):
-    min_x = 0.0
-    max_x = 0.0
-    
-    min_y = 0.0
-    max_y = 0.0
-    
-    for i in range(num_vertices):
-        if i == 0:
-            min_x = polygon[i, 0]
-            max_x = min_x
-            
-            min_y = polygon[i, 1]
-            max_y = min_y
-        else:
-            this_x = polygon[i, 0]
-            this_y = polygon[i, 1]
-            
-            if this_x < min_x:
-                min_x = this_x
-            elif this_x > max_x:
-                max_x = this_x
-            
-            if this_y < min_y:
-                min_y = this_y
-            elif this_y > max_y:
-                max_y = this_y
-    
-    return min_x, max_x, min_y, max_y
-    
-@nb.jit(nopython=True)
-def is_point_in_polygon_bounding_box(test_point, min_x, max_x, min_y, max_y):                
-    tp_x = test_point[0]
-    tp_y = test_point[1]
-    
-    if (min_x < tp_x < max_x) and (min_y < tp_y < max_y):
-        return 1
-    else:
-        return 0
-        
-# -----------------------------------------------------------------
-
-@nb.jit(nopython=True)     
-def is_point_in_polygon(test_point, num_vertices, polygon, min_x, max_x, min_y, max_y):
-    is_test_point_in_poly_bb = is_point_in_polygon_bounding_box(test_point, min_x, max_x, min_y, max_y)
-    
-    if is_test_point_in_poly_bb == 0:
-        return 0
-    else:
-        wn = 0
-        test_point_y = test_point[1]
-        
-        # count number of intersections of positive-x direction ray emanating from test_point with polygon edges
-        for i in range(num_vertices):
-            p_start = polygon[i]
-            p_end = polygon[(i + 1)%num_vertices]
-            
-            p_start_y = p_start[1]
-            
-            p_end_y = p_end[1]
-            
-            if p_start_y <= test_point_y < p_end_y:
-                # upward crossing
-                is_tp_left_of_edge = is_left(test_point, p_start, p_end)
-                
-                if is_tp_left_of_edge == 1:
-                    # positive-x direction ray emanating from test_point wil intersect with this edge if left of it
-                    wn = wn + 1
-            elif p_end_y < test_point_y <= p_start_y:
-                # downward crossing
-                is_tp_left_of_edge = is_left(test_point, p_start, p_end)
-                
-                if is_tp_left_of_edge == 0:
-                    # positive-x direction ray emanating from test_point wil intersect with this edge if left of it
-                    wn = wn - 1
-            else:
-                # no intersection
-                wn = wn
-                    
-        if wn == 0:
-            return 0
-        else:
-            return 1
-
-# -----------------------------------------------------------------
-
-@nb.jit(nopython=True)
-def calculate_squared_dist(vector):
-    x, y = vector
-    return x**2 + y**2
-    
-# -----------------------------------------------------------------
-    
-@nb.jit(nopython=True)
 def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointing_vector, polygon, num_bisection_iterations, max_movement_mag, success_exclusion_condition):
     
     fail_exclusion_condition = (success_exclusion_condition + 1)%2
     
     num_poly_vertices = polygon.shape[0]
-    min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(num_poly_vertices, polygon)
+    min_x, max_x, min_y, max_y = geometry.calculate_polygon_bounding_box(num_poly_vertices, polygon)
     
-    old_coord_status = is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
-    new_coord_status = is_point_in_polygon(new_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
+    old_coord_status = geometry.is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
+    new_coord_status = geometry.is_point_in_polygon(new_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
     
     # if the new coord is in polygon, then just use the new coord
     if new_coord_status == success_exclusion_condition:
@@ -409,7 +243,7 @@ def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointin
         
     # we know that the new coord is not in the polygon, now, so we test the old_coord
     if old_coord_status == fail_exclusion_condition:
-        while is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == fail_exclusion_condition:
+        while geometry.is_point_in_polygon(old_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == fail_exclusion_condition:
             old_coord = old_coord + max_movement_mag*unit_inside_pointing_vector
             num_bisection_iterations = int(num_bisection_iterations*1.5)
 
@@ -421,7 +255,7 @@ def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointin
     for i in range(num_bisection_iterations):
         test_coord = 0.5*(a + b)
         
-        if is_point_in_polygon(test_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == success_exclusion_condition:
+        if geometry.is_point_in_polygon(test_coord, num_poly_vertices, polygon, min_x, max_x, min_y, max_y) == success_exclusion_condition:
             a = test_coord
         else:
             b = test_coord
