@@ -7,17 +7,12 @@ Created on Sat Jun  6 12:21:52 2015
 
 from __future__ import division
 import numpy as np
-import geometry
-import os
-import multiprocessing as mp
-import math
+import core.geometry as geometry
 import moore_data_table
-import visualization.colors as colors
-import matplotlib.pyplot as plt
-
+import numba as nb
 
 # ==============================================================================
-
+@nb.jit(nopython=True)
 def calculate_centroids_per_tstep(node_coords_per_tstep):
     num_tsteps = node_coords_per_tstep.shape[0]
     num_nodes = node_coords_per_tstep.shape[1]
@@ -32,7 +27,6 @@ def calculate_centroids_per_tstep(node_coords_per_tstep):
     return centroids_per_tstep
 
 # ============================================================================== 
-
 def calculate_cell_centroids_for_all_time(a_cell):
     node_coords_per_tstep = get_node_coords_for_all_tsteps(a_cell)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
@@ -40,7 +34,6 @@ def calculate_cell_centroids_for_all_time(a_cell):
     return centroids_per_tstep
 
 # ==============================================================================
-
 def calculate_cell_centroids_until_tstep(a_cell, max_tstep):
     node_coords_per_tstep = get_node_coords_until_tstep(a_cell, max_tstep)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
@@ -48,15 +41,14 @@ def calculate_cell_centroids_until_tstep(a_cell, max_tstep):
     return centroids_per_tstep
 
 # ==============================================================================
-    
+@nb.jit(nopython=True)   
 def calculate_cell_centroids_for_given_times(a_cell, tsteps):
     node_coords_per_tstep = get_node_coords_for_given_tsteps(a_cell, tsteps)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
     
     return centroids_per_tstep
 
-# ============================================================================== 
-    
+# ==============================================================================   
 def calculate_cell_speeds_until_tstep(a_cell, max_tstep):
     # get unit time and length variables from cell
     T = a_cell.T
@@ -117,7 +109,7 @@ def get_data_until_timestep(a_cell, max_tstep, data_label):
         return a_cell.system_info[:max_tstep, :, getattr(a_cell, data_label + '_index')]
 
 # ==============================================================================
-
+@nb.jit(nopython=True)
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=2.5e-2):
 
     sum_rac = 0.0
@@ -178,7 +170,7 @@ def calculate_rgtpase_polarity_score(a_cell, significant_difference=0.1, max_tst
     scores_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
 
     if weigh_by_timepoint == True:
-        num_timepoints = rac_data_per_tstep.shape[0]
+        num_timepoints = rac_membrane_active_per_tstep.shape[0]
         
         averaged_score = np.average((np.arange(num_timepoints)/num_timepoints) * scores_per_tstep)
     else:

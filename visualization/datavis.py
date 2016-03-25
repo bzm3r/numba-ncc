@@ -76,7 +76,32 @@ def graph_avg_neighbour_distance_over_time():
 
 # ==============================================================================
 
-def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=None):
+def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name):
+    timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T/60.0
+    group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]
+    
+    fig, ax = plt.subplots()
+    
+    ax.plot(timepoints, group_centroid_x_coords, label="group centroid")
+    ax.set_ylabel("x coordinate - micrometers")
+    ax.set_xlabel("time (min.)")
+    
+    # Put a legend to the right of the current axis
+    ax.legend(loc='best')
+    ax.grid(which=u'both')
+    
+    if save_dir == None or save_name == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        fig.savefig(os.path.join(save_dir, "group_" + save_name + '.png'), forward=True)
+        plt.close(fig)
+        plt.close("alll")
+    
+        
+# ==============================================================================
+
+def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):
     num_cells = len(cells)
     
     # assuming that num_timepoints, T is same for all cells
@@ -142,6 +167,9 @@ def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=
         fig.savefig(os.path.join(save_dir, save_name + '.png'), forward=True)
         plt.close(fig)
         plt.close("all")
+        
+    if make_group_centroid_drift_graph == True:
+        graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name)
         
 # ==============================================================================
 

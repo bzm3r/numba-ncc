@@ -2,14 +2,12 @@ from __future__ import division
 import cairo
 import numpy as np
 import numba as nb
-import geometry
+import core.geometry as geometry
 import os, shutil
 import subprocess
 import time
 import math
 import colors
-import multiprocessing as multiproc
-import general
 import sys
 
 @nb.jit(nopython=True)
@@ -293,7 +291,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # -------------------------------------    
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, an_environment, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.1, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, sequential=False, num_processes=4):
+    def __init__(self, general_animation_save_folder_path, an_environment, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.1, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, sequential=False, num_processes=4):
         
         self.sequential = sequential
         self.num_processes = num_processes
@@ -313,8 +311,8 @@ class EnvironmentAnimation():
         self.plate_height_in_micrometers = plate_height_in_micrometers
         self.plate_width_in_micrometers = plate_width_in_micrometers
         
-        self.image_height_in_pixels = plate_height_in_micrometers*global_scale
-        self.image_width_in_pixels = plate_width_in_micrometers*global_scale
+        self.image_height_in_pixels = np.int(np.round(plate_height_in_micrometers*global_scale, decimals=0))
+        self.image_width_in_pixels = np.int(np.round(plate_width_in_micrometers*global_scale, decimals=0))
         
         self.transform_matrix = self.calculate_transform_matrix()
                 
@@ -332,7 +330,14 @@ class EnvironmentAnimation():
         
         self.only_show_cells = only_show_cells
         self.background_color = background_color
-        self.cell_polygon_colors = cell_polygon_colors
+        
+        self.cell_polygon_colors = []
+        if color_each_group_differently == True and len(cell_polygon_colors) == 0:
+            for a_cell in an_environment.cells_in_environment:
+                self.cell_polygon_colors.append((a_cell.cell_index, colors.color_list_cell_groups10[a_cell.cell_group_index%10]))
+        else:
+            self.cell_polygon_colors = cell_polygon_colors
+            
         self.default_cell_polygon_color = default_cell_polygon_color
         self.rgtpase_colors = rgtpase_colors
         self.velocity_colors = velocity_colors
