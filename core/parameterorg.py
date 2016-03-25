@@ -10,11 +10,26 @@ import environment
 import geometry
 
 #g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_gdi_bound_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
-g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 'stiffness', 'force', 'factor']
-g_rate_labels = ['kgtp', 'kdgtp', 'kgdi', 'kdgdi']
+
+
+mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
 chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'external_gradient_on_nodes']
-mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
+
+info_labels = mech_labels + chem_labels
+
+for index, label in enumerate(info_labels):
+    exec("{}_index = {}".format(label, repr(index)))
+    
+num_info_labels = len(mech_labels + chem_labels)
+
+info_indices_dict = {x: i for i, x in enumerate(mech_labels + chem_labels)}
+
+g_rate_labels = ['kgtp', 'kdgtp', 'kgdi', 'kdgdi']
+
+g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 'stiffness', 'force', 'factor']
+
+
 
 #-----------------------------------------------------------------
 

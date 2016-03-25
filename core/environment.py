@@ -7,12 +7,13 @@ import os
 import visualization.datavis as datavis
 import analysis.utilities as analysis_utils
 import visualization.animator as animator
-import dill as pickling_package
-import gzip
-import shutil
+#import dill as pickling_package
+#import gzip
+#import shutil
 import numba as nb
 import copy
 import time
+import hardio
 
 """
 Environment of cells.
@@ -63,7 +64,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_filepath=None, verbose=True, T=(1/0.5), num_nodes_per_cell=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
@@ -75,12 +76,17 @@ class Environment():
             self.verbose = False
             self.persist = False
             self.environment_name = None
-            self.environment_filepath = None
+            self.environment_dir = None
         else:
             self.verbose = verbose
             self.persist = persist
             self.environment_name = environment_name
-            self.environment_filepath = environment_filepath
+            self.environment_dir = environment_dir
+            
+        if environment_dir != None:
+            self.storefile_path = os.path.join(environment_dir, "store.hdf5")
+        else:
+            self.storefile_path = None
         
         self.space_physical_bdry_polygon = space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
@@ -96,7 +102,7 @@ class Environment():
         
         self.integration_params = integration_params
         
-        self.num_nodes_per_cell = num_nodes_per_cell
+        self.num_nodes = num_nodes
         
         self.micrometer = 1e-6
         
@@ -161,7 +167,7 @@ class Environment():
         for cgi in range(self.num_cell_groups):
             cg = self.cell_group_defns[cgi]
             cg_name = cg['cell_group_name']
-            cg_num_nodes = self.num_nodes_per_cell
+            cg_num_nodes = self.num_nodes
             coa_signal_strength = cell_dependent_coa_signal_strengths_defn[cg_name]/cg_num_nodes
             
             cell_dependent_coa_signal_strengths += (self.cell_group_defns[cgi]['num_cells'])*[coa_signal_strength]
@@ -171,12 +177,12 @@ class Environment():
 # -----------------------------------------------------------------
  
     def create_cell_group(self, num_timesteps, cell_group_defn, cell_group_index, cell_index_offset):
-#        for variable_name in ['cell_group_name', 'num_cells', 'init_cell_radius', 'num_nodes_per_cell', 'C_total', 'H_total', 'cell_group_bounding_box', 'chem_mech_space_defns', 'integration_params']:
+#        for variable_name in ['cell_group_name', 'num_cells', 'init_cell_radius', 'num_nodes', 'C_total', 'H_total', 'cell_group_bounding_box', 'chem_mech_space_defns', 'integration_params']:
 #            print(variable_name + ' = ' + "cell_group_defn['" + variable_name + "']")
         cell_group_name = cell_group_defn['cell_group_name']
         num_cells = cell_group_defn['num_cells']
         init_cell_radius = cell_group_defn['init_cell_radius']
-        num_nodes = self.num_nodes_per_cell
+        num_nodes = self.num_nodes
         C_total = cell_group_defn['C_total']
         H_total = cell_group_defn['H_total']
         cell_group_bounding_box = cell_group_defn['cell_group_bounding_box']
@@ -291,15 +297,15 @@ class Environment():
                     print "Time step: {}/{}".format(t, self.num_timesteps)
                     print "Executing dyanmics for cell: ", cell_index
             
-            current_cell.execute_step(cell_index, self.num_nodes_per_cell, environment_cells_node_coords, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
+            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
                 environment_cells_node_coords[cell_index] = this_cell_coords
                 
                 cells_bounding_box_array[cell_index] = geometry.calculate_polygon_bounding_box(this_cell_coords)
-                cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes_per_cell, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
-                #cells_node_distance_matrix = geometry.update_distance_squared_matrix(cell_index, self.num_cells, self.num_nodes_per_cell, environment_cells_node_coords, cells_node_distance_matrix)
+                cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                #cells_node_distance_matrix = geometry.update_distance_squared_matrix(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
                 
             
             if self.verbose == True:
@@ -313,8 +319,8 @@ class Environment():
             
     def make_visuals(self, t, visuals_save_dir, animation_settings, animation_obj, produce_animations, produce_graphs):
         if produce_graphs:
-            for cell_index, a_cell in enumerate(self.cells_in_environment):
-                if a_cell.skip_dynamics == True:
+            for cell_index in xrange(self.num_cells):
+                if self.cells_in_environment[cell_index].skip_dynamics == True:
                     continue
                 
                 save_dir_for_cell = os.path.join(visuals_save_dir, "cell_{}".format(cell_index))
@@ -322,73 +328,61 @@ class Environment():
                 if not os.path.exists(save_dir_for_cell):
                     os.makedirs(save_dir_for_cell)
                 
-                averaged_score, scores_per_tstep = analysis_utils.calculate_rgtpase_polarity_score(a_cell, significant_difference=0.2, max_tstep=t)
+                averaged_score, scores_per_tstep = analysis_utils.calculate_rgtpase_polarity_score(cell_index, self.storefile_path, significant_difference=0.2, max_tstep=t)
         
-                datavis.graph_important_cell_variables_over_time(a_cell, polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                datavis.graph_rates(a_cell, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                datavis.graph_strains(a_cell, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_important_cell_variables_over_time(cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_rates(cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_strains(cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 #datavis.graph_run_and_tumble_statistics(a_cell, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 #datavis.graph_pre_post_contact_cell_kinematics(a_cell, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 
-            datavis.graph_cell_velocity_over_time(self.cells_in_environment, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_cell_velocity_over_time(self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
             if self.num_cells > 2:
-                datavis.graph_delaunay_triangulation_area_over_time(self.cells_in_environment, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+                datavis.graph_delaunay_triangulation_area_over_time(self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
-            datavis.graph_centroid_related_data(self.cells_in_environment, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_centroid_related_data(self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
         
         if produce_animations:
             animation_obj.create_animation_from_data(visuals_save_dir, num_timesteps=t)
+            
+# -----------------------------------------------------------------    
     
-    def store(self):
-        print "Storing environment..."
-        pkl_file_path = os.path.join(self.environment_filepath, "{}.pkl".format(self.environment_name))
-        
-        with open(pkl_file_path, 'wb') as f:
-            pickling_package.dump(self, f)
-        
-    def compress(self):
-        print "Compressing stored environment..."
-        pkl_file_path = os.path.join(self.environment_filepath, "{}.pkl".format(self.environment_name))
-        
-        compressed_pkl_file_path = os.path.join(self.environment_filepath, "{}.pkl.gz".format(self.environment_name))
-        
-        with open(pkl_file_path, 'rb') as f_in, gzip.open(compressed_pkl_file_path, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-            
-        os.remove(pkl_file_path)
-# -----------------------------------------------------------------      
+    def get_empty_self_copy(self):
+        empty_self = Environment()
     
-    def simulation_complete(self):
-        if self.curr_t < self.max_t:
-            return False
-        else:
-            return True
-            
-    def load_soft_save(self):
-        self.soft_save.soft_save = copy.deepcopy(self.soft_save)
+        for attr_name, attr_value in inspect.getmembers(self):
+            if attr_name != "cells_in_environment":
+                setattr(empty_self, attr_name, attr_value)
         
-        return self.soft_save
-            
+        return empty_self
+        
+# ----------------------------------------------------------------- 
+        
+    def dump_cells_data(self):
+        pass
+    
+# ----------------------------------------------------------------- 
+        
     def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, elapsed_timesteps_before_hard_saving_env=100, elapsed_timesteps_before_soft_saving_env=100, given_pool_for_making_visuals=None):
         simulation_st = time.time()
         num_cells = self.num_cells
-        num_nodes_per_cell = self.num_nodes_per_cell
+        num_nodes = self.num_nodes
         
         environment_cells = self.cells_in_environment
         environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
         
-        cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, environment_cells_node_coords)
-        cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, cells_bounding_box_array, environment_cells_node_coords)
+        cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
+        cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
             
-        #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, environment_cells_node_coords)
+        #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
     
-        if self.environment_filepath == None:
+        if self.environment_dir == None:
             animation_obj = None
             produce_intermediate_visuals = False
             produce_final_visuals = False
         else:
-            animation_obj = animator.EnvironmentAnimation(os.path.join(self.environment_filepath), self, **animation_settings)
+            animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.get_empty_self_copy(), **animation_settings)
             
         if self.curr_t == 0 or self.curr_t < self.max_t:
             if self.last_timestep_when_animations_made == None:
@@ -406,7 +400,7 @@ class Environment():
                 
                         self.last_timestep_when_animations_made = t
                         
-                        visuals_save_dir = os.path.join(self.environment_filepath, 'T={}'.format(t))
+                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
                         if not os.path.exists(visuals_save_dir):
                             os.makedirs(visuals_save_dir)
                         
@@ -417,7 +411,7 @@ class Environment():
                         
                         self.last_timestep_when_graphs_made = t
                         
-                        visuals_save_dir = os.path.join(self.environment_filepath, 'T={}'.format(t))
+                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
                         if not os.path.exists(visuals_save_dir):
                             os.makedirs(visuals_save_dir)
                         
@@ -425,8 +419,7 @@ class Environment():
             
                 if elapsed_timesteps_before_hard_saving_env != None and t - self.last_timestep_when_environment_hard_saved >= elapsed_timesteps_before_hard_saving_env:
                     self.last_timestep_when_environment_hard_saved = t
-                    self.store()
-                    self.compress()
+                    self.dump_cells_data()
                     
                 if elapsed_timesteps_before_soft_saving_env != None and t - self.last_timestep_when_environment_soft_saved >= elapsed_timesteps_before_soft_saving_env:
                     self.last_timestep_when_environment_soft_saved = t
@@ -444,7 +437,7 @@ class Environment():
             
         if produce_final_visuals == True:
             t = self.num_timepoints
-            visuals_save_dir = os.path.join(self.environment_filepath, 'T={}'.format(t))
+            visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
             
             if not os.path.exists(visuals_save_dir):
                 os.makedirs(visuals_save_dir)
@@ -452,10 +445,8 @@ class Environment():
                 print "Making final visuals..."
                 self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)
                 
-        if self.environment_filepath != None and self.persist == True:
-            pass
-            self.store()
-            self.compress()
+        if self.environment_dir != None and self.persist == True:
+            self.dump_cells_data()
             
         simulation_time = np.round(simulation_et - simulation_st, decimals=2)
         print "Time taken to complete simulation: {}s".format(simulation_time)
