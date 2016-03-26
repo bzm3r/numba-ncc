@@ -9,11 +9,11 @@ import analysis.utilities as analysis_utils
 import visualization.animator as animator
 #import dill as pickling_package
 #import gzip
+#import copy
 #import shutil
 import numba as nb
-import copy
 import time
-import hardio
+import core.hardio as hardio
 
 """
 Environment of cells.
@@ -64,11 +64,10 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
-        self.last_timestep_when_environment_soft_saved = None
         self.last_timestep_when_graphs_made = None
         
         self.parameter_explorer_run = parameter_explorer_run        
@@ -108,14 +107,12 @@ class Environment():
         
         self.num_cell_groups = len(cell_group_defns)
         self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in cell_group_defns])
-        
+        self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
         self.full_output_dicts = [[] for cell in self.cells_in_environment]
         
         self.cell_indices = np.arange(self.num_cells)
         self.full_print = full_print
-        
-        self.soft_save = None
 
 # -----------------------------------------------------------------
 
@@ -212,7 +209,7 @@ class Environment():
             
             cell_index = cell_index_offset + cell_number
             
-            cells_in_group.append(cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, C_total, H_total, init_node_coords, biased_rgtpase_distrib_defn=bias_defn, intercellular_contact_factor_magnitudes=intercellular_contact_factor_magnitudes, radius_resting=init_cell_radius, length_edge_resting=length_edge_resting, area_resting=area_resting, space_physical_bdry_polygon=self.space_physical_bdry_polygon, space_migratory_bdry_polygon=self.space_migratory_bdry_polygon, cell_dependent_coa_signal_strengths=coa_factor_production_rates, verbose=self.verbose, **chem_mech_space_defns))
+            cells_in_group.append(cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, C_total, H_total, init_node_coords, self.max_timepoints_on_ram, biased_rgtpase_distrib_defn=bias_defn, intercellular_contact_factor_magnitudes=intercellular_contact_factor_magnitudes, radius_resting=init_cell_radius, length_edge_resting=length_edge_resting, area_resting=area_resting, space_physical_bdry_polygon=self.space_physical_bdry_polygon, space_migratory_bdry_polygon=self.space_migratory_bdry_polygon, cell_dependent_coa_signal_strengths=coa_factor_production_rates, verbose=self.verbose, **chem_mech_space_defns))
             
         return cells_in_group, init_cell_bounding_boxes
 # -----------------------------------------------------------------
@@ -359,12 +356,22 @@ class Environment():
         
 # ----------------------------------------------------------------- 
         
-    def dump_cells_data(self):
-        pass
+    def dump_cells_data(self, tpoint):
+        for cell_index in xrange(self.num_cells):
+            this_cell = self.cells_in_environment[cell_index]
+            if this_cell.last_trim_timestep < 0:
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info, self.storefile_path)
+                this_cell.trim_system_info(tpoint)
+            elif this_cell.last_trim_timestep < tpoint:
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[0:], self.storefile_path)
+                this_cell.trim_system_info(tpoint)
+            else:
+                continue
+            
     
 # ----------------------------------------------------------------- 
         
-    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, elapsed_timesteps_before_hard_saving_env=100, elapsed_timesteps_before_soft_saving_env=100, given_pool_for_making_visuals=None):
+    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
         simulation_st = time.time()
         num_cells = self.num_cells
         num_nodes = self.num_nodes
@@ -391,8 +398,6 @@ class Environment():
                 self.last_timestep_when_graphs_made = self.curr_t
             if self.last_timestep_when_environment_hard_saved == None:
                 self.last_timestep_when_environment_hard_saved = self.curr_t
-            if self.last_timestep_when_environment_soft_saved == None:
-                self.last_timestep_when_environment_soft_saved = self.curr_t
             
             for t in self.timepoints[self.curr_t:-1]:
                 if produce_intermediate_visuals == True:
@@ -417,16 +422,9 @@ class Environment():
                         
                         self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, False, True)
             
-                if elapsed_timesteps_before_hard_saving_env != None and t - self.last_timestep_when_environment_hard_saved >= elapsed_timesteps_before_hard_saving_env:
+                if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
                     self.last_timestep_when_environment_hard_saved = t
-                    self.dump_cells_data()
-                    
-                if elapsed_timesteps_before_soft_saving_env != None and t - self.last_timestep_when_environment_soft_saved >= elapsed_timesteps_before_soft_saving_env:
-                    self.last_timestep_when_environment_soft_saved = t
-                    print "Soft saving environment..."
-                    del self.soft_save
-                    self.soft_save = None
-                    self.soft_save = copy.deepcopy(self)
+                    self.dump_cells_data(t)
                     
                 cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells)
                 self.curr_t += 1

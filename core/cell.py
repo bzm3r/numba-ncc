@@ -98,6 +98,7 @@ class Cell():
                  integration_params, 
                  num_timesteps, T, C_total, H_total, 
                  init_node_coords,
+                 max_timepoints_on_ram,
                  radius_resting=None,
                  length_edge_resting=None,
                  area_resting=None,
@@ -281,8 +282,9 @@ class Cell():
         parameterorg.info_labels = parameterorg.mech_labels + parameterorg.chem_labels
         # Initializing information holders
         self.initialize_system_info_indices()
+        self.max_timepoints_on_ram = max_timepoints_on_ram
         # initializing system information holders
-        self.system_info = np.zeros((self.num_timepoints, self.num_nodes,  len(parameterorg.info_labels)))
+        self.system_info = np.zeros((2*self.max_timepoints_on_ram, self.num_nodes,  len(parameterorg.info_labels)))
         
         # L is node dependent; should we make it node independent?
         # self.L = length_edge_resting -> self.L = L
@@ -434,6 +436,8 @@ class Cell():
         self.init_rgtpase_membrane_active_frac = init_rgtpase_membrane_active_frac
         self.biased_rgtpase_distrib_defn_for_randomization = ['unbiased random', biased_rgtpase_distrib_defn[1], biased_rgtpase_distrib_defn[2]]
         self.initialize_cell(init_node_coords/self.L, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_gdi_bound_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac)
+        
+        self.last_trim_timestep = -1
         
         
         
@@ -785,6 +789,17 @@ class Cell():
         
         return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes
 
+# -----------------------------------------------------------------
+    def trim_system_info(self, environment_tpoint):
+        
+        assert(environment_tpoint == self.curr_tpoint)
+        
+        trimmed_system_info = np.empty_like(self.system_info)
+        trimmed_system_info[0] = self.system_info[-1]
+        self.system_info = trimmed_system_info
+        
+        self.last_trim_timestep = self.curr_tpoint
+        
 # -----------------------------------------------------------------
     def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, intercellular_squared_dist_array, line_segment_intersection_matrix, external_gradient_fn, be_talkative=False):
         dynamics.print_var = True

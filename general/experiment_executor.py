@@ -170,7 +170,7 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
                 print "Creating environment..."
                 parameter_overrides = [x['parameter_override_dict'] for x in user_cell_group_defns]
                 
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_filepath=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
                 
             an_environment.full_print = full_print
             

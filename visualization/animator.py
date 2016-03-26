@@ -9,6 +9,7 @@ import time
 import math
 import colors
 import sys
+import core.hardio as hardio
 
 @nb.jit(nopython=True)
 def create_transformation_matrix_entries(scale_x, scale_y, rotation_theta, translation_x, translation_y, plate_width, plate_height):
@@ -189,13 +190,29 @@ class AnimationCell():
 
 # -------------------------------------
 
-def prepare_velocity_data(cell_system_info_at_timestep, data_index_x, data_index_y, eta, velocity_scale, node_coords):
-    velocity_coords = velocity_scale*cell_system_info_at_timestep[:, [data_index_x, data_index_y]]/eta
-
-    velocity_F_coords_start = node_coords
-    velocity_F_coords_end = node_coords + velocity_coords
+def prepare_velocity_data(num_nodes, eta, velocity_scale, cell_index, timesteps, storefile_path):
+    scale = (velocity_scale/eta)
     
-    return velocity_F_coords_start, velocity_F_coords_end
+    num_timesteps = timesteps.shape[0]
+    
+    VF, VEFplus, VEFminus, VF_rgtpase, VF_cytoplasmic = np.empty((num_timesteps, num_nodes, 2), dtype=np.float64), np.empty((num_timesteps, num_nodes, 2), dtype=np.float64), np.empty((num_timesteps, num_nodes, 2), dtype=np.float64), np.empty((num_timesteps, num_nodes, 2), dtype=np.float64), np.empty((num_timesteps, num_nodes, 2), dtype=np.float64)
+    
+    VF[:,:,0] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_x", storefile_path)
+    VF[:,:,1] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_y", storefile_path)
+    
+    VEFplus[:,:,0] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "EFplus_x", storefile_path)
+    VEFplus[:,:1] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "EFplus_y", storefile_path)
+    
+    VEFminus[:,:,0] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "EFminus_x", storefile_path)
+    VEFminus[:,:,1] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "EFminus_y", storefile_path)
+    
+    VF_rgtpase[:,:,0] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_rgtpase_x", storefile_path)
+    VF_rgtpase[:,:,1] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_rgtpase_y", storefile_path)
+    
+    VF_cytoplasmic[:,:,0] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_cytoplasmic_x", storefile_path)
+    VF_cytoplasmic[:,:,1] = scale*hardio.get_data_for_tsteps(cell_index, timesteps, "F_cytoplasmic_y", storefile_path)
+
+    return VF, VEFplus, VEFminus, VF_rgtpase, VF_cytoplasmic
     
 # -------------------------------------
     
@@ -291,7 +308,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # -------------------------------------    
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, an_environment, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.1, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, sequential=False, num_processes=4):
+    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, cell_group_indices, cell_Ls, cell_etas, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.1, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, sequential=False, num_processes=4):
         
         self.sequential = sequential
         self.num_processes = num_processes
@@ -302,7 +319,7 @@ class EnvironmentAnimation():
         self.translation_y = translation_y
         
         self.string_together_into_animation = string_together_pictures_into_animation
-        self.animation_name = an_environment.environment_name + '_animation.mp4'
+        self.animation_name = environment_name + '_animation.mp4'
         self.short_video_length_definition = short_video_length_definition
         self.short_video_duration = short_video_duration
         self.fps = 30
@@ -316,8 +333,7 @@ class EnvironmentAnimation():
         
         self.transform_matrix = self.calculate_transform_matrix()
                 
-        self.environment = an_environment
-        self.num_cells_in_environment = self.environment.num_cells
+        self.num_cells_in_environment = num_cells
         
         self.show_velocities = show_velocities
         self.show_rgtpase = show_rgtpase
@@ -333,8 +349,8 @@ class EnvironmentAnimation():
         
         self.cell_polygon_colors = []
         if color_each_group_differently == True and len(cell_polygon_colors) == 0:
-            for a_cell in an_environment.cells_in_environment:
-                self.cell_polygon_colors.append((a_cell.cell_index, colors.color_list_cell_groups10[a_cell.cell_group_index%10]))
+            for ci in xrange(num_cells):
+                self.cell_polygon_colors.append((ci, colors.color_list_cell_groups10[cell_group_indices%10]))
         else:
             self.cell_polygon_colors = cell_polygon_colors
             
@@ -362,121 +378,134 @@ class EnvironmentAnimation():
         self.num_cells = self.environment.num_cells
         self.num_nodes = self.environment.num_nodes_per_cell
         self.max_num_timepoints = self.environment.num_timepoints 
-
-        for type_str in ["node", "F", "EFplus", "EFminus", "F_rgtpase", "F_cytoplasmic", "unit_in_vec"]:
-                    exec("self.cell_{}_indices = np.zeros((self.num_cells, 2), dtype=np.int64)".format(type_str))
-                    
-        for type_str in ["rac_membrane_active", "rac_membrane_inactive", "rho_membrane_active", "rho_membrane_inactive", "rac_cytosolic_gdi_bound", "rho_cytosolic_gdi_bound", "coa_signal"]:
-            exec("self.cell_{}_indices = np.zeros(self.num_cells, dtype=np.int64)".format(type_str))
             
-        self.cell_etas = np.zeros(self.num_cells, dtype=np.float64)
-        self.cells = self.environment.cells_in_environment
+        self.cell_etas = cell_etas
+        self.cell_Ls = cell_Ls
+        self.offset_magnitudes = np.array(self.cell_Ls)*self.offset_magnitude
+        self.storefile_path = self.environment.storefile_path                
         
-        for cell_index in range(self.num_cells):
-            cell = self.cells[cell_index]
-            
-            for j in range(2):
-                if j == 0:
-                    sub_str = "x"
-                else:
-                    sub_str = "y"
-                
-                for type_str in ["node", "F", "EFplus", "EFminus", "F_rgtpase", "F_cytoplasmic"]:
-                    if type_str == "node":
-                        self.cell_node_indices[cell_index, j] = eval("cell.{}_index".format(sub_str))
-                    else:
-                        value = eval("cell.{}_{}_index".format(type_str, sub_str))
-                        exec("self.cell_{}_indices[cell_index, j] = value".format(type_str))
-            
-            for type_str in ["rac_membrane_active", "rac_membrane_inactive", "rho_membrane_active", "rho_membrane_inactive", "rac_cytosolic_gdi_bound", "rho_cytosolic_gdi_bound", "coa_signal"]:
-                value = eval("cell.{}_index".format(type_str))
-                exec("self.cell_{}_indices[cell_index] = {}".format(type_str, value))
-                
-            self.cell_etas[cell_index] = cell.eta
-            
-        self.polygon_coords_per_timepoint_per_cell = np.empty((self.num_cells, self.max_num_timepoints, self.num_nodes, 2), dtype=np.float64)
+        if self.show_centroid_trail:
+            self.centroid_coords_per_timepoint_per_cell = np.empty((self.num_cells, self.max_num_timepoints, 2), dtype=np.float64)
+        else:
+            self.centroid_coords_per_timepoint_per_cell = None
         
-        self.centroid_coords_per_timepoint_per_cell = np.empty((self.num_cells, self.max_num_timepoints, 2), dtype=np.float64)
+        self.velocity_labels = ["F", "EFplus", "EFminus", "F_rgtpase", "F_cytoplasmic"]
+        self.num_velocity_labels = len(self.velocity_labels)
+        if self.show_velocities:
+            self.velocity_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, len(self.num_velocity_labels), self.num_nodes, 2, 2), dtype=np.float64)
+        else:
+            self.velocity_line_coords_per_label_per_timepoint_per_cell = None
         
-        self.velocity_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, len(self.velocity_colors), self.num_nodes, 2, 2), dtype=np.float64)
+        if self.show_rgtpase:
+            self.rgtpase_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, len(self.rgtpase_colors), self.num_nodes, 2, 2))
+        else:
+            self.rgtpase_line_coords_per_label_per_timepoint_per_cell = None
         
-        self.rgtpase_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, len(self.rgtpase_colors), self.num_nodes, 2, 2))
+        if self.show_coa:
+            self.coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2, 2), dtype=np.float64)
+        else:
+            self.coa_line_coords_per_timepoint_per_cell = None
         
-        self.coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2, 2), dtype=np.float64)
-        
-        self.gathered_info = np.zeros((self.max_num_timepoints, self.num_cells), dtype=np.int64)
-        self.animation_cells_per_timepoint = np.empty(self.max_num_timepoints, dtype=object)
-        self.image_drawn = np.zeros(self.max_num_timepoints, dtype=np.int64)
         self.global_image_dir = os.path.join(general_animation_save_folder_path, "images_global")
         if not os.path.exists(self.global_image_dir):
             os.makedirs(self.global_image_dir)
         else:
             shutil.rmtree(self.global_image_dir)
             os.makedirs(self.global_image_dir)
+            
+        self.gathered_info = np.zeros((self.max_num_timepoints, self.num_cells), dtype=np.int64)
+        self.animation_cells = np.empty(self.num_cells, dtype=object)
+        self.image_drawn_array = self.determine_drawn_timesteps(np.zeros(self.max_num_timepoints, dtype=np.int64))
+        self.cell_offset_magnitudes = np.zeros(num_cells, dtype=np.float64)
+        
     
     # ---------------------------------------------------------------------
     
+    def determine_drawn_timesteps(self):
+        image_drawn_array = np.zeros(self.max_num_timepoints, dtype=np.int64)
+        
+        drawn_timepoints = [int(fn[10:-4]) for fn in os.listdir(self.global_image_dir)]
+        image_drawn_array[drawn_timepoints] = 1
+        
+        return image_drawn_array
+        
+    # ---------------------------------------------------------------------
+        
     def calculate_transform_matrix(self):
         xx, xy, x0, yx, yy, y0 = create_transformation_matrix_entries(self.global_scale, self.global_scale, self.rotation_theta, self.translation_x, self.translation_y, self.plate_width_in_micrometers, self.plate_width_in_micrometers)
         return cairo.Matrix(xx, yx, xy, yy, x0, y0)
     
     # ---------------------------------------------------------------------
-    
-    def gather_data(self, unique_timesteps):
+        
+    def gather_data(self, unique_undrawn_timesteps):
+        polygon_coords_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes, 2), dtype=np.float64)
+        
+        if self.show_velocities:
+            velocity_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_velocity_labels, self.num_nodes, 2))
+        else:
+            velocity_coords_per_label_per_timepoint_per_cell = None
+            
+        if self.show_coa:
+            centroid_coords_per_timepoint_per_cell = np.empty((self.num_cells, unique_undrawn_timesteps.shape[0], 2), dtype=np.float64)
+        else:
+            centroid_coords_per_timepoint_per_cell = None
+            
+        
+        for cell_index in range(self.num_cells):
+            L = self.cell_Ls[cell_index]
+            eta = self.cell_etas[cell_index]
+            
+            polygon_coords_per_timepoint_per_cell[cell_index,:,:,:] = L*hardio.get_node_coords_for_given_tsteps(cell_index, unique_undrawn_timesteps, self.storefile_path)
+            
+            if self.show_velocities:
+                velocity_data_for_undrawn_timesteps = prepare_velocity_data(self.num_nodes, eta, self.velocity_scale, cell_index, unique_undrawn_timesteps, self.storefile_path)
+                
+                for x in xrange(self.num_velocity_labels):
+                    velocity_coords_per_label_per_timepoint_per_cell[cell_index,:,x,:,:] = velocity_data_for_undrawn_timesteps[x]
+                
+                        
         for ti in unique_timesteps:
             for cell_index in range(self.num_cells):
-                cell = self.cells[cell_index]
-                L = cell.L/1e-6
-                if self.gathered_info[ti][cell_index] == 0:
-                    self.gathered_info[ti][cell_index] = 1
-                    
-                    cell_system_info_at_timestep = cell.system_info[ti]
-                
-                    # Polygon coordinates
-                    polygon_coords = L*cell_system_info_at_timestep[:, [self.cell_node_indices[cell_index][0], self.cell_node_indices[cell_index][1]]]
-                    if ti == 0:
-                        if cell_index == 0:
-                            init_edge_length = geometry.calculate_average_edge_lengths(polygon_coords.shape[0], polygon_coords)[0]
-                            self.offset_magnitude = init_edge_length*self.offset_scale
+                L = self.cell_Ls
                             
-                    self.polygon_coords_per_timepoint_per_cell[cell_index, ti] = polygon_coords
-    
-                    self.centroid_coords_per_timepoint_per_cell[cell_index, ti] = geometry.calculate_centroid(self.num_nodes, polygon_coords)
-                    
-                    eta = self.cell_etas[cell_index]
+                self.polygon_coords_per_timepoint_per_cell[cell_index, ti] = polygon_coords
+
+                self.centroid_coords_per_timepoint_per_cell[cell_index, ti] = geometry.calculate_centroid(self.num_nodes, polygon_coords)
                 
-                    for data_type_index, data_index_pair in enumerate([self.cell_F_indices[cell_index], self.cell_EFplus_indices[cell_index], self.cell_EFminus_indices[cell_index], self.cell_F_rgtpase_indices[cell_index], self.cell_F_cytoplasmic_indices[cell_index]]):
-                        velocity_data = prepare_velocity_data(cell_system_info_at_timestep, data_index_pair[0], data_index_pair[1], eta, self.velocity_scale, polygon_coords)
-                        
-                        for node_index in range(self.num_nodes):
-                            for start_end_index in range(2):
-                                for x_y_index in range(2):
-                                    self.velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][ti][data_type_index][node_index][start_end_index][x_y_index] = velocity_data[start_end_index][node_index][x_y_index]
+                eta = self.cell_etas[cell_index]
+            
+                for data_type_index, data_index_pair in enumerate([self.cell_F_indices[cell_index], self.cell_EFplus_indices[cell_index], self.cell_EFminus_indices[cell_index], self.cell_F_rgtpase_indices[cell_index], self.cell_F_cytoplasmic_indices[cell_index]]):
+                    velocity_data = prepare_velocity_data(cell_system_info_at_timestep, data_index_pair[0], data_index_pair[1], eta, self.velocity_scale, polygon_coords)
                     
-                                
-                    for data_type_index, data_index in enumerate([self.cell_rac_membrane_active_indices[cell_index], self.cell_rac_membrane_inactive_indices[cell_index], self.cell_rho_membrane_active_indices[cell_index], self.cell_rho_membrane_inactive_indices[cell_index]]):
-                        
-                        if data_type_index < 2:
-                            unit_in_vec_dir = -1
-                        else:
-                            unit_in_vec_dir = 1
-                        
-                        offset_direction = data_type_index%2 - 1
-                        
-                        rgtpase_data = prepare_rgtpase_data(cell_system_info_at_timestep, data_index, unit_in_vec_dir, self.rgtpase_scale, polygon_coords, self.offset_magnitude, offset_direction)
-                        
-                        for node_index in range(self.num_nodes):
-                            for start_end_index in range(2):
-                                for x_y_index in range(2):
-                                    self.rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][ti][data_type_index][node_index][start_end_index][x_y_index] = rgtpase_data[start_end_index][node_index][x_y_index]
-                    
-                    coa_data_index = self.cell_coa_signal_indices[cell_index]
-                    coa_data = prepare_coa_data(cell_system_info_at_timestep, coa_data_index, self.coa_scale, polygon_coords)
-                    # self.coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2, 2), dtype=np.float64)
                     for node_index in range(self.num_nodes):
                         for start_end_index in range(2):
                             for x_y_index in range(2):
-                                self.coa_line_coords_per_timepoint_per_cell[cell_index][ti][node_index][start_end_index][x_y_index] = coa_data[start_end_index][node_index][x_y_index]
+                                self.velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][ti][data_type_index][node_index][start_end_index][x_y_index] = velocity_data[start_end_index][node_index][x_y_index]
+                
+                            
+                for data_type_index, data_index in enumerate([self.cell_rac_membrane_active_indices[cell_index], self.cell_rac_membrane_inactive_indices[cell_index], self.cell_rho_membrane_active_indices[cell_index], self.cell_rho_membrane_inactive_indices[cell_index]]):
+                    
+                    if data_type_index < 2:
+                        unit_in_vec_dir = -1
+                    else:
+                        unit_in_vec_dir = 1
+                    
+                    offset_direction = data_type_index%2 - 1
+                    
+                    rgtpase_data = prepare_rgtpase_data(cell_system_info_at_timestep, data_index, unit_in_vec_dir, self.rgtpase_scale, polygon_coords, self.offset_magnitude, offset_direction)
+                    
+                    for node_index in range(self.num_nodes):
+                        for start_end_index in range(2):
+                            for x_y_index in range(2):
+                                self.rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][ti][data_type_index][node_index][start_end_index][x_y_index] = rgtpase_data[start_end_index][node_index][x_y_index]
+                
+                coa_data_index = self.cell_coa_signal_indices[cell_index]
+                coa_data = prepare_coa_data(cell_system_info_at_timestep, coa_data_index, self.coa_scale, polygon_coords)
+                # self.coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2, 2), dtype=np.float64)
+                for node_index in range(self.num_nodes):
+                    for start_end_index in range(2):
+                        for x_y_index in range(2):
+                            self.coa_line_coords_per_timepoint_per_cell[cell_index][ti][node_index][start_end_index][x_y_index] = coa_data[start_end_index][node_index][x_y_index]
                                     
                                     
     # ---------------------------------------------------------------------
@@ -527,23 +556,23 @@ class EnvironmentAnimation():
         
         return arg_list
         
-    def create_animation_from_data(self, animation_save_folder_path, num_timesteps=None, duration=None):
-            
-        if duration == None or duration == 'auto': 
-            if num_timesteps*self.timestep_length < self.short_video_length_definition:
-                duration = self.short_video_duration
-            else:
-                duration = (num_timesteps*self.timestep_length/self.short_video_length_definition)*self.short_video_duration
-                
-        num_frames = duration*self.fps
+    def create_animation_from_data(self, animation_save_folder_path, timepoint_to_draw_till=None, duration=None):
         
-        if num_timesteps == None:
+        if timepoint_to_draw_till == None:
             num_timesteps = self.environment.num_timepoints
             
-        unique_timesteps = np.sort(np.array(list(set(np.linspace(0, num_timesteps, num=num_frames, endpoint=False, dtype=np.int64)))))
+        if duration == None or duration == 'auto': 
+            if timepoint_to_draw_till*self.timestep_length < self.short_video_length_definition:
+                duration = self.short_video_duration
+            else:
+                duration = (timepoint_to_draw_till*self.timestep_length/self.short_video_length_definition)*self.short_video_duration
+                
+        num_frames = duration*self.fps
+            
+        unique_undrawn_timesteps = np.sort(np.array([x for x in list(set(np.linspace(0, num_timesteps, num=num_frames, endpoint=False, dtype=np.int64))) if self.image_drawn[x] == 0]))
         num_unique_timesteps = unique_timesteps.shape[0]
         
-        self.gather_data(unique_timesteps)
+        self.gather_data(unique_undrawn_timesteps)
 
         animation_cells = self.create_animation_cells()
         

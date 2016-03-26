@@ -65,14 +65,14 @@ def get_node_coords(cell_index, tstep, storefile_path):
     
 # ==============================================================================
     
-def get_data(cell_index, tstep, data_label, storefile_path):
+def get_data_for_tsteps(cell_index, tsteps, data_label, storefile_path):
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
         
-        if tstep == None:
+        if tsteps == None:
             return dset[:,:,parameterorg.info_indices_dict[data_label]]
         else:
-            return dset[tstep,:,parameterorg.info_indices_dict[data_label]]
+            return dset[tsteps,:,parameterorg.info_indices_dict[data_label]]
         
 # ==============================================================================  
     

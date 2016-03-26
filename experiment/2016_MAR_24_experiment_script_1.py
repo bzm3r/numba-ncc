@@ -115,7 +115,7 @@ if __name__ == '__main__':
     
         run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=1000, elapsed_timesteps_before_producing_intermediate_animations=1000, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_hard_saving_env=1000, elapsed_timesteps_before_soft_saving_env=None, delete_and_rerun_experiments_without_stored_env=False)
         
-    if RUN_ANALYSIS == True:
+    if False == True:
         # ================================================================
         for si in xrange(len(parameter_override_dicts_per_sub_experiment)):
             environment_name_format_string = environment_name_format_strings[si]
