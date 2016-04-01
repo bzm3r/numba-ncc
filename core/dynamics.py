@@ -11,7 +11,7 @@ import numba as nb
 import chemistry
 import geometry
 import mechanics
-import general.general as general
+import general.utilities as general_utilities
 
 # ----------------------------------------------------------------------------------------
 #@nb.jit(nopython=True)  
@@ -35,8 +35,8 @@ def unpack_state_array(num_nodal_phase_var_indices, num_nodes, state_array):
 
 # ----------------------------------------------------------------------------------------
 #@nb.jit(nopython=True)       
-def pack_state_array_from_system_info(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info, tstep):
-    system_info_at_tstep = system_info[tstep]
+def pack_state_array_from_system_info(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info, access_index):
+    system_info_at_tstep = system_info[access_index]
     state_array = pack_state_array(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info_at_tstep)
     
     return state_array
@@ -87,7 +87,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     nodal_y = nodal_phase_vars[nodal_y_start_index:nodal_y_end_index]
     
-    node_coords = general.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
+    node_coords = general_utilities.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
     
     rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_active) - calculate_sum(num_nodes, rac_membrane_inactive)
     rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_active) - calculate_sum(num_nodes, rho_membrane_inactive)                            
@@ -245,7 +245,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 #    
 #    nodal_y = nodal_phase_vars[nodal_y_start_index:nodal_y_end_index]
 #    
-#    node_coords = general.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
+#    node_coords = general_utilities.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
 #    
 #    rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_active) - calculate_sum(num_nodes, rac_membrane_inactive)
 #    rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_active) - calculate_sum(num_nodes, rho_membrane_inactive)                            

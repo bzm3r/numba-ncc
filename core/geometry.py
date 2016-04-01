@@ -98,7 +98,8 @@ def rotate_2D_vector_CCW(vector):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def rotate_2D_vectors_CCW(num_vectors, vectors):
+def rotate_2D_vectors_CCW(vectors):
+    num_vectors = vectors.shape[0]
     rotated_vectors = np.empty_like(vectors)
     
     for i in range(num_vectors):
@@ -269,8 +270,9 @@ def difference_2D_vectors(num_elements, v1s, v2s):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_unit_inside_pointing_vecs(num_nodes, node_coords):
-
+def calculate_unit_inside_pointing_vecs(node_coords):
+    num_nodes = node_coords.shape[0]
+    
     unit_inside_pointing_vecs = np.empty((num_nodes, 2), dtype=np.float64)
     
     tangent_vector = np.empty(2, dtype=np.float64)
@@ -278,12 +280,12 @@ def calculate_unit_inside_pointing_vecs(num_nodes, node_coords):
     for i in range(num_nodes):
         i_plus_1 = (i + 1)%num_nodes
         
-        edge_vector_to_plus = calculate_vector_from_p1_to_p2_given_vectors(node_coords[i], node_coords[i_plus_1])
+        edge_vector_to_plus = node_coords[i_plus_1] - node_coords[i]
         edge_vector_to_plus_normalized = normalize_2D_vector(edge_vector_to_plus)
         
         i_minus_1 = (i - 1)%num_nodes
         
-        edge_vector_from_minus = calculate_vector_from_p1_to_p2_given_vectors(node_coords[i_minus_1], node_coords[i])
+        edge_vector_from_minus = node_coords[i] - node_coords[i_minus_1]
         edge_vectors_from_minus_normalized = normalize_2D_vector(edge_vector_from_minus)
         
         tangent_vector[0] = edge_vector_to_plus_normalized[0] + edge_vectors_from_minus_normalized[0]
@@ -296,6 +298,19 @@ def calculate_unit_inside_pointing_vecs(num_nodes, node_coords):
         unit_inside_pointing_vecs[i, 1] = y_part
     
     return unit_inside_pointing_vecs
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)  
+def calculate_unit_inside_pointing_vecs_per_timestep(node_coords_per_timestep):
+    num_timesteps = node_coords_per_timestep.shape[0]
+    num_nodes = node_coords_per_timestep.shape[1]
+    
+    unit_inside_pointing_vecs_per_timestep = np.empty((num_timesteps, num_nodes, 2), dtype=np.float64)
+    
+    for t in range(num_timesteps):
+        unit_inside_pointing_vecs_per_timestep[t] = calculate_unit_inside_pointing_vecs(node_coords_per_timestep[t])
+    
+    return unit_inside_pointing_vecs_per_timestep
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  

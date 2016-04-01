@@ -142,7 +142,7 @@ def calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_activ
 @nb.jit(nopython=True)  
 def calculate_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic):
     
-    unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(num_nodes, node_coords)
+    unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(node_coords)
     
     rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors)
 

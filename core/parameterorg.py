@@ -115,12 +115,12 @@ def make_chem_mech_space_parameter_defn_dict(C_total=3e6, H_total=1.5e6, num_nod
 
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_filepath="A:\\cncell\\experiment-storage\\", parameter_overrides=[], num_nodes_per_cell=15, T=(1/0.5), integration_params={}, closeness_dist_squared_criteria=(0.5e-6)**2, persist=True, parameter_explorer_run=False):
+def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", parameter_overrides=[], num_nodes=15, T=(1/0.5), integration_params={}, closeness_dist_squared_criteria=(0.5e-6)**2, persist=True, parameter_explorer_run=False):
     
     for cell_group_defn_index, user_cell_group_defn in enumerate(user_cell_group_defns):
         C_total = user_cell_group_defn['C_total']
         H_total = user_cell_group_defn['H_total']
-        num_nodes = num_nodes_per_cell
+        num_nodes = num_nodes
         num_cells = user_cell_group_defn['num_cells']
         init_cell_radius = user_cell_group_defn['init_cell_radius']
         cell_group_bounding_box = user_cell_group_defn['cell_group_bounding_box']
@@ -129,6 +129,6 @@ def make_environment_given_user_cell_group_defns(environment_name='', num_timest
         
         user_cell_group_defn.update([('chem_mech_space_defns', parameter_dict)])
     
-    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_filepath=environment_filepath, verbose=verbose, num_nodes_per_cell=num_nodes_per_cell, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn)
+    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, num_nodes=num_nodes, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn)
     
     return the_environment

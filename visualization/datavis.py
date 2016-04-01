@@ -45,7 +45,7 @@ def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, st
     init_area = convex_hull_areas_per_tstep[0]
     
     normalized_convex_hull_areas_per_tstep = convex_hull_areas_per_tstep/init_area
-    timepoints = np.arange(normalized_convex_hull_areas_per_tstep.shape[0])*T/60.0
+    timepoints = np.arange(normalized_convex_hull_areas_per_tstep.shape[0])*T
     
     fig, ax = plt.subplots()
     
@@ -73,13 +73,15 @@ def graph_avg_neighbour_distance_over_time():
 # ==============================================================================
 
 def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name):
-    timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T/60.0
+    timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
     group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]
+    group_centroid_y_coords = relative_group_centroid_per_tstep[:,1]
     
     fig, ax = plt.subplots()
     
-    ax.plot(timepoints, group_centroid_x_coords, label="group centroid")
-    ax.set_ylabel("x coordinate - micrometers")
+    ax.plot(timepoints, group_centroid_x_coords, label="x-coord", color='b')
+    ax.plot(timepoints, group_centroid_y_coords, label="y-coord", color='g')
+    ax.set_ylabel("group centroid position (micrometers)")
     ax.set_xlabel("time (min.)")
     
     # Put a legend to the right of the current axis
@@ -97,7 +99,7 @@ def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, s
         
 # ==============================================================================
 
-def graph_centroid_related_data(num_cells, num_timepoints, T, L, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):    
+def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):    
     # assuming that num_timepoints, T is same for all cells
     if max_tstep == None:
         max_tstep = num_timepoints
@@ -107,12 +109,12 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, L, storefile_path,
     # ------------------------
     
     for ci in xrange(num_cells):
-        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
+        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
     # ------------------------
-    
+        
     group_centroid_per_tstep = np.array([geometry.calculate_cluster_centroid(cell_centroids) for cell_centroids in all_cell_centroids_per_tstep])
     
     init_group_centroid_per_tstep = group_centroid_per_tstep[0]
@@ -164,10 +166,11 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, L, storefile_path,
         
 # ==============================================================================
 
-def graph_cell_velocity_over_time(num_cells, T, L, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0):
+def graph_cell_velocity_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0):
     fig, ax = plt.subplots()
 
     for ci in xrange(num_cells):
+        L = cell_Ls[ci]
 #        num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
         timepoints, cell_speeds = analysis_utils.calculate_cell_speeds_until_tstep(ci, max_tstep, storefile_path, T, L)
         
@@ -487,7 +490,7 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
     
     data_max_tstep = cell_centroids_per_tstep.shape[0] - 1
     
-    ic_contact_data = hardio.get_ic_contact_data(cell_index, max_tstep, storefile_path)
+    ic_contact_data = analysis_utils.get_ic_contact_data(cell_index, storefile_path, max_tstep=max_tstep)
     
     contact_start_end_arrays = analysis_utils.determine_contact_start_ends(ic_contact_data)
     #print "contact_start_end_arrays: ", contact_start_end_arrays
@@ -495,7 +498,7 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
     smoothened_contact_start_end_arrays = analysis_utils.smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1)
     #print "smoothened_contact_start_end_arrays: ", smoothened_contact_start_end_arrays
     
-    assessable_contact_start_end_arrays = hardio.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
+    assessable_contact_start_end_arrays = analysis_utils.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
     #print "assessable_contact_start_end_arrays: ", assessable_contact_start_end_arrays
     
     pre_velocities, post_velocities, pre_accelerations, post_accelerations = analysis_utils.calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, T)

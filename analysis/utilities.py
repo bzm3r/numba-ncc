@@ -10,7 +10,7 @@ import numpy as np
 import core.geometry as geometry
 import moore_data_table
 import numba as nb
-import hardio
+import core.hardio as hardio
 
 # ==============================================================================
 @nb.jit(nopython=True)
@@ -56,10 +56,9 @@ def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, 
     
     num_tsteps = node_coords_per_tstep.shape[0]
     
-    delta_t = (T/60.0)
-    timepoints = np.arange(num_tsteps - 1)*delta_t # want times in minutes
+    timepoints = np.arange(num_tsteps - 1)*T # want times in minutes
     
-    velocities = (centroid_per_tstep[2:] - centroid_per_tstep[:-2])/(2*delta_t) # interested in micrometer/min
+    velocities = (centroid_per_tstep[2:] - centroid_per_tstep[:-2])/(2*T) # interested in micrometer/min
     
     speeds = geometry.calculate_2D_vector_mags(velocities.shape[0], velocities)
     
@@ -119,7 +118,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     
 # ==============================================================================
     
-def calculate_rgtpase_polarity_score(cell_index, storefile_path, num_nodes, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
+def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
     rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
     
@@ -695,7 +694,7 @@ def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_p
     run_periods = [(tpi[2] - tpi[1])*T for tpi in tumble_periods_info]
     
     if cell_centroids == None:
-        cell_centroids = hardio.calculate_cell_centroids_for_all_time(cell_index, storefile_path)*L
+        cell_centroids = calculate_cell_centroids_for_all_time(cell_index, storefile_path)*L
 
     tumble_centroids = [cell_centroids[tpi[0]:tpi[1]] for tpi in tumble_periods_info]
     net_tumble_displacement_mags = [np.linalg.norm(tccs[-1] - tccs[0]) for tccs in tumble_centroids]

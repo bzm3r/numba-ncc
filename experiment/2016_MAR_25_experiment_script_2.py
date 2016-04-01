@@ -8,7 +8,7 @@ import analysis
 import general
 import visualization.datavis as datavis
 
-EXPERIMENT_NUMBER = 0
+EXPERIMENT_NUMBER = 2
 experiment_description = "large group - long timesteps"
 
 BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
@@ -19,7 +19,7 @@ experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERI
 TOTAL_TIME = 50*60*60#32000#(60*60)*3
 TIMESTEP_LENGTH = (1/0.5)                                                                                                                                                                                                                                                                                                                                           
 NUM_TIMESTEPS = int(TOTAL_TIME/TIMESTEP_LENGTH)
-NUM_NODES_PER_CELL = 16
+NUM_NODES = 16
 
 CELL_DIAMETER = 40
 NUM_BOXES = 1
@@ -57,7 +57,7 @@ if make_migr_poly == False:
     WIDTH_MIGR_CORRIDOR = None
     HEIGHT_MIGR_CORRIDOR = None
 
-environment_wide_variable_defns = {'num_timesteps': NUM_TIMESTEPS, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': TIMESTEP_LENGTH, 'num_nodes_per_cell': NUM_NODES_PER_CELL, 'verbose': True, 'integration_params': {'atol': 1e-4, 'rtol': 1e-4}, 'closeness_dist_squared_criteria': (1e-6)**2}
+environment_wide_variable_defns = {'num_timesteps': NUM_TIMESTEPS, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': TIMESTEP_LENGTH, 'num_nodes': NUM_NODES, 'verbose': True, 'integration_params': {'atol': 1e-4, 'rtol': 1e-4}, 'closeness_dist_squared_criteria': (1e-6)**2}
 
 base_parameter_dict = dict([('halfmax_coa_sensing_dist_multiplier', 4.4), ('kdgdi_rac_estimate_multiplier', 0.2), ('kdgdi_rho_estimate_multiplier', 0.2), ('kgdi_rac_estimate_multiplier', 1), ('kgdi_rho_estimate_multiplier', 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500), ('kdgtp_rac_multiplier', 20), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000), ('kdgtp_rho_multiplier', 20), ('kgtp_rac_autoact_multiplier', 250), ('kgtp_rac_multiplier', 20), ('kgtp_rho_autoact_multiplier', 125), ('kgtp_rho_multiplier', 20), ('max_protrusive_node_velocity', 1e-06), ('randomization', False), ('randomization_centre', 0.15), ('randomization_depth', 1.0), ('randomization_function_type', 0), ('randomization_scheme', 0), ('randomization_time_mean', 20), ('randomization_time_variance_factor', 0.25), ('randomization_width', 10), ('randomization_width_baseline', 2), ('randomization_width_halfmax_threshold', 0.3), ('randomization_width_hf_exponent', 3), ('sigma_rac', 2e-05), ('sigma_rho_multiplier', 0.2), ('force_rac_exp', 3), ('force_rho_exp', 3), ('force_rac_threshold_multiplier', 0.5), ('force_rho_threshold_multiplier', 0.5), ('skip_dynamics', False), ('stiffness_cytoplasmic', 100), ('stiffness_edge', 5e-10), ('tension_fn_type', 0), ('tension_mediated_rac_hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('threshold_rac_autoact_multiplier', 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5), ('threshold_rho_autoact_multiplier', 0.5), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25), ('coa_belt_offset_multiplier', 1.5)])
     
@@ -86,7 +86,7 @@ user_cell_group_defns_per_subexperiment = []
 for si in xrange(num_sub_experiments):
     user_cell_group_defns = []
     
-    environment_name_format_strings.append( form_base_environment_name_format_string(EXPERIMENT_NUMBER, np.sum(NUM_CELLS_IN_BOXES), str(np.round(TOTAL_TIME/(3600.), decimals=2))+"h", NUM_TIMESTEPS, NUM_NODES_PER_CELL, HEIGHT_MIGR_CORRIDOR, WIDTH_MIGR_CORRIDOR))
+    environment_name_format_strings.append( form_base_environment_name_format_string(EXPERIMENT_NUMBER, np.sum(NUM_CELLS_IN_BOXES), str(np.round(TOTAL_TIME/(3600.), decimals=2))+"h", NUM_TIMESTEPS, NUM_NODES, HEIGHT_MIGR_CORRIDOR, WIDTH_MIGR_CORRIDOR))
     
     for bi in boxes:
         this_box_x_offset = box_x_offsets[bi]
@@ -111,9 +111,9 @@ if __name__ == '__main__':
         plate_height = 40*5*1.2
         plate_width = 4*40*10*1.2
         
-        animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 2000.0*TIMESTEP_LENGTH), ('short_video_duration', 5.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True), ('sequential', True), ('num_processes', 4)])
+        animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 2000.0*TIMESTEP_LENGTH), ('short_video_duration', 5.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True)])
     
-        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=1000, elapsed_timesteps_before_producing_intermediate_animations=1000, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_hard_saving_env=1000, elapsed_timesteps_before_soft_saving_env=None, delete_and_rerun_experiments_without_stored_env=False)
+        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, animation_settings=animation_settings, produce_intermediate_visuals=False, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True)
         
     if False == True:
         # ================================================================

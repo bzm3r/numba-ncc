@@ -1,19 +1,17 @@
 from __future__ import division
 import numpy as np
 import cell
-from parameterorg import *
+import parameterorg
 import geometry
 import os
 import visualization.datavis as datavis
 import analysis.utilities as analysis_utils
 import visualization.animator as animator
-#import dill as pickling_package
-#import gzip
-#import copy
-#import shutil
+import dill
 import numba as nb
 import time
 import core.hardio as hardio
+import copy
 
 """
 Environment of cells.
@@ -73,31 +71,31 @@ class Environment():
         self.parameter_explorer_run = parameter_explorer_run        
         if parameter_explorer_run == True:
             self.verbose = False
-            self.persist = False
             self.environment_name = None
             self.environment_dir = None
         else:
             self.verbose = verbose
-            self.persist = persist
             self.environment_name = environment_name
             self.environment_dir = environment_dir
             
         if environment_dir != None:
             self.storefile_path = os.path.join(environment_dir, "store.hdf5")
+            self.empty_self_pickle_path = os.path.join(environment_dir, "environment.pkl")
         else:
             self.storefile_path = None
+            self.empty_self_pickle_path = None
         
         self.space_physical_bdry_polygon = space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
         self.external_gradient_fn = external_gradient_fn
         self.cell_group_defns = cell_group_defns
         
-        self.curr_t = 0
+        self.curr_tpoint = 0
+        self.timestep_offset_due_to_dumping = 0
         self.T = T
         self.num_timesteps = num_timesteps
         self.num_timepoints = num_timesteps + 1
-        self.timepoints = np.arange(self.curr_t, self.num_timepoints)
-        self.max_t = num_timesteps
+        self.timepoints = np.arange(self.curr_tpoint, self.num_timepoints)
         
         self.integration_params = integration_params
         
@@ -105,15 +103,31 @@ class Environment():
         
         self.micrometer = 1e-6
         
-        self.num_cell_groups = len(cell_group_defns)
-        self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in cell_group_defns])
+        self.num_cell_groups = len(self.cell_group_defns)
+        self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns])
         self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
         self.full_output_dicts = [[] for cell in self.cells_in_environment]
         
         self.cell_indices = np.arange(self.num_cells)
         self.full_print = full_print
+        
+        for cell_index in xrange(self.num_cells):
+            hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
 
+# -----------------------------------------------------------------
+
+    def get_system_info_index(self, tpoint):
+        return tpoint - self.timestep_offset_due_to_dumping
+
+    def extend_simulation_runtime(self, new_num_timesteps):
+        self.num_timesteps = new_num_timesteps
+        
+        
+    def simulation_complete(self):
+        return self.num_timesteps == self.curr_tpoint
+        
+        
 # -----------------------------------------------------------------
 
     def make_cells(self):
@@ -317,7 +331,8 @@ class Environment():
     def make_visuals(self, t, visuals_save_dir, animation_settings, animation_obj, produce_animations, produce_graphs):
         if produce_graphs:
             for cell_index in xrange(self.num_cells):
-                if self.cells_in_environment[cell_index].skip_dynamics == True:
+                this_cell = self.cells_in_environment[cell_index]
+                if this_cell.skip_dynamics == True:
                     continue
                 
                 save_dir_for_cell = os.path.join(visuals_save_dir, "cell_{}".format(cell_index))
@@ -327,47 +342,76 @@ class Environment():
                 
                 averaged_score, scores_per_tstep = analysis_utils.calculate_rgtpase_polarity_score(cell_index, self.storefile_path, significant_difference=0.2, max_tstep=t)
         
-                datavis.graph_important_cell_variables_over_time(cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                datavis.graph_rates(cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                datavis.graph_strains(cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                #datavis.graph_run_and_tumble_statistics(a_cell, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                #datavis.graph_pre_post_contact_cell_kinematics(a_cell, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                
-            datavis.graph_cell_velocity_over_time(self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+                datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                #datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                #datavis.graph_pre_post_contact_cell_kinematics(self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+            
+            cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
+            
+            datavis.graph_cell_velocity_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
             if self.num_cells > 2:
-                datavis.graph_delaunay_triangulation_area_over_time(self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+                datavis.graph_delaunay_triangulation_area_over_time(self.num_cells, self.num_timepoints, self.T/60.0, self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
-            datavis.graph_centroid_related_data(self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_centroid_related_data(self.num_cells, self.curr_tpoint, self.T/60.0, cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
         
         if produce_animations:
-            animation_obj.create_animation_from_data(visuals_save_dir, num_timesteps=t)
+            animation_obj.create_animation_from_data(visuals_save_dir, timestep_to_draw_till=t)
             
-# -----------------------------------------------------------------    
-    
-    def get_empty_self_copy(self):
-        empty_self = Environment()
-    
-        for attr_name, attr_value in inspect.getmembers(self):
-            if attr_name != "cells_in_environment":
-                setattr(empty_self, attr_name, attr_value)
+# -----------------------------------------------------------------
+    def get_empty_cell(self, cell_index):
+        empty_cell = copy.deepcopy(self.cells_in_environment[cell_index])
+        
+        empty_cell.system_info = None
+        
+        return empty_cell
+        
+# -----------------------------------------------------------------
+      
+    def get_empty_cells(self):
+        return [self.get_empty_cell(ci) for ci in xrange(self.num_cells)]
+        
+# -----------------------------------------------------------------
+        
+    def get_empty_self_copy(self, preserve_cell_structure=True):
+        empty_self = copy.deepcopy(self)
+        
+        if preserve_cell_structure:
+            empty_self.cells_in_environment = self.get_empty_cells()
+        else:
+            empty_self.cells_in_environment = None
         
         return empty_self
         
 # ----------------------------------------------------------------- 
         
-    def dump_cells_data(self, tpoint):
+    def dump_to_store(self, tpoint):
+        access_index = self.get_system_info_index(self.curr_tpoint)
         for cell_index in xrange(self.num_cells):
             this_cell = self.cells_in_environment[cell_index]
             if this_cell.last_trim_timestep < 0:
-                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info, self.storefile_path)
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[:access_index+1], self.storefile_path)
                 this_cell.trim_system_info(tpoint)
             elif this_cell.last_trim_timestep < tpoint:
-                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[0:], self.storefile_path)
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[1:access_index+1], self.storefile_path)
                 this_cell.trim_system_info(tpoint)
             else:
                 continue
             
+            
+        self.timestep_offset_due_to_dumping = self.curr_tpoint
+        
+        with open(self.empty_self_pickle_path, 'wb') as f:
+            dill.dump(self.get_empty_self_copy(), f)
+        
+        
+# ----------------------------------------------------------------- 
+        
+    def initialize_cells_from_store(self):
+        for a_cell in self.cells_in_environment:
+            a_cell.init_from_storefile(self.curr_tpoint, self.storefile_path)
     
 # ----------------------------------------------------------------- 
         
@@ -389,49 +433,47 @@ class Environment():
             produce_intermediate_visuals = False
             produce_final_visuals = False
         else:
-            animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.get_empty_self_copy(), **animation_settings)
+            cell_group_indices = []
+            cell_Ls = []
+            cell_etas = []
+            cell_skip_dynamics = []
             
-        if self.curr_t == 0 or self.curr_t < self.max_t:
-            if self.last_timestep_when_animations_made == None:
-                self.last_timestep_when_animations_made = self.curr_t
-            if self.last_timestep_when_graphs_made == None:
-                self.last_timestep_when_graphs_made = self.curr_t
-            if self.last_timestep_when_environment_hard_saved == None:
-                self.last_timestep_when_environment_hard_saved = self.curr_t
-            
-            for t in self.timepoints[self.curr_t:-1]:
-                if produce_intermediate_visuals == True:
-                    if t - self.last_timestep_when_animations_made >= elapsed_timesteps_before_producing_intermediate_animations:
+            for a_cell in self.cells_in_environment:
+                cell_group_indices.append(a_cell.cell_group_index)
+                cell_Ls.append(a_cell.L/1e-6)
+                cell_etas.append(a_cell.eta)
+                cell_skip_dynamics.append(a_cell.skip_dynamics)
                 
-                        self.last_timestep_when_animations_made = t
-                        
-                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-                        if not os.path.exists(visuals_save_dir):
-                            os.makedirs(visuals_save_dir)
-                        
-                        print "Making intermediate animations..."
-                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, False)
-                        
-                    if t - self.last_timestep_when_graphs_made >= elapsed_timesteps_before_producing_intermediate_graphs:
-                        
-                        self.last_timestep_when_graphs_made = t
-                        
-                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-                        if not os.path.exists(visuals_save_dir):
-                            os.makedirs(visuals_save_dir)
-                        
-                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, False, True)
+            animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
             
+        if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
+            if self.last_timestep_when_environment_hard_saved == None:
+                self.last_timestep_when_environment_hard_saved = self.curr_tpoint
+            
+            for t in self.timepoints[self.curr_tpoint:-1]:
                 if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
                     self.last_timestep_when_environment_hard_saved = t
-                    self.dump_cells_data(t)
+                    
+                    if self.environment_dir != None:
+                        self.dump_to_store(t)
+                        
+                    if t in produce_intermediate_visuals:
+                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
+                        if not os.path.exists(visuals_save_dir):
+                            os.makedirs(visuals_save_dir)
+                        
+                        print "Making intermediate visuals..."
+                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
                     
                 cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells)
-                self.curr_t += 1
+                self.curr_tpoint += 1
         else:
             raise StandardError("max_t has already been reached.")
         
         simulation_et = time.time()
+        
+        if self.environment_dir != None:
+            self.dump_to_store(self.curr_tpoint)
             
         if produce_final_visuals == True:
             t = self.num_timepoints
@@ -442,9 +484,6 @@ class Environment():
                 
                 print "Making final visuals..."
                 self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)
-                
-        if self.environment_dir != None and self.persist == True:
-            self.dump_cells_data()
             
         simulation_time = np.round(simulation_et - simulation_st, decimals=2)
         print "Time taken to complete simulation: {}s".format(simulation_time)
