@@ -225,5 +225,33 @@ def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, pr
     
     
 # =======================================================================
+
+def get_subexperiment_number_from_folder_string(experiment_number, folder_string):
+    info_tokens = folder_string.split("_")
     
-            
+    experiment_number_token = info_tokens[0]
+    
+    subexperiment_number, repeat_number = [int(x) for x in (experiment_number_token[len("EXP{}".format(experiment_number)) + 1:-1]).split(",")]
+    
+    return subexperiment_number, repeat_number
+
+# =======================================================================
+
+    
+def get_environment_dirs_given_relevant_experiment_info(base_output_dir, relevant_experiment_info):
+    env_dirs = []
+    
+    for experiment_info_tuple in relevant_experiment_info:
+        date_str, experiment_number, subexp_number = experiment_info_tuple
+        experiment_directory = os.path.join(base_output_dir, date_str, "EXP_{}".format(experiment_number))
+        
+        for d in os.listdir(experiment_directory):
+            env_dir = os.path.join(experiment_directory, d)
+            if os.path.isdir(env_dir):
+                subexperiment_number, repeat_number = get_subexperiment_number_from_folder_string(experiment_number, d)
+                
+                if subexperiment_number == subexp_number:
+                    env_dirs.append(os.path.join(env_dir))
+                    
+    return env_dirs
+        

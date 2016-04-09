@@ -12,7 +12,7 @@ EXPERIMENT_NUMBER = 0
 experiment_description = "large group - long timesteps"
 
 BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
-DATE_STR = "2016_MAR_28"
+DATE_STR = "2016_APR_01"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
@@ -33,7 +33,7 @@ x_space_between_boxes = [2*CELL_DIAMETER, 2*CELL_DIAMETER, 2*CELL_DIAMETER]
 
 physical_bdry_polygon_extra = 5
 
-x_offset = 760#10#500
+x_offset = 10#10#500
 y_offset = 10
 
 box_x_offsets = [0]*NUM_BOXES
@@ -51,7 +51,7 @@ HEIGHT_MIGR_CORRIDOR = box_heights[0]
 make_migr_poly = True
 make_phys_poly = False
 
-space_migratory_bdry_polygon, space_physical_bdry_polygon = make_space_polygons(make_migr_poly, make_phys_poly, WIDTH_MIGR_CORRIDOR, HEIGHT_MIGR_CORRIDOR, -1000, 10)
+space_migratory_bdry_polygon, space_physical_bdry_polygon = make_space_polygons(make_migr_poly, make_phys_poly, WIDTH_MIGR_CORRIDOR, HEIGHT_MIGR_CORRIDOR, 10, 10)
 
 if make_migr_poly == False:
     WIDTH_MIGR_CORRIDOR = None
