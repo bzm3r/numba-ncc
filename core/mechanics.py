@@ -11,7 +11,7 @@ import numba as nb
 
         
 # -----------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def hill_function(exp, thresh, sig):
     pow_sig = sig**exp
     pow_thresh = thresh**exp
@@ -19,7 +19,7 @@ def hill_function(exp, thresh, sig):
     return pow_sig/(pow_thresh + pow_sig)
         
 # -----------------------------------------------------------------
-        
+@nb.jit(nopython=True)         
 def calculate_phys_space_bdry_contact_factors(num_nodes, node_coords, space_physical_bdry_polygons):
     
     if space_physical_bdry_polygons.size == 0:
@@ -28,7 +28,7 @@ def calculate_phys_space_bdry_contact_factors(num_nodes, node_coords, space_phys
         return geometry.are_points_inside_polygons(num_nodes, node_coords, space_physical_bdry_polygons)
 
 # -----------------------------------------------------------------
-   
+@nb.jit(nopython=True)    
 def calculate_migr_bdry_contact_factors(num_nodes, node_coords, space_migratory_bdry_polygon, migr_bdry_contact_factor_mag):
     
     are_nodes_in_migr_space = geometry.are_points_inside_polygon(num_nodes, node_coords, space_migratory_bdry_polygon.shape[0], space_migratory_bdry_polygon)
@@ -43,7 +43,7 @@ def calculate_migr_bdry_contact_factors(num_nodes, node_coords, space_migratory_
     return result
 
 # -----------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def calculate_local_strains(node_coords, length_edge_resting):
     average_edge_lengths = geometry.calculate_average_edge_lengths(node_coords)
     
@@ -56,7 +56,7 @@ def calculate_local_strains(node_coords, length_edge_resting):
     return local_strains
 
 # -----------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def calculate_cytoplasmic_force(num_nodes, node_coords, area_resting, stiffness_cytoplasmic, unit_inside_pointing_vectors):
     current_area = abs(geometry.calculate_polygon_area(num_nodes, node_coords))
         
@@ -69,7 +69,7 @@ def calculate_cytoplasmic_force(num_nodes, node_coords, area_resting, stiffness_
         return np.zeros((num_nodes, 2))
         
 # -----------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def calculate_spring_edge_forces(num_nodes, node_coords, stiffness_edge, length_edge_resting):
     
     edge_vectors_to_plus = np.empty((num_nodes, 2), dtype=np.float64)
@@ -120,7 +120,7 @@ def calculate_spring_edge_forces(num_nodes, node_coords, stiffness_edge, length_
     return local_average_strains, EFplus, EFminus
 
 # -----------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors):   
     rgtpase_mediated_force_mags = np.zeros(num_nodes, dtype=np.float64)
     
@@ -139,10 +139,10 @@ def calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_activ
     return result 
     
 # ----------------------------------------------------------------------------
-
+@nb.jit(nopython=True)  
 def calculate_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic):
     
-    unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(num_nodes, node_coords)
+    unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(node_coords)
     
     rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors)
 

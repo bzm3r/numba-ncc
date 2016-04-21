@@ -8,11 +8,11 @@ import analysis
 import general
 import visualization.datavis as datavis
 
-EXPERIMENT_NUMBER = 0
+EXPERIMENT_NUMBER = 2
 experiment_description = "15 cells in a corridor"
 
 BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
-DATE_STR = "2016_FEB_20"
+DATE_STR = "2016_FEB_21"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
@@ -26,18 +26,18 @@ coa_strength = 0.1
 
 CELL_DIAMETER = 40
 NUM_BOXES = 2
-NUM_CELLS_IN_BOXES = [15, 0]
+NUM_CELLS_IN_BOXES = [3, 0]
 
 boxes = np.arange(NUM_BOXES)
-box_heights = [3*CELL_DIAMETER, 2*CELL_DIAMETER]
-box_widths = [5*CELL_DIAMETER, 2*CELL_DIAMETER]
+box_heights = [2*CELL_DIAMETER, 2*CELL_DIAMETER]
+box_widths = [2*CELL_DIAMETER, 2*CELL_DIAMETER]
 
 x_space_between_boxes = [2*CELL_DIAMETER]
 y_space_between_boxes = [0]
 
 physical_bdry_polygon_extra = 5
 
-x_offset = 20
+x_offset = 500
 y_offset = 500
 
 box_x_offsets = [0]*NUM_BOXES
@@ -49,8 +49,8 @@ for bi in boxes:
         
 box_y_offsets = [y_offset, y_offset]
 
-WIDTH_MIGR_CORRIDOR = (3*CELL_DIAMETER + 2*CELL_DIAMETER)*6
-HEIGHT_MIGR_CORRIDOR = 3*CELL_DIAMETER
+WIDTH_MIGR_CORRIDOR = 2*CELL_DIAMETER#(3*CELL_DIAMETER + 2*CELL_DIAMETER)*6
+HEIGHT_MIGR_CORRIDOR = 2*CELL_DIAMETER
 
 make_migr_poly = True
 make_phys_poly = False
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         
         animation_settings = dict([('global_scale', 1), ('plate_height_in_micrometers', plate_width), ('plate_width_in_micrometers', plate_height), ('velocity_scale', 1), ('rgtpase_scale', global_scale*625), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', True), ('show_coa', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 2000.0*TIMESTEP_LENGTH), ('short_video_duration', 20.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True), ('sequential', True), ('num_processes', 4)])
     
-        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=8000, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_saving_env=100, delete_and_rerun_experiments_without_stored_env=True)
+        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=8000, animation_settings=animation_settings, produce_intermediate_visuals=False, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_hard_saving_env=8000, elapsed_timesteps_before_soft_saving_env=8000, delete_and_rerun_experiments_without_stored_env=True)
         
     if RUN_ANALYSIS == True:
         # ================================================================

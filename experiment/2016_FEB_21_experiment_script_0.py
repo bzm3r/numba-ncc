@@ -12,7 +12,7 @@ EXPERIMENT_NUMBER = 0
 experiment_description = "15 cells in a corridor"
 
 BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
-DATE_STR = "2016_FEB_20"
+DATE_STR = "2016_FEB_21"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         
         animation_settings = dict([('global_scale', 1), ('plate_height_in_micrometers', plate_width), ('plate_width_in_micrometers', plate_height), ('velocity_scale', 1), ('rgtpase_scale', global_scale*625), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', True), ('show_coa', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 2000.0*TIMESTEP_LENGTH), ('short_video_duration', 20.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True), ('sequential', True), ('num_processes', 4)])
     
-        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=8000, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_saving_env=100, delete_and_rerun_experiments_without_stored_env=True)
+        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, elapsed_timesteps_before_producing_intermediate_graphs=8000, elapsed_timesteps_before_producing_intermediate_animations=10, animation_settings=animation_settings, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=True, elapsed_timesteps_before_saving_env=10, delete_and_rerun_experiments_without_stored_env=True)
         
     if RUN_ANALYSIS == True:
         # ================================================================

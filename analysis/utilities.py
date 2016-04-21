@@ -7,17 +7,13 @@ Created on Sat Jun  6 12:21:52 2015
 
 from __future__ import division
 import numpy as np
-import geometry
-import os
-import multiprocessing as mp
-import math
+import core.geometry as geometry
 import moore_data_table
-import visualization.colors as colors
-import matplotlib.pyplot as plt
-
+import numba as nb
+import core.hardio as hardio
 
 # ==============================================================================
-
+@nb.jit(nopython=True)
 def calculate_centroids_per_tstep(node_coords_per_tstep):
     num_tsteps = node_coords_per_tstep.shape[0]
     num_nodes = node_coords_per_tstep.shape[1]
@@ -32,92 +28,44 @@ def calculate_centroids_per_tstep(node_coords_per_tstep):
     return centroids_per_tstep
 
 # ============================================================================== 
-
-def calculate_cell_centroids_for_all_time(a_cell):
-    node_coords_per_tstep = get_node_coords_for_all_tsteps(a_cell)
+def calculate_cell_centroids_for_all_time(cell_index, storefile_path):
+    node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(cell_index, storefile_path)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
     
     return centroids_per_tstep
 
 # ==============================================================================
-
-def calculate_cell_centroids_until_tstep(a_cell, max_tstep):
-    node_coords_per_tstep = get_node_coords_until_tstep(a_cell, max_tstep)
+def calculate_cell_centroids_until_tstep(cell_index, max_tstep, storefile_path):
+    node_coords_per_tstep = hardio.get_node_coords_until_tstep(cell_index, max_tstep, storefile_path)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
     
     return centroids_per_tstep
 
 # ==============================================================================
-    
-def calculate_cell_centroids_for_given_times(a_cell, tsteps):
-    node_coords_per_tstep = get_node_coords_for_given_tsteps(a_cell, tsteps)
+@nb.jit(nopython=True)   
+def calculate_cell_centroids_for_given_times(cell_index, tsteps, storefile_path):
+    node_coords_per_tstep = hardio.get_node_coords_for_given_tsteps(cell_index, tsteps, storefile_path)
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
     
     return centroids_per_tstep
 
-# ============================================================================== 
-    
-def calculate_cell_speeds_until_tstep(a_cell, max_tstep):
-    # get unit time and length variables from cell
-    T = a_cell.T
-    L = a_cell.L
-    
-    node_coords_per_tstep = get_node_coords_until_tstep(a_cell, max_tstep)
-    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)*L/1e-6
+# ==============================================================================   
+def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, L):
+    node_coords_per_tstep = hardio.get_node_coords_until_tstep(cell_index, max_tstep, storefile_path)
+    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)*L
     
     num_tsteps = node_coords_per_tstep.shape[0]
     
-    delta_t = (T/60.0)
-    timepoints = np.arange(num_tsteps - 1)*delta_t # want times in minutes
+    timepoints = np.arange(num_tsteps - 1)*T # want times in minutes
     
-    velocities = (centroid_per_tstep[2:] - centroid_per_tstep[:-2])/(2*delta_t) # interested in micrometer/min
+    velocities = (centroid_per_tstep[2:] - centroid_per_tstep[:-2])/(2*T) # interested in micrometer/min
     
     speeds = geometry.calculate_2D_vector_mags(velocities.shape[0], velocities)
     
     return timepoints, speeds
-            
-                
-# ==============================================================================  
-
-def get_node_coords_for_all_tsteps(a_cell):
-    return a_cell.system_info[:, :, [a_cell.x_index, a_cell.y_index]]
-    
-# ============================================================================== 
-
-def get_node_coords_until_tstep(a_cell, max_tstep):
-    if max_tstep == None:
-        return a_cell.system_info[:, :, [a_cell.x_index, a_cell.y_index]]
-    else:
-        return a_cell.system_info[:max_tstep, :, [a_cell.x_index, a_cell.y_index]]
-    
-# ==============================================================================
-    
-def get_node_coords_for_given_tsteps(a_cell, tsteps):
-    return a_cell.system_info[tsteps, :, [a_cell.x_index, a_cell.y_index]]
 
 # ==============================================================================
-    
-def get_node_coords(a_cell, tstep):
-    return a_cell.system_info[tstep, :, [a_cell.x_index, a_cell.y_index]]
-    
-# ==============================================================================
-    
-def get_data(a_cell, tstep, data_label):
-    if tstep == None:
-        return a_cell.system_info[:, :, getattr(a_cell, data_label + '_index')]
-    else:
-        return a_cell.system_info[tstep, :, getattr(a_cell, data_label + '_index')]
-        
-# ==============================================================================  
-    
-def get_data_until_timestep(a_cell, max_tstep, data_label):
-    if max_tstep == None:
-        return get_data(a_cell, None, data_label)
-    else:
-        return a_cell.system_info[:max_tstep, :, getattr(a_cell, data_label + '_index')]
-
-# ==============================================================================
-
+@nb.jit(nopython=True)
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=2.5e-2):
 
     sum_rac = 0.0
@@ -170,15 +118,16 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     
 # ==============================================================================
     
-def calculate_rgtpase_polarity_score(a_cell, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
-    num_nodes = a_cell.num_nodes
-    rac_membrane_active_per_tstep = get_data_until_timestep(a_cell, max_tstep, "rac_membrane_active")
-    rho_membrane_active_per_tstep = get_data_until_timestep(a_cell, max_tstep, "rho_membrane_active")
+def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
+    rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
+    rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
+    
+    num_nodes = rac_membrane_active_per_tstep.shape[1]
     
     scores_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
 
     if weigh_by_timepoint == True:
-        num_timepoints = rac_data_per_tstep.shape[0]
+        num_timepoints = rac_membrane_active_per_tstep.shape[0]
         
         averaged_score = np.average((np.arange(num_timepoints)/num_timepoints) * scores_per_tstep)
     else:
@@ -188,12 +137,12 @@ def calculate_rgtpase_polarity_score(a_cell, significant_difference=0.1, max_tst
     
 # ==============================================================================
 
-def calculate_average_rgtpase_activity(a_cell):
-    rac_data = get_data(a_cell, None, 'rac_membrane_active')
+def calculate_average_rgtpase_activity(cell_index, storefile_path):
+    rac_data = hardio.get_data(cell_index, None, 'rac_membrane_active', storefile_path)
     sum_rac_over_nodes = np.sum(rac_data, axis=1)
     avg_sum_rac_over_nodes = np.average(sum_rac_over_nodes)
     
-    rho_data = get_data(a_cell, None, 'rho_membrane_active')
+    rho_data = hardio.get_data(cell_index, None, 'rho_membrane_active', storefile_path)
     sum_rho_over_nodes = np.sum(rho_data, axis=1)
     avg_sum_rho_over_nodes = np.average(sum_rho_over_nodes)
     
@@ -201,11 +150,9 @@ def calculate_average_rgtpase_activity(a_cell):
 
 # ==============================================================================
     
-def calculate_total_displacement(a_cell):
-    init_node_coords = np.transpose(get_node_coords(a_cell, 0))
-    final_node_coords = np.transpose(get_node_coords(a_cell, -1))
-    
-    num_nodes = a_cell.num_nodes
+def calculate_total_displacement(num_nodes, cell_index, storefile_path):
+    init_node_coords = np.transpose(hardio.get_node_coords(cell_index, 0, storefile_path))
+    final_node_coords = np.transpose(hardio.get_node_coords(cell_index, -1, storefile_path))
     
     init_centroid = geometry.calculate_centroid(num_nodes, init_node_coords)
     final_centroid = geometry.calculate_centroid(num_nodes, final_node_coords)
@@ -214,32 +161,29 @@ def calculate_total_displacement(a_cell):
 
 # ==============================================================================
    
-def calculate_sum_displacement_per_interval(a_cell, n):
-    timepoints_of_interest = np.linspace(0, a_cell.num_timesteps, num=n, dtype=np.int64)
+def calculate_sum_displacement_per_interval(num_nodes, num_timesteps, cell_index, num_timesteps_to_pick, storefile_path):
+    timepoints_of_interest = np.linspace(0, num_timesteps, num=num_timesteps_to_pick, dtype=np.int64)
     
-    ncs_of_interest = [np.transpose(get_node_coords(a_cell, x))  for x in timepoints_of_interest]
-    num_nodes = a_cell.num_nodes
+    ncs_of_interest = [np.transpose(hardio.get_node_coords(cell_index, x, storefile_path))  for x in timepoints_of_interest]
     centroids_of_interest = np.array([geometry.calculate_centroid(num_nodes, x) for x in ncs_of_interest])
 
     return np.sum([np.linalg.norm(x) for x in centroids_of_interest[1:] - centroids_of_interest[:-1]])
 
 # ==============================================================================
     
-def calculate_migry_boundary_violation_score(a_cell):
-    migr_bdry_contact_data = get_data(a_cell, None, 'migr_bdry_contact')
+def calculate_migry_boundary_violation_score(num_nodes, num_timesteps, cell_index, storefile_path):
+    migr_bdry_contact_data = hardio.get_data(cell_index, None, 'migr_bdry_contact', storefile_path)
     
     x = migr_bdry_contact_data - 1.0
     y = x > 1e-10
     y = np.array(y, dtype=np.int64)
     
-    return np.sum(y)/(a_cell.num_timesteps*a_cell.num_nodes)
+    return np.sum(y)/(num_timesteps*num_nodes)
 
 # ==============================================================================
    
-def calculate_average_total_strain(a_cell):
-    node_coords_per_timestep = get_node_coords_for_all_tsteps(a_cell)
-    
-    num_nodes = a_cell.num_nodes
+def calculate_average_total_strain(num_nodes, cell_index, storefile_path):
+    node_coords_per_timestep = hardio.get_node_coords_for_all_tsteps(cell_index, storefile_path)
     
     init_perimeter = geometry.calculate_perimeter(num_nodes, node_coords_per_timestep[0])
     total_strains = np.array([geometry.calculate_perimeter(num_nodes, x) for x in node_coords_per_timestep])/init_perimeter
@@ -249,19 +193,14 @@ def calculate_average_total_strain(a_cell):
 
 # ==============================================================================
 
-def calculate_acceleration(a_cell):
-    num_timepoints = a_cell.num_timepoints
-    num_nodes = a_cell.num_nodes
-    L = a_cell.L
-    T = a_cell.T
-    
+def calculate_acceleration(num_timepoints, num_nodes, L, T, cell_index, storefile_path):    
     init_point = 0
     mid_point = np.int(num_timepoints*0.5)
     final_point = -1
     
-    init_node_coords = np.transpose(get_node_coords(a_cell, init_point))
-    mid_node_coords = np.transpose(get_node_coords(a_cell, mid_point))
-    final_node_coords = np.transpose(get_node_coords(a_cell, final_point))
+    init_node_coords = np.transpose(hardio.get_node_coords(cell_index, init_point, storefile_path))
+    mid_node_coords = np.transpose(hardio.get_node_coords(cell_index, mid_point, storefile_path))
+    final_node_coords = np.transpose(hardio.get_node_coords(cell_index, final_point, storefile_path))
     
     init_centroid = geometry.calculate_centroid(num_nodes, init_node_coords)
     mid_centroid = geometry.calculate_centroid(num_nodes, mid_node_coords)
@@ -274,9 +213,9 @@ def calculate_acceleration(a_cell):
         
 # ==============================================================================
         
-def score_distance_travelled(a_cell):
-    xs = get_data(a_cell, None, 'x')
-    ys = get_data(a_cell, None, 'y')
+def score_distance_travelled(cell_index, storefile_path):
+    xs = hardio.get_data(cell_index, None, 'x', storefile_path)
+    ys = hardio.get_data(cell_index, None, 'y', storefile_path)
     
     x_disps = xs[1:] - xs[:-1]
     y_disps = ys[1:] - ys[:-1]
@@ -294,14 +233,14 @@ def score_distance_travelled(a_cell):
 
 # ==============================================================================
 
-def get_event_tsteps(a_cell, event_type):
+def get_event_tsteps(event_type, cell_index, storefile_path):
     relevant_data_per_tstep = None
     
     if event_type == "ic-contact":
-        ic_mags = get_data(a_cell, None, "intercellular_contact_factor_magnitudes")
+        ic_mags = hardio.get_data(cell_index, None, "intercellular_contact_factor_magnitudes", storefile_path)
         relevant_data_per_tstep = np.any(ic_mags > 1, axis=1)
     elif event_type == "randomization":
-        polarity_loss_occurred = get_data(a_cell, None, "polarity_loss_occurred")
+        polarity_loss_occurred = hardio.get_data(cell_index, None, "polarity_loss_occurred", storefile_path)
         relevant_data_per_tstep =  np.any(polarity_loss_occurred, axis=1)
         
     if relevant_data_per_tstep == None:
@@ -511,11 +450,11 @@ def calculate_null_hypothesis_probability(velocities):
     
 # =================================================================================
 
-def get_ic_contact_data(a_cell, max_tstep=None):
+def get_ic_contact_data(cell_index, storefile_path, max_tstep=None):
     if max_tstep == None:
-        ic_contact_data = get_data(a_cell, None, "intercellular_contact_factor_magnitudes")
+        ic_contact_data = hardio.get_data(cell_index, None, "intercellular_contact_factor_magnitudes", storefile_path)
     else:
-        ic_contact_data = get_data_until_timestep(a_cell, max_tstep, "intercellular_contact_factor_magnitudes")
+        ic_contact_data = hardio.get_data_until_timestep(cell_index, max_tstep, "intercellular_contact_factor_magnitudes", storefile_path)
     
     return np.array(np.any(ic_contact_data > 1, axis=1), dtype=np.int64)
 
@@ -742,22 +681,20 @@ def determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period
 
 # ===========================================================================
 
-def calculate_run_and_tumble_statistics(a_cell, cell_centroids = None, max_tstep=None, significant_difference=2.5e-2, tumble_period_polarization_threshold=0.5):
-    num_nodes = a_cell.num_nodes
+def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, cell_centroids = None, max_tstep=None, significant_difference=2.5e-2, tumble_period_polarization_threshold=0.5):
 
-    rac_membrane_active_per_tstep = get_data_until_timestep(a_cell, max_tstep, "rac_membrane_active")
-    rho_membrane_active_per_tstep = get_data_until_timestep(a_cell, max_tstep, "rho_membrane_active")
+    rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
+    rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
     
     polarization_score_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
         
     tumble_periods_info = determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period_polarization_threshold)
     
-    T = a_cell.T/60.0
     tumble_periods = [(tpi[1] - tpi[0])*T for tpi in tumble_periods_info]
     run_periods = [(tpi[2] - tpi[1])*T for tpi in tumble_periods_info]
     
     if cell_centroids == None:
-        cell_centroids = calculate_cell_centroids_for_all_time(a_cell)*(a_cell.L/1e-6)
+        cell_centroids = calculate_cell_centroids_for_all_time(cell_index, storefile_path)*L
 
     tumble_centroids = [cell_centroids[tpi[0]:tpi[1]] for tpi in tumble_periods_info]
     net_tumble_displacement_mags = [np.linalg.norm(tccs[-1] - tccs[0]) for tccs in tumble_centroids]

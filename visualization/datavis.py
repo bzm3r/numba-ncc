@@ -7,30 +7,26 @@ Created on Sat Jun  6 12:21:52 2015
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.markers as mrk
 import analysis.utilities as analysis_utils
 import os
 import colors
-import general.general as general
 import scipy.spatial as space
 import core.geometry as geometry
+import core.hardio as hardio
 
 # ==============================================================================
 
-def graph_delaunay_triangulation_area_over_time(cells, save_dir=None, save_name=None, max_tstep=None):
-    num_cells = len(cells)
-    
+def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, save_name=None, max_tstep=None):
     # assuming that num_timepoints, T is same for all cells
     if max_tstep == None:
-        max_tstep = cells[0].num_timepoints
-    T = cells[0].T
+        max_tstep = num_timepoints
         
     all_cell_centroids_per_tstep = np.zeros((max_tstep, num_cells, 2), dtype=np.float64)
     
     # ------------------------
     
-    for ci, a_cell in enumerate(cells):
-        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)
+    for ci in xrange(num_cells):
+        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
@@ -49,7 +45,7 @@ def graph_delaunay_triangulation_area_over_time(cells, save_dir=None, save_name=
     init_area = convex_hull_areas_per_tstep[0]
     
     normalized_convex_hull_areas_per_tstep = convex_hull_areas_per_tstep/init_area
-    timepoints = np.arange(normalized_convex_hull_areas_per_tstep.shape[0])*T/60.0
+    timepoints = np.arange(normalized_convex_hull_areas_per_tstep.shape[0])*T
     
     fig, ax = plt.subplots()
     
@@ -76,27 +72,49 @@ def graph_avg_neighbour_distance_over_time():
 
 # ==============================================================================
 
-def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=None):
-    num_cells = len(cells)
+def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name):
+    timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
+    group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]
+    group_centroid_y_coords = relative_group_centroid_per_tstep[:,1]
     
+    fig, ax = plt.subplots()
+    
+    ax.plot(timepoints, group_centroid_x_coords, label="x-coord", color='b')
+    ax.plot(timepoints, group_centroid_y_coords, label="y-coord", color='g')
+    ax.set_ylabel("group centroid position (micrometers)")
+    ax.set_xlabel("time (min.)")
+    
+    # Put a legend to the right of the current axis
+    ax.legend(loc='best')
+    ax.grid(which=u'both')
+    
+    if save_dir == None or save_name == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        fig.savefig(os.path.join(save_dir, "group_" + save_name + '.png'), forward=True)
+        plt.close(fig)
+        plt.close("alll")
+    
+        
+# ==============================================================================
+
+def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):    
     # assuming that num_timepoints, T is same for all cells
     if max_tstep == None:
-        max_tstep = cells[0].num_timepoints
-    T = cells[0].T
+        max_tstep = num_timepoints
         
     all_cell_centroids_per_tstep = np.zeros((max_tstep, num_cells, 2), dtype=np.float64)
     
     # ------------------------
     
-    for ci, a_cell in enumerate(cells):
-        L = a_cell.L
-        
-        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*(L/1e-6)
+    for ci in xrange(num_cells):
+        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
     # ------------------------
-    
+        
     group_centroid_per_tstep = np.array([geometry.calculate_cluster_centroid(cell_centroids) for cell_centroids in all_cell_centroids_per_tstep])
     
     init_group_centroid_per_tstep = group_centroid_per_tstep[0]
@@ -143,25 +161,28 @@ def graph_centroid_related_data(cells, save_dir=None, save_name=None, max_tstep=
         plt.close(fig)
         plt.close("all")
         
+    if make_group_centroid_drift_graph == True:
+        graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name)
+        
 # ==============================================================================
 
-def graph_cell_velocity_over_time(cells, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0):
+def graph_cell_velocity_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0):
     fig, ax = plt.subplots()
 
-    for ci, a_cell in enumerate(cells):
-        T = a_cell.T
-        num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
-        timepoints, cell_speeds = analysis_utils.calculate_cell_speeds_until_tstep(a_cell, max_tstep=max_tstep)
+    for ci in xrange(num_cells):
+        L = cell_Ls[ci]
+#        num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
+        timepoints, cell_speeds = analysis_utils.calculate_cell_speeds_until_tstep(ci, max_tstep, storefile_path, T, L)
         
-        chunky_timepoints = general.chunkify_numpy_array(timepoints, num_timesteps_to_average_over)
-        chunky_cell_speeds = general.chunkify_numpy_array(cell_speeds, num_timesteps_to_average_over)
+#        chunky_timepoints = general.chunkify_numpy_array(timepoints, num_timesteps_to_average_over)
+#        chunky_cell_speeds = general.chunkify_numpy_array(cell_speeds, num_timesteps_to_average_over)
+#        
+#        averaged_cell_speeds = np.average(chunky_cell_speeds, axis=1)
         
-        averaged_cell_speeds = np.average(chunky_cell_speeds, axis=1)
+#        resized_timepoints = np.arange(num_timesteps_to_average_over*chunky_timepoints.shape[0])
+#        corresponding_cell_speeds = np.repeat(averaged_cell_speeds, num_timesteps_to_average_over)
         
-        resized_timepoints = np.arange(num_timesteps_to_average_over*chunky_timepoints.shape[0])
-        corresponding_cell_speeds = np.repeat(averaged_cell_speeds, num_timesteps_to_average_over)
-        
-        ax.plot(timepoints[::30], cell_speeds[::30], color=colors.color_list20[ci%20], label="cell {}".format(a_cell.cell_label))
+        ax.plot(timepoints[::30], cell_speeds[::30], color=colors.color_list20[ci%20], label="cell {}".format(ci))
 
     # Shrink current axis by 20%
     box = ax.get_position()
@@ -184,28 +205,29 @@ def graph_cell_velocity_over_time(cells, save_dir=None, save_name=None, max_tste
         
 # ==============================================================================
 
-def graph_important_cell_variables_over_time(a_cell, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None):
+def graph_important_cell_variables_over_time(T, cell_index, storefile_path, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    #randomization_kicks = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
+    #randomization_kicks = hardio.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
     #randomization_kicks = np.any(randomization_kicks, axis=1)
     
-    rac_mem_active = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_active')
+    # cell_index, max_tstep, data_label, storefile_path
+    rac_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_active', storefile_path)
     sum_rac_act_over_nodes = np.sum(rac_mem_active, axis=1)
     
-    rac_mem_inactive = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_membrane_inactive')
+    rac_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_inactive', storefile_path)
     sum_rac_inact_over_nodes = np.sum(rac_mem_inactive, axis=1)
     
-    rho_mem_active = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_active')
+    rho_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_active', storefile_path)
     sum_rho_act_over_nodes = np.sum(rho_mem_active, axis=1)
     
-    rho_mem_inactive = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_membrane_inactive')
+    rho_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_inactive', storefile_path)
     sum_rho_inact_over_nodes = np.sum(rho_mem_inactive, axis=1)
     
-    rac_cyt_gdi = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rac_cytosolic_gdi_bound')[:, 0]
-    rho_cyt_gdi = analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'rho_cytosolic_gdi_bound')[:, 0]
+    rac_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_cytosolic_gdi_bound', storefile_path)[:, 0]
+    rho_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_cytosolic_gdi_bound', storefile_path)[:, 0]
     
-    time_points = a_cell.T*np.arange(rac_mem_active.shape[0])/60.0
+    time_points = T*np.arange(rac_mem_active.shape[0])
     
     #for data_set, line_style, data_label in zip([randomization_kicks, sum_rac_act_over_nodes, sum_rho_act_over_nodes, sum_rac_inact_over_nodes, sum_rho_inact_over_nodes, rac_cyt_gdi, rho_cyt_gdi], ['k', 'b', 'r', 'b--', 'r--', 'c', 'm'], ['random kick', 'rac_active', 'rho_active', 'rac_inactive', 'rho_inactive', 'rac_gdi', 'rho_gdi'])
     
@@ -237,11 +259,11 @@ def graph_important_cell_variables_over_time(a_cell, polarity_scores=None, save_
         
 # ==============================================================================
 
-def graph_strains(a_cell, save_dir=None, save_name=None, max_tstep=None):
+def graph_strains(T, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    average_strains = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'local_strains'), axis=1)*100
-    time_points = a_cell.T*np.arange(average_strains.shape[0])/60.0
+    average_strains = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)*100
+    time_points = T*np.arange(average_strains.shape[0])
     
     ax.plot(time_points, average_strains, 'k', label='avg_strains')
         
@@ -265,20 +287,20 @@ def graph_strains(a_cell, save_dir=None, save_name=None, max_tstep=None):
         
 # ==============================================================================
     
-def graph_rates(a_cell, save_dir=None, save_name=None, max_tstep=None):
+def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdgtp_rho_baseline, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    average_kgtp_rac = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rac'), axis=1)/a_cell.kgtp_rac_baseline
+    average_kgtp_rac = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kgtp_rac', storefile_path), axis=1)/kgtp_rac_baseline
     avg_average_kgtp_rac = np.average(average_kgtp_rac)
-    average_kgtp_rho = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kgtp_rho'), axis=1)/a_cell.kgtp_rho_baseline
+    average_kgtp_rho = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kgtp_rho', storefile_path), axis=1)/kgtp_rho_baseline
     avg_average_kgtp_rho = np.average(average_kgtp_rho)
-    average_kdgtp_rac = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rac'), axis=1)/a_cell.kdgtp_rac_baseline
+    average_kdgtp_rac = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kdgtp_rac', storefile_path), axis=1)/kdgtp_rac_baseline
     avg_average_kdgtp_rac = np.average(average_kdgtp_rac)
-    average_kdgtp_rho = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'kdgtp_rho'), axis=1)/a_cell.kdgtp_rho_baseline
+    average_kdgtp_rho = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kdgtp_rho', storefile_path), axis=1)/kdgtp_rho_baseline
     avg_average_kdgtp_rho = np.average(average_kdgtp_rho)
-    average_coa_signal = np.average(analysis_utils.get_data_until_timestep(a_cell, max_tstep, 'coa_signal'), axis=1) + 1.0
+    average_coa_signal = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'coa_signal', storefile_path), axis=1) + 1.0
     
-    time_points = a_cell.T*np.arange(average_kgtp_rac.shape[0])/60.0
+    time_points = T*np.arange(average_kgtp_rac.shape[0])/60.0
     
     for data_set, line_style, data_label in zip([average_kgtp_rac, average_kgtp_rho, average_kdgtp_rac, average_kdgtp_rho, average_coa_signal], ['b-.', 'r-.', 'c-.', 'm-.', 'b'], ['avg_kgtp_rac ({})'.format(avg_average_kgtp_rac), 'avg_kgtp_rho ({})'.format(avg_average_kgtp_rho), 'avg_kdgtp_rac ({})'.format(avg_average_kdgtp_rac), 'avg_kdgtp_rho ({})'.format(avg_average_kdgtp_rho), 'average_coa_signal']):
         ax.plot(time_points, data_set, line_style, label=data_label)
@@ -301,8 +323,8 @@ def graph_rates(a_cell, save_dir=None, save_name=None, max_tstep=None):
         plt.close(fig)
         plt.close("all")
         
-def graph_run_and_tumble_statistics(a_cell, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2):
-    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = analysis_utils.calculate_run_and_tumble_statistics(a_cell, significant_difference=significant_difference)
+def graph_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2):
+    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = analysis_utils.calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, significant_difference=significant_difference)
     
     num_run_and_tumble_periods = len(tumble_periods)
     
@@ -394,7 +416,9 @@ def graph_run_and_tumble_statistics(a_cell, save_dir=None, save_name=None, max_t
         plt.close("all")
 
 
-def autolabel(rects):
+# ==============================================================================
+
+def autolabel(ax, rects):
     # attach some text labels
     for rect in rects:
         height = rect.get_height()
@@ -405,7 +429,7 @@ def autolabel(rects):
 # ==============================================================================
     
 def graph_data_label_over_time(ax, a_cell, data_label):            
-    data = analysis_utils.get_data(a_cell, None, data_label)
+    data = hardio.get_data(a_cell, None, data_label)
     sum_data_over_nodes = np.sum(data, axis=1)
     
     ax.plot(sum_data_over_nodes, label=data_label)
@@ -415,7 +439,7 @@ def graph_data_label_over_time(ax, a_cell, data_label):
 # ==============================================================================
     
 def graph_data_label_average_node_over_time(ax, a_cell, data_label):            
-    data = analysis_utils.get_data(a_cell, None, data_label)
+    data = hardio.get_data(a_cell, None, data_label)
     average_data_over_nodes = np.average(data, axis=1)
     
     ax.plot(average_data_over_nodes, label=data_label)
@@ -457,17 +481,16 @@ def graph_data_labels_average_node_over_time(a_cell, data_labels, save_dir=None,
 
 # ==============================================================================
 
-def graph_pre_post_contact_cell_kinematics(a_cell, save_dir=None, save_name=None, max_tstep=None, timeperiod_in_seconds_over_which_to_calculate_kinematics=2.0):
+def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, timeperiod_in_seconds_over_which_to_calculate_kinematics=2.0):
     
-    T = a_cell.T
     delta_tsteps = np.ceil(timeperiod_in_seconds_over_which_to_calculate_kinematics/T)
     min_tsteps_needed_to_calculate_kinematics = 2*delta_tsteps
     
-    cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(a_cell, max_tstep)*a_cell.L/1e-6
+    cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(cell_index, max_tstep, storefile_path)*L
     
     data_max_tstep = cell_centroids_per_tstep.shape[0] - 1
     
-    ic_contact_data = analysis_utils.get_ic_contact_data(a_cell, max_tstep)
+    ic_contact_data = analysis_utils.get_ic_contact_data(cell_index, storefile_path, max_tstep=max_tstep)
     
     contact_start_end_arrays = analysis_utils.determine_contact_start_ends(ic_contact_data)
     #print "contact_start_end_arrays: ", contact_start_end_arrays
@@ -561,23 +584,29 @@ def graph_pre_post_contact_cell_kinematics(a_cell, save_dir=None, save_name=None
         fig1.set_size_inches(8, 12)
         fig1.savefig(os.path.join(save_dir, save_name + "_acc.png"), forward=True)
         
-        plt.close(fig)
+        plt.close(fig0)
+        plt.close(fig1)
         plt.close("all")
         
 # ==========================================================================================
         
-def present_collated_single_cell_motion_data(extracted_results, experiment_dir=None):
+def present_collated_single_cell_motion_data(T, L, num_cells, storefile_path, experiment_dir):
     labels = []
     cell_centroid_data = []
     persistences = []
     
-    for r in extracted_results:
-        labels.append((r[0], r[1]))
-        cell_centroid_data.append(r[2])
-        persistences.append(r[3])
-            
-    mean_persistence = np.round(np.average(persistences), decimals=3)
-    std_persistence = np.round(np.std(persistences), decimals=3)
+    for ci in xrange(num_cells):
+        this_cell_centroid_data = analysis_utils.calculate_cell_centroids_for_all_time(ci, storefile_path)
+        cell_centroid_data.append(this_cell_centroid_data)
+        persistences.append(analysis_utils.calculate_persistence(this_cell_centroid_data))
+    
+    
+    if len(persistences) > 0:
+        mean_persistence = np.round(np.average(persistences), decimals=3)
+        std_persistence = np.round(np.std(persistences), decimals=3)
+    else:
+        mean_persistence = None
+        std_persistence = None
     
     fig, ax = plt.subplots()
     
@@ -591,8 +620,11 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir=N
             possible_max_data_lim = np.max(np.abs(ccs))
             if  possible_max_data_lim > max_data_lim:
                 max_data_lim = possible_max_data_lim
-                
-        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%20], label='({}, {}), ps.={}'.format(label[0], label[1], np.round(persistences[i], decimals=3)))
+        
+        if len(persistences) > 0:
+            ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%20], label='({}, {}), ps.={}'.format(label[0], label[1], np.round(persistences[i], decimals=3)))
+        else:
+            ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%20], label='({}, {}), ps.={}'.format(label[0], label[1], None))
         
     ax.set_title("persistence: {} +/- {}".format(mean_persistence, std_persistence))
     

@@ -10,11 +10,26 @@ import environment
 import geometry
 
 #g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_gdi_bound_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
-g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 'stiffness', 'force', 'factor']
+
+
+mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
+
+chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'external_gradient_on_nodes']
+
+info_labels = mech_labels + chem_labels
+
+for index, label in enumerate(info_labels):
+    exec("{}_index = {}".format(label, repr(index)))
+    
+num_info_labels = len(mech_labels + chem_labels)
+
+info_indices_dict = {x: i for i, x in enumerate(mech_labels + chem_labels)}
+
 g_rate_labels = ['kgtp', 'kdgtp', 'kgdi', 'kdgdi']
 
-chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred']
-mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
+g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 'stiffness', 'force', 'factor']
+
+
 
 #-----------------------------------------------------------------
 
@@ -85,7 +100,7 @@ def make_chem_mech_space_parameter_defn_dict(C_total=3e6, H_total=1.5e6, num_nod
         
     eta = (sigma_rac*length_edge_resting)/max_protrusive_node_velocity
     #--------------
-    factor_migr_bdry_contact = 3
+    factor_migr_bdry_contact = 10
     #--------------
     stiffness_cytoplasmic = 0.00001 # Newtons
     #--------------
@@ -100,12 +115,12 @@ def make_chem_mech_space_parameter_defn_dict(C_total=3e6, H_total=1.5e6, num_nod
 
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), verbose=False, environment_filepath="A:\\cncell\\experiment-storage\\", parameter_overrides=[], num_nodes_per_cell=15, T=(1/0.5), integration_params={}, closeness_dist_squared_criteria=(0.5e-6)**2, persist=True, parameter_explorer_run=False):
+def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", parameter_overrides=[], num_nodes=15, T=(1/0.5), integration_params={}, closeness_dist_squared_criteria=(0.5e-6)**2, persist=True, parameter_explorer_run=False):
     
     for cell_group_defn_index, user_cell_group_defn in enumerate(user_cell_group_defns):
         C_total = user_cell_group_defn['C_total']
         H_total = user_cell_group_defn['H_total']
-        num_nodes = num_nodes_per_cell
+        num_nodes = num_nodes
         num_cells = user_cell_group_defn['num_cells']
         init_cell_radius = user_cell_group_defn['init_cell_radius']
         cell_group_bounding_box = user_cell_group_defn['cell_group_bounding_box']
@@ -114,6 +129,6 @@ def make_environment_given_user_cell_group_defns(environment_name='', num_timest
         
         user_cell_group_defn.update([('chem_mech_space_defns', parameter_dict)])
     
-    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_filepath=environment_filepath, verbose=verbose, num_nodes_per_cell=num_nodes_per_cell, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run)
+    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, num_nodes=num_nodes, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn)
     
     return the_environment
