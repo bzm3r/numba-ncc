@@ -457,7 +457,7 @@ def calculate_bounding_box_polygon(polygon):
     return bounding_box_polygon
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)    
+#@nb.jit(nopython=True)    
 def create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, environment_cells_node_coords):
     bounding_box_polygon_array = np.zeros((num_cells, 4), dtype=np.float64)
 
@@ -970,12 +970,25 @@ def check_if_line_segment_from_node_self_intersects(start_coord, end_coord, poly
         return 0
         
 # -----------------------------------------------------------------
+
+@nb.jit(nopython=True)
+def close_to_zero(x, tol):
+    if x < 0:
+        x = -1*x
         
+    if x < tol:
+        return True
+    
+    return False
+
+# -----------------------------------------------------------------
+
 @nb.jit(nopython=True)
 def check_if_line_segment_intersects_box(start, end, min_x, min_y, max_x, max_y):
     
     sx, sy = start
     ex, ey = end
+    
     
     if sx < min_x and ex < min_x:
         return False
@@ -986,7 +999,21 @@ def check_if_line_segment_intersects_box(start, end, min_x, min_y, max_x, max_y)
     if sy > max_y and ey > max_y:
         return False
         
-    m = (sy - ey)/(sx - ex)
+    dx = sx - ex
+    if close_to_zero(dx, 1e-16):
+        if min_y < sy < max_y and min_y < ey < max_y:
+            return False
+        else:
+            return True
+    
+    dy = sy - ey
+    if close_to_zero(dy, 1e-16):
+        if min_x < sx < max_x and min_x < ex < max_x:
+            return False
+        else:
+            return True
+            
+    m = dy/dx
     b = sy - m*sx
 
     if min_y < m*min_x + b < max_y:
@@ -1086,7 +1113,7 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
     
 # -----------------------------------------------------------------
     
-@nb.jit(nopython=True)      
+#@nb.jit(nopython=True)      
 def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
@@ -1118,8 +1145,9 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells
     return distance_squared_matrix, line_segment_intersection_matrix
 
 # -----------------------------------------------------------------
-    
-@nb.jit(nopython=True)      
+# what if point array is flattened?
+#     
+@nb.jit(nopython=True)
 def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
     
     # 1 if info has been updated, 0 otherwise

@@ -345,7 +345,7 @@ class Environment():
                 datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                #datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 #datavis.graph_pre_post_contact_cell_kinematics(self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
             
             cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
