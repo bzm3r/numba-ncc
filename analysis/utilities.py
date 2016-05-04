@@ -639,7 +639,7 @@ def analyze_single_cell_motion(experiment_dir, subexperiment_index, rpt_number, 
 
 # ===========================================================================
 
-def determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period_polarization_threshold):
+def determine_run_and_tumble_periods(avg_strain_per_tstep, polarization_score_per_tstep, tumble_period_strain_threshold,  tumble_period_polarization_threshold):
     num_tsteps = polarization_score_per_tstep.shape[0]
     
     tumble_period_found = False
@@ -649,7 +649,7 @@ def determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period
     run_and_tumble_pair_index = 0
     
     for ti in range(num_tsteps):
-        this_tstep_is_tumble = polarization_score_per_tstep[ti] <= tumble_period_polarization_threshold
+        this_tstep_is_tumble = polarization_score_per_tstep[ti] <= tumble_period_polarization_threshold and avg_strain_per_tstep[ti] <= tumble_period_strain_threshold
         
         if tumble_period_found == False and this_tstep_is_tumble:
             tumble_period_found = True
@@ -681,14 +681,14 @@ def determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period
 
 # ===========================================================================
 
-def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, cell_centroids = None, max_tstep=None, significant_difference=2.5e-2, tumble_period_polarization_threshold=0.5):
+def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, cell_centroids = None, max_tstep=None, significant_difference=2.5e-2, tumble_period_strain_threshold=0.3, tumble_period_polarization_threshold=0.6):
 
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
     rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
-    
+    avg_strain_per_tstep = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, "local_strains", storefile_path), axis=1)
     polarization_score_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
         
-    tumble_periods_info = determine_run_and_tumble_periods(polarization_score_per_tstep, tumble_period_polarization_threshold)
+    tumble_periods_info = determine_run_and_tumble_periods(avg_strain_per_tstep, polarization_score_per_tstep, tumble_period_strain_threshold, tumble_period_polarization_threshold)
     
     tumble_periods = [(tpi[1] - tpi[0])*T for tpi in tumble_periods_info]
     run_periods = [(tpi[2] - tpi[1])*T for tpi in tumble_periods_info]
