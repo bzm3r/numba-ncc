@@ -321,7 +321,8 @@ class Cell():
         self.force_adh_mag = force_adh_mag/(self.ML_T2)
         
         self.closeness_dist_squared_criteria = closeness_dist_squared_criteria/(self.L**2)
-        
+        closeness_dist = np.sqrt(self.closeness_dist_squared_criteria)
+        self.force_adh_mag_slope = (0.0 - 1.0)*self.force_adh_mag/closeness_dist
         self.eta = (eta/self.num_nodes)/(self.ML_T2/(self.L/self.T))
                 
         # ======================================================
@@ -487,7 +488,7 @@ class Cell():
         intercellular_contact_factors = np.ones(self.num_nodes)
         migr_bdry_contact_factors = np.ones(self.num_nodes)
         
-        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.area_resting, self.stiffness_cytoplasmic, np.zeros((self.num_nodes, self.num_cells_in_environment), dtype=np.int64), np.zeros((self.num_nodes, self.num_cells_in_environment, 2), dtype=np.int64))
+        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.force_adh_mag_slope, self.area_resting, self.stiffness_cytoplasmic, np.zeros((self.num_nodes, self.num_cells_in_environment), dtype=np.int64), np.zeros((self.num_nodes, self.num_cells_in_environment, 2), dtype=np.int64))
         
         self.system_info[access_index, :, parameterorg.local_strains_index] = local_strains
         
@@ -682,7 +683,12 @@ class Cell():
         rac_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_inactive_index]
         rho_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_inactive_index]
         
+        print "rac_membrane_actives: ", rac_membrane_actives
+        print "rho_membrane_actives: ", rho_membrane_actives
+        
         transduced_coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, self.coa_distribution_exponent, self.coa_sensitivity_exponent, self.coa_belt_offset, self.cell_dependent_coa_signal_strengths, intercellular_squared_dist_array, line_segment_intersection_matrix)
+        
+        print "transduced_coa_signals: ", transduced_coa_signals
         
         max_coa = np.max(transduced_coa_signals)
         min_coa = np.min(transduced_coa_signals)
@@ -775,18 +781,20 @@ class Cell():
 #        print "rho_membrane_actives: ", rho_membrane_actives
 #        print "length_edge_resting: ", self.length_edge_resting
 #        print "stiffness_edge: ", self.stiffness_edge
-#        print "force_rac_mag: ", self.force_rac_mag
-#        print "force_rho_mag: ", self.force_rho_mag
+        print "force_rac_mag: ", self.force_rac_max_mag
+        print "force_rho_mag: ", self.force_rho_max_mag
+        print "force_adh_mag: ", self.force_adh_mag
 #        print "area_resting: ", self.area_resting
 #        print "stiffness_cytoplasmic: ", self.stiffness_cytoplasmic
         
         # num_nodes, num_cells, this_ci, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_mag, area_resting, stiffness_cytoplasmic, intercellular_squared_dist_array, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node
         
-        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(num_nodes, self.num_cells_in_environment, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node)
+        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(num_nodes, self.num_cells_in_environment, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.force_adh_mag_slope, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node)
         
 #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
 #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
-#        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
+        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
+        printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
 #        printing_fcyto = np.round(np.linalg.norm(F_cytoplasmic, axis=1)*1e6, decimals=2)
 #        
 #        current_area = abs(geometry.calculate_polygon_area(num_nodes, node_coords))
@@ -794,7 +802,9 @@ class Cell():
         
 #        print "edge_forces_plus: ", np.min(printing_efplus), np.max(printing_efplus)
 #        print "edge_forces_minus: ", np.min(printing_efminus), np.max(printing_efminus) 
-#        print "F_rgtpase: ", np.min(printing_frgtpase), np.max(printing_frgtpase)
+        print "F_rgtpase: ", printing_frgtpase
+        print "F_adh: ", printing_fadh
+        print "F_rgtpase/F_adh: ", np.max(printing_frgtpase)/np.max(printing_fadh)
 #        print "area_strain: ", area_strain
 #        print "stiff_cyto: ", self.stiffness_cytoplasmic
 #        print "F_cytoplasmic: ", np.min(printing_fcyto), np.max(printing_fcyto) 
@@ -841,7 +851,7 @@ class Cell():
         
         transduced_coa_signals = self.system_info[access_index, :, parameterorg.coa_signal_index]
         
-        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes
+        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_mag, self.force_adh_mag_slope, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes
 
 # -----------------------------------------------------------------
     def trim_system_info(self, environment_tpoint):
@@ -890,7 +900,8 @@ class Cell():
             external_gradient_on_nodes = np.where(np.array([external_gradient_fn(x*self.L/1e-6) for x in this_cell_node_x_coords]) < 0, np.zeros(num_nodes), np.array([external_gradient_fn(x*self.L/1e-6) for x in this_cell_node_x_coords]))
             
             rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, external_gradient_on_nodes)
-          
+            
+            print "executing dynamics!"
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]

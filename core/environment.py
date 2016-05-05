@@ -457,13 +457,18 @@ class Environment():
                     if self.environment_dir != None:
                         self.dump_to_store(t)
                         
-                    if t in produce_intermediate_visuals:
-                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-                        if not os.path.exists(visuals_save_dir):
-                            os.makedirs(visuals_save_dir)
+                if t != 0 and t in produce_intermediate_visuals:
+                    self.last_timestep_when_environment_hard_saved = t
+                    
+                    if self.environment_dir != None:
+                        self.dump_to_store(t)
                         
-                        print "Making intermediate visuals..."
-                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
+                    visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
+                    if not os.path.exists(visuals_save_dir):
+                        os.makedirs(visuals_save_dir)
+                    
+                    print "Making intermediate visuals..."
+                    self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
                     
                 cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells)
                 self.curr_tpoint += 1

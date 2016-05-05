@@ -299,7 +299,6 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, coa_distributio
                 this_node_other_cell_relevant_line_seg_intersection_slice = this_node_relevant_line_seg_intersection_slice[other_ci]
                 this_node_other_cell_relevant_dist_squared_slice = this_node_relevant_dist_squared_slice[other_ci]
                 for other_ni in range(num_nodes):
-                    #if dist_squared_between_nodes < cutoff_distance_squared:
                     line_segment_between_node_intersects_polygon = this_node_other_cell_relevant_line_seg_intersection_slice[other_ni]
                     if line_segment_between_node_intersects_polygon == 1:
                         transduced_coa_signal = 0.0
@@ -315,13 +314,12 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, coa_distributio
                         if coa_sensitivity_exponent > 0:
                             transduced_coa_signal = untransduced_coa_signal
                         else:
-                            transduced_coa_signal = 0.0#np.exp(coa_sensitivity_exponent*(coa_at_belt_offset - untransduced_coa_signal))
-                            
+                            transduced_coa_signal = 0.0                         
                             if transduced_coa_signal > 1.0:
                                 transduced_coa_signal = 0.0
-#                else:
-#                    transduced_coa_signal = 0.0
-                    
+
+                    if np.isnan(transduced_coa_signal):
+                        raise StandardError("Caught a fish!")
                     this_node_coa_signal = this_node_coa_signal + transduced_coa_signal*signal_strength
 
                     
