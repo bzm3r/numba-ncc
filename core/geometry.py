@@ -836,20 +836,20 @@ def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coo
     
     if 0 < proj_for_plus1 and proj_for_plus1 < 1:
         closest_pc = closest_nc + proj_for_plus1*closest_to_plus1
-        return calculate_squared_dist(this_nc, closest_pc)
+        return calculate_squared_dist(this_nc, closest_pc), closest_pc
         
     proj_for_minus1 = calculate_projection_of_a_on_b(closest_to_this, closest_to_minus1)
     if 0 < proj_for_minus1 and proj_for_minus1 < 1:
         closest_pc = closest_nc + proj_for_minus1*closest_to_minus1
-        return calculate_squared_dist(this_nc, closest_pc)
+        return calculate_squared_dist(this_nc, closest_pc), closest_pc
     
-    return -1
+    return -1, np.zeros(2, dtype=np.float64)
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
 def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria, all_cells_node_coords, are_nodes_inside_other_cells):
     close_points_exist = np.zeros((num_nodes, num_cells), dtype=np.int64)
-    
+    close_points = np.zeros((num_nodes, num_cells, 2), dtype=np.float64)
     closest_nodes_on_other_cells = find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array)
     
     for ni in range(num_nodes):
@@ -866,18 +866,20 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
                 
                 if closest_node_dist < closeness_dist_squared_criteria:
                     close_points_exist[ni][ci] = 1
+                    close_points[ni][ci] = other_cell_node_coords[closest_ni]
                     continue
                 
-                closest_point_dist = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
+                closest_point_dist, closest_point_coords = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
                 if closest_point_dist != -1 and closest_point_dist < closeness_dist_squared_criteria:
                     close_points_exist[ni][ci] = 1
+                    close_points[ni][ci] = closest_point_coords
                     continue
                 
                 if are_nodes_inside_other_cells[ni][ci] == 1:
-                    close_points_exist[ni][ci] = 1
+                    close_points_exist[ni][ci] = 2
                     continue
         
-    return close_points_exist
+    return close_points_exist, close_points
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  

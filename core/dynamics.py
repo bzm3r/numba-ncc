@@ -51,31 +51,32 @@ def calculate_sum(num_elements, sequence):
     return result
     
 # ----------------------------------------------------------------------------------------
-@nb.jit(nopython=True)  
-def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes, num_nodal_phase_vars, num_ode_cellwide_phase_vars, nodal_rac_membrane_active_index, length_edge_resting, nodal_rac_membrane_inactive_index, nodal_rho_membrane_active_index, nodal_rho_membrane_inactive_index, nodal_x_index, nodal_y_index, kgtp_rac_baseline, kdgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rho_baseline, kgtp_rac_autoact_baseline, kgtp_rho_autoact_baseline, kdgtp_rho_mediated_rac_inhib_baseline, kdgtp_rac_mediated_rho_inhib_baseline, kgdi_rac, kdgdi_rac, kgdi_rho, kdgdi_rho, threshold_rac_autoact, threshold_rho_autoact, threshold_rho_mediated_rac_inhib, threshold_rac_mediated_rho_inhib, exponent_rac_autoact, exponent_rho_autoact, exponent_rho_mediated_rac_inhib, exponent_rac_mediated_rho_inhib, diffusion_const_active, diffusion_const_inactive, nodal_intercellular_contact_factor_magnitudes_index, nodal_migr_bdry_contact_index, space_at_node_factor_rac, space_at_node_factor_rho, eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic, transduced_coa_signals, space_physical_bdry_polygon, exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, intercellular_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier,  tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, tension_fn_type, external_gradient_on_nodes, intercellular_contact_factor_magnitudes):
+    
+#@nb.jit(nopython=True)  
+def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes, num_nodal_phase_vars, num_ode_cellwide_phase_vars, nodal_rac_membrane_active_index, length_edge_resting, nodal_rac_membrane_inactive_index, nodal_rho_membrane_active_index, nodal_rho_membrane_inactive_index, nodal_x_index, nodal_y_index, kgtp_rac_baseline, kdgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rho_baseline, kgtp_rac_autoact_baseline, kgtp_rho_autoact_baseline, kdgtp_rho_mediated_rac_inhib_baseline, kdgtp_rac_mediated_rho_inhib_baseline, kgdi_rac, kdgdi_rac, kgdi_rho, kdgdi_rho, threshold_rac_autoact, threshold_rho_autoact, threshold_rho_mediated_rac_inhib, threshold_rac_mediated_rho_inhib, exponent_rac_autoact, exponent_rho_autoact, exponent_rho_mediated_rac_inhib, exponent_rac_mediated_rho_inhib, diffusion_const_active, diffusion_const_inactive, nodal_intercellular_contact_factor_magnitudes_index, nodal_migr_bdry_contact_index, space_at_node_factor_rac, space_at_node_factor_rho, eta, num_cells, all_cells_node_coords, intercellular_squared_dist_array, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_mag, area_resting, stiffness_cytoplasmic, transduced_coa_signals, space_physical_bdry_polygon, exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, intercellular_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, tension_fn_type, external_gradient_on_nodes, intercellular_contact_factor_magnitudes):
             
     nodal_phase_vars = state_array
     
     rac_mem_active_start_index = nodal_rac_membrane_active_index*num_nodes
     rac_mem_active_end_index = rac_mem_active_start_index + num_nodes
     
-    rac_membrane_active = nodal_phase_vars[rac_mem_active_start_index:rac_mem_active_end_index]
+    rac_membrane_actives = nodal_phase_vars[rac_mem_active_start_index:rac_mem_active_end_index]
     
     
     rac_mem_inactive_start_index = nodal_rac_membrane_inactive_index*num_nodes
     rac_mem_inactive_end_index = rac_mem_inactive_start_index + num_nodes
     
-    rac_membrane_inactive = nodal_phase_vars[rac_mem_inactive_start_index:rac_mem_inactive_end_index]
+    rac_membrane_inactives = nodal_phase_vars[rac_mem_inactive_start_index:rac_mem_inactive_end_index]
     
     rho_mem_active_start_index = nodal_rho_membrane_active_index*num_nodes
     rho_mem_active_end_index = rho_mem_active_start_index + num_nodes
     
-    rho_membrane_active = nodal_phase_vars[rho_mem_active_start_index:rho_mem_active_end_index]
+    rho_membrane_actives = nodal_phase_vars[rho_mem_active_start_index:rho_mem_active_end_index]
     
     rho_mem_inactive_start_index = nodal_rho_membrane_inactive_index*num_nodes
     rho_mem_inactive_end_index = rho_mem_inactive_start_index + num_nodes
     
-    rho_membrane_inactive = nodal_phase_vars[rho_mem_inactive_start_index:rho_mem_inactive_end_index]
+    rho_membrane_inactives = nodal_phase_vars[rho_mem_inactive_start_index:rho_mem_inactive_end_index]
     
     nodal_x_start_index = nodal_x_index*num_nodes
     nodal_x_end_index = nodal_x_start_index + num_nodes
@@ -89,11 +90,10 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     node_coords = general_utilities.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
     
-    rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_active) - calculate_sum(num_nodes, rac_membrane_inactive)
-    rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_active) - calculate_sum(num_nodes, rho_membrane_inactive)                            
+    rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_actives) - calculate_sum(num_nodes, rac_membrane_inactives)
+    rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_actives) - calculate_sum(num_nodes, rho_membrane_inactives)                            
                         
-    # calculate forces
-    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, node_coords, rac_membrane_active, rho_membrane_active, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic)
+    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, num_cells, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_mag, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node)
     
     F_x = F[:, 0]
     F_y = F[:, 1]
@@ -106,23 +106,23 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
         if local_strain > 0:
             only_tensile_local_strains[i] = local_strain
     
-    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
-    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, rho_membrane_active,  exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
+    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
+    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, rho_membrane_actives,  exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
 
     kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
     
-    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, rho_membrane_active, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
+    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
     
-    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
+    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, rac_membrane_actives, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
     
     kdgdis_rho = kdgdi_rho*np.ones(num_nodes, dtype=np.float64)
     
     edgeplus_lengths = geometry.calculate_edgeplus_lengths(num_nodes, node_coords)
     
-    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, rac_membrane_active, diffusion_const_active, edgeplus_lengths)
-    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rac_membrane_inactive, diffusion_const_inactive, edgeplus_lengths)
-    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, rho_membrane_active, diffusion_const_active, edgeplus_lengths)
-    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rho_membrane_inactive, diffusion_const_active, edgeplus_lengths)
+    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, rac_membrane_actives, diffusion_const_active, edgeplus_lengths)
+    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rac_membrane_inactives, diffusion_const_inactive, edgeplus_lengths)
+    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, rho_membrane_actives, diffusion_const_active, edgeplus_lengths)
+    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rho_membrane_inactives, diffusion_const_active, edgeplus_lengths)
     
     delta_rac_activated = np.zeros(num_nodes, dtype=np.float64)
     delta_rac_inactivated = np.zeros(num_nodes, dtype=np.float64)
@@ -177,18 +177,18 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     for ni in range(num_nodes):                
         # finish assigning chemistry variables
-        delta_rac_activated[ni] = kgtps_rac[ni]*rac_membrane_inactive[ni]
-        delta_rac_inactivated[ni] = kdgtps_rac[ni]*rac_membrane_active[ni]
+        delta_rac_activated[ni] = kgtps_rac[ni]*rac_membrane_inactives[ni]
+        delta_rac_inactivated[ni] = kdgtps_rac[ni]*rac_membrane_actives[ni]
         
         delta_rac_on = kdgdis_rac[ni]*rac_cytosolic_gdi_bound
-        delta_rac_off = kgdi_rac*rac_membrane_inactive[ni]
+        delta_rac_off = kgdi_rac*rac_membrane_inactives[ni]
         delta_rac_cytosol_to_membrane[ni] = delta_rac_on - delta_rac_off
         
-        delta_rho_activated[ni] = kgtps_rho[ni]*rho_membrane_inactive[ni]
-        delta_rho_inactivated[ni] = kdgtps_rho[ni]*rho_membrane_active[ni]
+        delta_rho_activated[ni] = kgtps_rho[ni]*rho_membrane_inactives[ni]
+        delta_rho_inactivated[ni] = kdgtps_rho[ni]*rho_membrane_actives[ni]
         
         delta_rho_on = kdgdis_rho[ni]*rho_cytosolic_gdi_bound
-        delta_rho_off = kgdi_rho*rho_membrane_inactive[ni]
+        delta_rho_off = kgdi_rho*rho_membrane_inactives[ni]
         delta_rho_cytosol_to_membrane[ni] = delta_rho_on - delta_rho_off
         
     # set up ode array
@@ -217,23 +217,23 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 #    rac_mem_active_start_index = nodal_rac_membrane_active_index*num_nodes
 #    rac_mem_active_end_index = rac_mem_active_start_index + num_nodes
 #    
-#    rac_membrane_active = nodal_phase_vars[rac_mem_active_start_index:rac_mem_active_end_index]
+#    rac_membrane_actives = nodal_phase_vars[rac_mem_active_start_index:rac_mem_active_end_index]
 #    
 #    
 #    rac_mem_inactive_start_index = nodal_rac_membrane_inactive_index*num_nodes
 #    rac_mem_inactive_end_index = rac_mem_inactive_start_index + num_nodes
 #    
-#    rac_membrane_inactive = nodal_phase_vars[rac_mem_inactive_start_index:rac_mem_inactive_end_index]
+#    rac_membrane_inactives = nodal_phase_vars[rac_mem_inactive_start_index:rac_mem_inactive_end_index]
 #    
 #    rho_mem_active_start_index = nodal_rho_membrane_active_index*num_nodes
 #    rho_mem_active_end_index = rho_mem_active_start_index + num_nodes
 #    
-#    rho_membrane_active = nodal_phase_vars[rho_mem_active_start_index:rho_mem_active_end_index]
+#    rho_membrane_actives = nodal_phase_vars[rho_mem_active_start_index:rho_mem_active_end_index]
 #    
 #    rho_mem_inactive_start_index = nodal_rho_membrane_inactive_index*num_nodes
 #    rho_mem_inactive_end_index = rho_mem_inactive_start_index + num_nodes
 #    
-#    rho_membrane_inactive = nodal_phase_vars[rho_mem_inactive_start_index:rho_mem_inactive_end_index]
+#    rho_membrane_inactives = nodal_phase_vars[rho_mem_inactive_start_index:rho_mem_inactive_end_index]
 #    
 #    nodal_x_start_index = nodal_x_index*num_nodes
 #    nodal_x_end_index = nodal_x_start_index + num_nodes
@@ -247,11 +247,11 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 #    
 #    node_coords = general_utilities.make_node_coords_array_given_xs_and_ys(num_nodes, nodal_x, nodal_y)
 #    
-#    rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_active) - calculate_sum(num_nodes, rac_membrane_inactive)
-#    rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_active) - calculate_sum(num_nodes, rho_membrane_inactive)                            
+#    rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_actives) - calculate_sum(num_nodes, rac_membrane_inactives)
+#    rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_actives) - calculate_sum(num_nodes, rho_membrane_inactives)                            
 #                        
 #    # calculate forces
-#    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, node_coords, rac_membrane_active, rho_membrane_active, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic)
+#    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, area_resting, stiffness_cytoplasmic)
 #    
 #    F_x = F[:, 0]
 #    F_y = F[:, 1]
@@ -264,23 +264,23 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 #        if local_strain > 0:
 #            only_tensile_local_strains[i] = local_strain
 #    
-#    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
-#    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, rho_membrane_active,  exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
+#    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
+#    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, rho_membrane_actives,  exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
 #
 #    kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
 #    
-#    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, rho_membrane_active, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
+#    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
 #    
-#    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
+#    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, rac_membrane_actives, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
 #    
 #    kdgdis_rho = kdgdi_rho*np.ones(num_nodes, dtype=np.float64)
 #    
 #    edgeplus_lengths = geometry.calculate_edgeplus_lengths(num_nodes, node_coords)
 #    
-#    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, rac_membrane_active, diffusion_const_active, edgeplus_lengths)
-#    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rac_membrane_inactive, diffusion_const_inactive, edgeplus_lengths)
-#    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, rho_membrane_active, diffusion_const_active, edgeplus_lengths)
-#    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rho_membrane_inactive, diffusion_const_active, edgeplus_lengths)
+#    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, rac_membrane_actives, diffusion_const_active, edgeplus_lengths)
+#    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rac_membrane_inactives, diffusion_const_inactive, edgeplus_lengths)
+#    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, rho_membrane_actives, diffusion_const_active, edgeplus_lengths)
+#    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rho_membrane_inactives, diffusion_const_active, edgeplus_lengths)
 #    
 #    delta_rac_activated = np.zeros(num_nodes, dtype=np.float64)
 #    delta_rac_inactivated = np.zeros(num_nodes, dtype=np.float64)
@@ -344,18 +344,18 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 #    
 #    for ni in range(num_nodes):                
 #        # finish assigning chemistry variables
-#        delta_rac_activated[ni] = kgtps_rac[ni]*rac_membrane_inactive[ni]
-#        delta_rac_inactivated[ni] = kdgtps_rac[ni]*rac_membrane_active[ni]
+#        delta_rac_activated[ni] = kgtps_rac[ni]*rac_membrane_inactives[ni]
+#        delta_rac_inactivated[ni] = kdgtps_rac[ni]*rac_membrane_actives[ni]
 #        
 #        delta_rac_on = kdgdis_rac[ni]*rac_cytosolic_gdi_bound
-#        delta_rac_off = kgdi_rac*rac_membrane_inactive[ni]
+#        delta_rac_off = kgdi_rac*rac_membrane_inactives[ni]
 #        delta_rac_cytosol_to_membrane[ni] = delta_rac_on - delta_rac_off
 #        
-#        delta_rho_activated[ni] = kgtps_rho[ni]*rho_membrane_inactive[ni]
-#        delta_rho_inactivated[ni] = kdgtps_rho[ni]*rho_membrane_active[ni]
+#        delta_rho_activated[ni] = kgtps_rho[ni]*rho_membrane_inactives[ni]
+#        delta_rho_inactivated[ni] = kdgtps_rho[ni]*rho_membrane_actives[ni]
 #        
 #        delta_rho_on = kdgdis_rho[ni]*rho_cytosolic_gdi_bound
-#        delta_rho_off = kgdi_rho*rho_membrane_inactive[ni]
+#        delta_rho_off = kgdi_rho*rho_membrane_inactives[ni]
 #        delta_rho_cytosol_to_membrane[ni] = delta_rho_on - delta_rho_off
 #        
 #    # set up ode array

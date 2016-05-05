@@ -223,7 +223,7 @@ class Environment():
             
             cell_index = cell_index_offset + cell_number
             
-            cells_in_group.append(cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, C_total, H_total, init_node_coords, self.max_timepoints_on_ram, biased_rgtpase_distrib_defn=bias_defn, intercellular_contact_factor_magnitudes=intercellular_contact_factor_magnitudes, radius_resting=init_cell_radius, length_edge_resting=length_edge_resting, area_resting=area_resting, space_physical_bdry_polygon=self.space_physical_bdry_polygon, space_migratory_bdry_polygon=self.space_migratory_bdry_polygon, cell_dependent_coa_signal_strengths=coa_factor_production_rates, verbose=self.verbose, **chem_mech_space_defns))
+            cells_in_group.append(cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, C_total, H_total, self.num_cells, init_node_coords, self.max_timepoints_on_ram, biased_rgtpase_distrib_defn=bias_defn, intercellular_contact_factor_magnitudes=intercellular_contact_factor_magnitudes, radius_resting=init_cell_radius, length_edge_resting=length_edge_resting, area_resting=area_resting, space_physical_bdry_polygon=self.space_physical_bdry_polygon, space_migratory_bdry_polygon=self.space_migratory_bdry_polygon, cell_dependent_coa_signal_strengths=coa_factor_production_rates, verbose=self.verbose, **chem_mech_space_defns))
             
         return cells_in_group, init_cell_bounding_boxes
 # -----------------------------------------------------------------
