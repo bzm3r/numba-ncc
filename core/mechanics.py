@@ -150,8 +150,15 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, forc
         for ci in range(num_cells):
             if ci != this_ci:
                 if close_point_on_other_cells_to_each_node_exists[ni][ci] == 1:
-                    dist = close_point_on_other_cells_to_each_node_exists[ni][ci]
-                    force_mag = force_adh_mag + force_adh_mag_slope*dist
+                    dist = close_point_on_other_cells_to_each_node_dist[ni][ci]
+                    force_mag = force_adh_mag_slope*(dist*dist) - force_adh_mag_slope*dist
+#                    print "----------------------"
+#                    print "ni: ", ni
+#                    print "dist: ", dist
+#                    print "force_mag: ", force_mag
+#                    print "----------------------"
+                    if force_mag < 0:
+                        force_mag = 0
                     force_vec = geometry.normalize_2D_vector(all_cell_centres[ci] - this_node)*force_mag
                     force_vec = force_vec*force_mag
                     this_node_F_adh += force_vec

@@ -8,7 +8,7 @@ import analysis
 import general
 import visualization.datavis as datavis
 
-EXPERIMENT_NUMBER = 100
+EXPERIMENT_NUMBER = 300
 experiment_description = "4-cells, testing adhesion"
 
 BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
@@ -16,18 +16,18 @@ DATE_STR = "2016_MAY_05"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
-TOTAL_TIME = 3*60*60#32000#(60*60)*3
+TOTAL_TIME = 6*60*60#32000#(60*60)*3
 TIMESTEP_LENGTH = (1/0.5)                                                                                                                                                                                                                                                                                                                                           
 NUM_TIMESTEPS = int(TOTAL_TIME/TIMESTEP_LENGTH)
 NUM_NODES = 16
 
 CELL_DIAMETER = 40
 NUM_BOXES = 1
-NUM_CELLS_IN_BOXES = [2]
+NUM_CELLS_IN_BOXES = [4]
 
 boxes = np.arange(NUM_BOXES)
-box_heights = [1*CELL_DIAMETER, 4*CELL_DIAMETER]
-box_widths = [3*CELL_DIAMETER, 4*CELL_DIAMETER]
+box_heights = [2*CELL_DIAMETER, 4*CELL_DIAMETER]
+box_widths = [2*CELL_DIAMETER, 4*CELL_DIAMETER]
 
 x_space_between_boxes = [2*CELL_DIAMETER, 2*CELL_DIAMETER, 2*CELL_DIAMETER]
 
@@ -48,7 +48,7 @@ box_y_offsets = [y_offset, y_offset - 2*CELL_DIAMETER, y_offset + 2*CELL_DIAMETE
 WIDTH_MIGR_CORRIDOR = 20*box_widths[0]
 HEIGHT_MIGR_CORRIDOR = box_heights[0]
 
-make_migr_poly = True
+make_migr_poly = False
 make_phys_poly = False
 
 space_migratory_bdry_polygon, space_physical_bdry_polygon = make_space_polygons(make_migr_poly, make_phys_poly, WIDTH_MIGR_CORRIDOR, HEIGHT_MIGR_CORRIDOR, x_offset, y_offset)
@@ -84,7 +84,7 @@ parameter_override_dicts_per_sub_experiment += [[update_pd_with_keyvalue_tuples(
 
 # sub-experiment 0
 experiment_descriptions_per_subexperiment += ['''set randomization_time_mean = 30, which means that mean run time is 30 minutes''']
-coa = 8*0.05*0.5*0.5
+coa = 16*0.05*0.5*0.5
 other_cil = 4
 self_cil = 3
 cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment += [[dict([(x, coa) for x in boxes])]*NUM_BOXES]#[1.85]

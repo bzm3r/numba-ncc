@@ -322,7 +322,13 @@ class Cell():
         
         self.closeness_dist_squared_criteria = closeness_dist_squared_criteria/(self.L**2)
         closeness_dist = np.sqrt(self.closeness_dist_squared_criteria)
-        self.force_adh_mag_slope = (0.0 - 1.0)*self.force_adh_mag/closeness_dist
+        # f = ax^2 + bx
+        # f_adh_mag = a(0.5)^2 + b*0.5
+        # 0 = a + b
+        # a = -b
+        # f_adh_mag = a(0.5)^2 - a*0.5
+        # f_adh_mag/(0.5^2 + 0.5) = a
+        self.force_adh_mag_slope = self.force_adh_mag/(0.25*self.closeness_dist_squared_criteria - 0.5*closeness_dist)
         self.eta = (eta/self.num_nodes)/(self.ML_T2/(self.L/self.T))
                 
         # ======================================================
