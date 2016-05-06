@@ -31,15 +31,23 @@ def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, st
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
     # ------------------------
-        
-    delaunay_triangulations_per_tstep = [space.Delaunay(all_cell_centroids) for all_cell_centroids in all_cell_centroids_per_tstep]
+                
+    delaunay_triangulations_per_tstep = []
+    for cell_centroids in all_cell_centroids_per_tstep:
+        try:
+            delaunay_triangulations_per_tstep.append(space.Delaunay(cell_centroids))
+        except:
+            delaunay_triangulations_per_tstep.append(None)
     
     convex_hull_areas_per_tstep = []
     
     for dt, all_cell_centroids in zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep):
-        simplices = all_cell_centroids[dt.simplices]
-        simplex_areas = np.array([geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
-        convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
+        if dt != None:
+            simplices = all_cell_centroids[dt.simplices]
+            simplex_areas = np.array([geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
+            convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
+        else:
+            convex_hull_areas_per_tstep.append(np.nan)
         
     convex_hull_areas_per_tstep = np.array(convex_hull_areas_per_tstep)
     init_area = convex_hull_areas_per_tstep[0]

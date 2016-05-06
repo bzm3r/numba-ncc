@@ -16,12 +16,11 @@ import core.hardio as hardio
 @nb.jit(nopython=True)
 def calculate_centroids_per_tstep(node_coords_per_tstep):
     num_tsteps = node_coords_per_tstep.shape[0]
-    num_nodes = node_coords_per_tstep.shape[1]
     
     centroids_per_tstep = np.zeros((num_tsteps, 2), dtype=np.float64)
     
     for ti in range(num_tsteps):
-        cx, cy = geometry.calculate_centroid(num_nodes, node_coords_per_tstep[ti])
+        cx, cy = geometry.calculate_centroid(node_coords_per_tstep[ti])
         centroids_per_tstep[ti][0] = cx
         centroids_per_tstep[ti][1] = cy
         

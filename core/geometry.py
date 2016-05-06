@@ -16,7 +16,8 @@ def calculate_cluster_centroid(points):
 
 # ----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_centroid(num_vertices, polygon_coords):
+def calculate_centroid(polygon_coords):
+    num_vertices = polygon_coords.shape[0]
     A = calculate_polygon_area(num_vertices, polygon_coords)
     
     Cx = 0.0
@@ -41,7 +42,19 @@ def calculate_centroid(num_vertices, polygon_coords):
     centroid[1] = area_factor*Cy
     
     return centroid
+
+# ----------------------------------------------------------------
+
+@nb.jit(nopython=True)
+def calculate_centroids(polygons):
+    num_polygons = polygons.shape[0]
+    centroids = np.zeros((num_polygons, 2), dtype=np.float64)
+    
+    for pi in range(num_polygons):
+        centroids[pi] = calculate_centroid(polygons[pi])
         
+    return centroids
+     
 # ----------------------------------------------------------------
 @nb.jit(nopython=True)  
 def determine_rotation_matrix_to_rotate_vector1_to_lie_along_vector2(vector1, vector2):
@@ -849,7 +862,7 @@ def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coo
 @nb.jit(nopython=True)      
 def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria, all_cells_node_coords, are_nodes_inside_other_cells):
     close_points_exist = np.zeros((num_nodes, num_cells), dtype=np.int64)
-    close_points = np.zeros((num_nodes, num_cells, 2), dtype=np.float64)
+    close_points_dist = np.zeros((num_nodes, num_cells), dtype=np.float64)
     closest_nodes_on_other_cells = find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array)
     
     for ni in range(num_nodes):
@@ -864,22 +877,22 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
                 
                 other_cell_node_coords = all_cells_node_coords[ci]
                 
-                if closest_node_dist < closeness_dist_squared_criteria:
-                    close_points_exist[ni][ci] = 1
-                    close_points[ni][ci] = other_cell_node_coords[closest_ni]
-                    continue
-                
                 closest_point_dist, closest_point_coords = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
                 if closest_point_dist != -1 and closest_point_dist < closeness_dist_squared_criteria:
                     close_points_exist[ni][ci] = 1
-                    close_points[ni][ci] = closest_point_coords
+                    close_points_dist[ni][ci] = calculate_2D_vector_mag(closest_point_coords - this_nc)
+                    continue
+                
+                if closest_node_dist < closeness_dist_squared_criteria:
+                    close_points_exist[ni][ci] = 1
+                    close_points_dist[ni][ci] = calculate_2D_vector_mag(other_cell_node_coords[closest_ni] - this_nc)
                     continue
                 
                 if are_nodes_inside_other_cells[ni][ci] == 1:
                     close_points_exist[ni][ci] = 2
                     continue
         
-    return close_points_exist, close_points
+    return close_points_exist, close_points_dist
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
