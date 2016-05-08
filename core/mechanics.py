@@ -141,7 +141,7 @@ def calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_activ
 
 # ----------------------------------------------------------------------------
 @nb.jit(nopython=True)
-def calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, force_adh_mag_slope, node_coords, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node_dist, all_cell_centres):
+def calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, force_adh_mag_slope, node_coords, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, all_cell_centres):
     F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
     
     for ni in range(num_nodes):
@@ -150,7 +150,7 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, forc
         for ci in range(num_cells):
             if ci != this_ci:
                 if close_point_on_other_cells_to_each_node_exists[ni][ci] == 1:
-                    dist = close_point_on_other_cells_to_each_node_dist[ni][ci]
+                    dist = geometry.calculate_2D_vector_mag(close_point_on_other_cells_to_each_node[ni][ci] - this_node)
                     force_mag = force_adh_mag_slope*(dist*dist) - force_adh_mag_slope*dist
 #                    print "----------------------"
 #                    print "ni: ", ni
@@ -168,13 +168,13 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, forc
     
 # ----------------------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_forces(num_nodes, num_cells, this_ci, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_mag, force_adh_mag_slope, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node_dist, all_cell_centres):
+def calculate_forces(num_nodes, num_cells, this_ci, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_mag, force_adh_mag_slope, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, all_cell_centres):
     
     unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(node_coords)
     
     rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(num_nodes, node_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors)
     
-    F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, force_adh_mag_slope, node_coords, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node_dist, all_cell_centres)
+    F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, force_adh_mag, force_adh_mag_slope, node_coords, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, all_cell_centres)
 
     F_cytoplasmic = calculate_cytoplasmic_force(num_nodes, node_coords, area_resting, stiffness_cytoplasmic, unit_inside_pointing_vectors)
     
