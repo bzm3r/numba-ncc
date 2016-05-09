@@ -214,6 +214,11 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
         
         ode_array[i + 5*num_nodes] = delta_nodal_y[i]
         
+#    print_array = np.array([x for x in np.abs([delta_nodal_x, delta_nodal_y]).flatten() if x > 0.0])
+#    print_array_average = np.average(print_array)
+#    print_max, print_min = np.max(print_array), np.min(print_array)
+#    
+#    print "ode_array: ", print_max, print_min, print_max/print_array_average, print_min/print_array_average    
     return ode_array
     
 #@nb.jit(nopython=True)  

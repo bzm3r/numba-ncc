@@ -291,9 +291,9 @@ class Cell():
         # self.L = length_edge_resting -> self.L = L
         # No, I do not think there is a need to do so because
 
-        self.L = length_edge_resting
+        self.L = 0.1*(sigma_rac*length_edge_resting/eta)*T#length_edge_resting
         self.T = T
-        self.ML_T2 = stiffness_edge
+        self.ML_T2 = stiffness_edge#sigma_rac*length_edge_resting#stiffness_edge
         
         self.skip_dynamics = skip_dynamics
         
@@ -306,7 +306,7 @@ class Cell():
         self.diffusion_const_active = diffusion_const_active*(self.T/(self.L**2))
         self.diffusion_const_inactive = diffusion_const_inactive*(self.T/(self.L**2))
         self.stiffness_edge = stiffness_edge/(self.ML_T2)
-        self.stiffness_cytoplasmic = 1e10*stiffness_edge#stiffness_cytoplasmic/(self.ML_T2)
+        self.stiffness_cytoplasmic = (1e10*self.ML_T2)*self.stiffness_edge#stiffness_cytoplasmic/(self.ML_T2)
         
         # ======================================================
         
@@ -891,7 +891,7 @@ class Cell():
         dynamics.print_var = True
         
         if self.skip_dynamics == False:            
-            intercellular_squared_dist_array = intercellular_squared_dist_array/(self.L*self.L)
+            intercellular_squared_dist_array = intercellular_squared_dist_array/(self.L**2)
             all_cells_node_coords = all_cells_node_coords/self.L
             
             num_cells = all_cells_node_coords.shape[0]
