@@ -1,18 +1,14 @@
 from __future__ import division
 import numpy as np
-import os
-import shutil
-import time
 from general.exec_utils import *
 import analysis
-import general
 import visualization.datavis as datavis
 
 EXPERIMENT_NUMBER = 1
 
 experiment_description = "4-cells, testing adhesion"
 
-BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
+BASE_OUTPUT_DIR = "C:\\cygwin\\home\\Brian Merchant\\numba-ncc\\output\\"
 DATE_STR = "2016_MAY_10"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)

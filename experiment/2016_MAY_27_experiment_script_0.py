@@ -1,23 +1,19 @@
 from __future__ import division
 import numpy as np
-import os
-import shutil
-import time
 from general.exec_utils import *
 import analysis
-import general
 import visualization.datavis as datavis
 
-EXPERIMENT_NUMBER = 10
+EXPERIMENT_NUMBER = 1
 
 experiment_description = "4-cells, testing adhesion"
 
-BASE_OUTPUT_DIR = "A:\\numba-ncc\\output\\"
-DATE_STR = "2016_MAY_08"
+BASE_OUTPUT_DIR = "C:\\cygwin\\home\\Brian Merchant\\numba-ncc\\output\\"
+DATE_STR = "2016_MAY_27"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
-TOTAL_TIME = 16000#20*60*60#32000#(60*60)*3
+TOTAL_TIME = 250#20*60*60#32000#(60*60)*3
 TIMESTEP_LENGTH = (1/0.5)                                                                                                                                                                                                                                                                                                                                           
 NUM_TIMESTEPS = int(TOTAL_TIME/TIMESTEP_LENGTH)
 NUM_NODES = 16
@@ -34,8 +30,8 @@ x_space_between_boxes = [2*CELL_DIAMETER, 2*CELL_DIAMETER, 2*CELL_DIAMETER]
 
 physical_bdry_polygon_extra = 5
 
-x_offset = 500#10
-y_offset = 500#10
+x_offset = 125#10
+y_offset = 125#10
 
 box_x_offsets = [0]*NUM_BOXES
 for bi in boxes:
@@ -76,20 +72,10 @@ other_cil = 4
 self_cil = 3
 cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment += [[dict([(x, coa) for x in boxes])]*NUM_BOXES]#[1.85]
 intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment += [{0: {0: self_cil}}]
-biased_rgtpase_distrib_defn_dicts += [[{'default': ['unbiased random', np.array([-np.pi/4, np.pi/4]) + np.pi/32 + np.pi, 0.1]}]]
+biased_rgtpase_distrib_defn_dicts += [[{0: ['biased uniform', np.array([-np.pi/4, np.pi/4]) + np.pi/32 + np.pi, 0.2], 1: ['biased uniform', -1*(np.array([-np.pi/4, np.pi/4]) + np.pi/32 + np.pi), 0.2]}]]
 external_gradient_fn_per_subexperiment += [lambda x: 0.0]
-parameter_override_dicts_per_sub_experiment += [[update_pd_with_keyvalue_tuples(base_parameter_dict, [('halfmax_coa_sensing_dist_multiplier', 4.4, 4.4), ('kdgdi_rac_estimate_multiplier', 0.2, 1.0*0.2), ('kdgdi_rho_estimate_multiplier', 0.2, 1.0*0.2), ('kgdi_rac_estimate_multiplier', 1, 1.0), ('kgdi_rho_estimate_multiplier', 1, 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500, 800), ('kdgtp_rac_multiplier', 20, 20*(2/3.)), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000, 500), ('kdgtp_rho_multiplier', 20, 20*(2/3.)), ('kgtp_rac_autoact_multiplier', 250, 1.1*200*1.8), ('kgtp_rac_multiplier', 20, 20), ('kgtp_rho_autoact_multiplier', 125, 105*1.0), ('kgtp_rho_multiplier', 20, 20), ('max_protrusive_node_velocity', 1e-06, 0.25e-6), ('randomization', False, True), ('randomization_scheme', 0, 0), ('randomization_time_mean', 20, 45), ('randomization_time_variance_factor', 0.25, 0.1), ('sigma_rac', 2e-05, 3.2e-05), ('sigma_rho_multiplier', 0.2, 0.2), ('force_adh_mag', 0.0, 6.4e-11), ('force_rac_exp', 3, 3), ('force_rho_exp', 3, 3), ('force_rac_threshold_multiplier', 0.5, 0.9*1.75), ('force_rho_threshold_multiplier', 0.5, 0.9*1.75), ('skip_dynamics', False, False), ('stiffness_edge', 5e-10, 3.8e-10), ('tension_fn_type', 0, 5), ('tension_mediated_rac_inhibition_half_strain', 0.05, 0.05*0.6), ('threshold_rac_autoact_multiplier', 0.5, 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5, 0.5), ('threshold_rho_autoact_multiplier', 0.5, 0.3), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5, 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25, -1), ('coa_belt_offset_multiplier', 1.5, 1.5)]), update_pd_with_keyvalue_tuples(base_parameter_dict, [('skip_dynamics', False, True)])]]
+parameter_override_dicts_per_sub_experiment += [[update_pd_with_keyvalue_tuples(base_parameter_dict, [('halfmax_coa_sensing_dist_multiplier', 4.4, 4.4), ('kdgdi_rac_estimate_multiplier', 0.2, 1.0*0.2), ('kdgdi_rho_estimate_multiplier', 0.2, 1.0*0.2), ('kgdi_rac_estimate_multiplier', 1, 1.0), ('kgdi_rho_estimate_multiplier', 1, 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500, 800), ('kdgtp_rac_multiplier', 20, 20*(2/3.)), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000, 500), ('kdgtp_rho_multiplier', 20, 20*(2/3.)), ('kgtp_rac_autoact_multiplier', 250, 1.1*200*1.8), ('kgtp_rac_multiplier', 20, 20), ('kgtp_rho_autoact_multiplier', 125, 105*1.0), ('kgtp_rho_multiplier', 20, 20), ('max_protrusive_node_velocity', 1e-06, 0.25e-6), ('randomization', False, False), ('randomization_scheme', 0, 0), ('randomization_time_mean', 20, 45), ('randomization_time_variance_factor', 0.25, 0.1), ('sigma_rac', 2e-05, 3.2e-05), ('sigma_rho_multiplier', 0.2, 0.2), ('force_adh_mag', 0.0, 6.4e-11), ('force_rac_exp', 3, 3), ('force_rho_exp', 3, 3), ('force_rac_threshold_multiplier', 0.5, 0.9*1.75), ('force_rho_threshold_multiplier', 0.5, 0.9*1.75), ('skip_dynamics', False, False), ('stiffness_edge', 5e-10, 3.8e-10), ('tension_fn_type', 0, 5), ('tension_mediated_rac_inhibition_half_strain', 0.05, 0.05*0.6), ('threshold_rac_autoact_multiplier', 0.5, 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5, 0.5), ('threshold_rho_autoact_multiplier', 0.5, 0.3), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5, 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25, -1), ('coa_belt_offset_multiplier', 1.5, 1.5)]), update_pd_with_keyvalue_tuples(base_parameter_dict, [('skip_dynamics', False, True)])]]
 
-# sub-experiment 0
-experiment_descriptions_per_subexperiment += ['''set randomization_time_mean = 30, which means that mean run time is 30 minutes''']
-coa = 32*0.05*0.5*0.5
-other_cil = 4
-self_cil = 3
-cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment += [[dict([(x, coa) for x in boxes])]*NUM_BOXES]#[1.85]
-intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment += [{0: {0: self_cil}}]
-biased_rgtpase_distrib_defn_dicts += [[{'default': ['unbiased random', np.array([-np.pi/4, np.pi/4]) + np.pi/32 + np.pi, 0.1]}]]
-external_gradient_fn_per_subexperiment += [lambda x: 0.0]
-parameter_override_dicts_per_sub_experiment += [[update_pd_with_keyvalue_tuples(base_parameter_dict, [('halfmax_coa_sensing_dist_multiplier', 4.4, 4.4), ('kdgdi_rac_estimate_multiplier', 0.2, 1.0*0.2), ('kdgdi_rho_estimate_multiplier', 0.2, 1.0*0.2), ('kgdi_rac_estimate_multiplier', 1, 1.0), ('kgdi_rho_estimate_multiplier', 1, 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500, 800), ('kdgtp_rac_multiplier', 20, 20*(2/3.)), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000, 500), ('kdgtp_rho_multiplier', 20, 20*(2/3.)), ('kgtp_rac_autoact_multiplier', 250, 1.1*200*1.8), ('kgtp_rac_multiplier', 20, 20), ('kgtp_rho_autoact_multiplier', 125, 105*1.0), ('kgtp_rho_multiplier', 20, 20), ('max_protrusive_node_velocity', 1e-06, 0.25e-6), ('randomization', False, True), ('randomization_scheme', 0, 0), ('randomization_time_mean', 20, 45), ('randomization_time_variance_factor', 0.25, 0.1), ('sigma_rac', 2e-05, 3.2e-05), ('sigma_rho_multiplier', 0.2, 0.2), ('force_adh_mag', 0.0, 0.75*6.4e-11), ('force_rac_exp', 3, 3), ('force_rho_exp', 3, 3), ('force_rac_threshold_multiplier', 0.5, 0.9*1.75), ('force_rho_threshold_multiplier', 0.5, 0.9*1.75), ('skip_dynamics', False, False), ('stiffness_edge', 5e-10, 3.8e-10), ('tension_fn_type', 0, 5), ('tension_mediated_rac_inhibition_half_strain', 0.05, 0.05*0.6), ('threshold_rac_autoact_multiplier', 0.5, 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5, 0.5), ('threshold_rho_autoact_multiplier', 0.5, 0.3), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5, 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25, -1), ('coa_belt_offset_multiplier', 1.5, 1.5)]), update_pd_with_keyvalue_tuples(base_parameter_dict, [('skip_dynamics', False, True)])]]
 
 num_sub_experiments = len(parameter_override_dicts_per_sub_experiment)
 
@@ -120,12 +106,12 @@ if __name__ == '__main__':
     NUM_EXPERIMENT_REPEATS = 1
     if RUN_EXPERIMENTS == True:
         global_scale = 1
-        plate_height = 1000#40*3*1.2
-        plate_width = 1000#4*40*10*1.2
+        plate_height = 250#40*3*1.2
+        plate_width = 250#4*40*10*1.2
         
-        animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*TIMESTEP_LENGTH), ('short_video_duration', 2.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True)])
+        animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5*1.5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*TIMESTEP_LENGTH), ('short_video_duration', 2.0), ('timestep_length', TIMESTEP_LENGTH), ('fps', 30), ('string_together_pictures_into_animation', True)])
     
-        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, animation_settings=animation_settings, produce_intermediate_visuals=np.arange(np.int(NUM_TIMESTEPS/1000.0))*1000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=False)
+        run_experiments(experiment_dir, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=NUM_EXPERIMENT_REPEATS, animation_settings=animation_settings, produce_intermediate_visuals=np.arange(np.int(NUM_TIMESTEPS/1000.0))*1000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True)
         
     if False == True:
         # ================================================================
