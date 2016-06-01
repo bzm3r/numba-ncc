@@ -289,7 +289,7 @@ class Environment():
 
 # -----------------------------------------------------------------
             
-    def execute_system_dynamics_in_random_sequence(self, t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells):        
+    def execute_system_dynamics_in_random_sequence(self, t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells):        
         execution_sequence = self.cell_indices
         np.random.shuffle(execution_sequence)
         
@@ -308,11 +308,14 @@ class Environment():
                     print "Time step: {}/{}".format(t, self.num_timesteps)
                     print "Executing dyanmics for cell: ", cell_index
             
-            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
+            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
+                this_cell_forces = current_cell.curr_node_forces*current_cell.ML_T2
+                
                 environment_cells_node_coords[cell_index] = this_cell_coords
+                environment_cells_node_forces[cell_index] = this_cell_forces
                 
                 cells_bounding_box_array[cell_index] = geometry.calculate_polygon_bounding_box(this_cell_coords)
                 cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
@@ -324,7 +327,7 @@ class Environment():
                     if cell_index == last_cell_index:
                         print "="*40
                 
-        return cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords
+        return cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces
             
 # -----------------------------------------------------------------
             
@@ -422,6 +425,7 @@ class Environment():
         
         environment_cells = self.cells_in_environment
         environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
+        environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
         
         cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
         cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
@@ -469,8 +473,8 @@ class Environment():
                     
                     print "Making intermediate visuals..."
                     self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
-                    
-                cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells)
+                
+                cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells)
                 self.curr_tpoint += 1
         else:
             raise StandardError("max_t has already been reached.")
