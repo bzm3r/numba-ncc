@@ -279,8 +279,8 @@ class Cell():
         self.C_total = C_total
         self.H_total = H_total
         
-        self.C = 0.5*C_total/self.num_nodes
-        self.H = 0.5*H_total/self.num_nodes
+        #self.C_total = 0.5*C_total/self.num_nodes
+        #self.H_total = 0.5*H_total/self.num_nodes
         
         self.num_nodes = init_node_coords.shape[0]
         self.num_cells_in_environment = num_cells_in_environment
