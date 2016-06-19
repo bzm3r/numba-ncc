@@ -144,123 +144,6 @@ class Cell():
                  closeness_dist_squared_criteria=None,
                  cell_dependent_coa_signal_strengths=None, halfmax_coa_sensing_dist=None, coa_sensitivity_percent_drop_over_cell_diameter=None, coa_belt_offset=None, randomization=None, randomization_scheme=None, randomization_time_mean=None, randomization_time_variance_factor=None, randomization_magnitude=None, skip_dynamics=None, randomization_rgtpase_distrib_strength=None, tension_mediated_rac_inhibition_half_strain=None, tension_fn_type=None, tension_mediated_rac_hill_exponent=None, verbose=False):
         """Constructor for Cell object.
-        
-        :param integration_params: integration algorithm parameters
-        :type integration_params: ``dict``
-        
-        :param max_t: max time (in seconds) until which integration will be performed
-        :type max_t: float
-
-        :param T: non-dimensionalizing factor for time, which will also determine the length of the time interval over which spatial dynamics is considered stable
-        :type T: float
-
-        :param L: non-dimensionalizing factor for space
-        :type L: float
-        
-        :param C_total: amount of Rac inside a cell during migration (assumed to be a constant) 
-        :type C_total: float
-        
-        :param H_total: amount of Rho inside a cell during migration (assumed to be a constant)
-        :type H_total: float
-
-        :param init_node_coords: sequence of coordinates
-        :type init_node_coords: numpy.array, float
-        
-        :param length_edge_resting: resting edge length (assumed to be the same for all edges)
-        :type length_edge_resting: float
-        
-        :param biased_rgtpase_distrib_defn: boolean switch to determine if initial Rho GTPase distribution should be randomized or not; if the distribution is not randomized, it will be symmetric
-        :type biased_rgtpase_distrib_defn: boolean
-        
-        :param init_rgtpase_cytosol_gdi_bound_frac: fraction of Rho GTPase species that is cytosolic and bound to GDI, initially
-        :type init_rgtpase_cytosol_gdi_bound_frac: float
-        
-        :param init_rgtpase_cytosol_membrane_inactive_frac: fraction of Rho GTPase species that is membrane bound and inactive, initially
-        :type init_rgtpase_cytosol_membrane_inactive_frac: float
-        
-        :param init_rgtpase_cytosol_membrane_active_frac: fraction of Rho GTPase species that is membrane bound and active, initially
-        :type init_rgtpase_cytosol_membrane_active_frac: float
-        
-        :param kgtp_rac_baseline:  baseline Rho activation rate
-        :type kgtp_rac_baseline: float
-        
-        :param kdgtp_rac_baseline: baseline Rho inactivation rate
-        :type kdgtp_rac_baseline: float
-        
-        :param kgtp_rho_baseline:  baseline Rac activation rate
-        :type kgtp_rho_baseline: float
-        
-        :param kdgtp_rho_baseline: baseline Rho inactivation rate
-        :type kdgtp_rho_baseline: float
-
-        :param kgtp_rac_autoact_baseline: baseline Rac auto-activation rate
-        :type kgtp_rac_autoact_baseline: float
-        
-        :param kgtp_rho_autoact_baseline: baseline Rho auto-activation rate
-        :type kgtp_rho_autoact_baseline: float
-        
-        :param kdgtp_rho_mediated_rac_inhib_baseline: baseline Rho mediated Rac inactivation rate
-        :type kdgtp_rho_mediated_rac_inhib_baseline: float
-        
-        :param kdgtp_rac_mediated_rho_inhib_baseline: baseline Rac mediated Rho inactivation rate
-        :type kdgtp_rac_mediated_rho_inhib_baseline: float
-        
-        :param kgdi_rac: GDI association rate, Rac
-        :type kgdi_rac: float
-
-        :param rho_kdgi: GDI association rate, Rho
-        :type kgdi_rho: float
-
-        :param threshold_rac_autoact: Rac auto-activation half-max threshold for Hill function
-        :type threshold_rac_autoact: float
-        
-        :param threshold_rho_autoact: Rho auto-activation half-max threshold for Hill function.
-        :type threshold_rho_autoact: float
-        
-        :param threshold_rho_mediated_rac_inhib: Rho mediated, Rac inactivation half-max threshold for Hill function
-        :type threshold_rho_mediated_rac_inhib: float
-        
-        :param threshold_rac_mediated_rho_inhib: Rac mediated, Rho inactivation half-max threshold for Hill function
-        :type threshold_rac_mediated_rho_inhib: float
-        
-        :param exponent_rac_autoact: Rac auto-activation half-max exponent for Hill function
-        :type exponent_rac_autoact: float
-        
-        :param exponent_rho_autoact: Rho auto-activation half-max exponent for Hill function.
-        :type exponent_rho_autoact: float
-        
-        :param exponent_rho_mediated_rac_inhib: Rho mediated, Rac inactivation half-max exponent for Hill function
-        :type exponent_rho_mediated_rac_inhib: float
-        
-        :param exponent_rac_mediated_rho_inhib: Rac mediated, Rho inactivation half-max exponent for Hill function
-        :type exponent_rac_mediated_rho_inhib: float
-        
-        :param diffusion_const_active: diffusion constant for acivated, membrane-bound, Rho GTPase
-        :type diffusion_const_active: float
-        
-        :param diffusion_const_inactive: diffusion constant for inactive, membrane-bound, Rho GTPase
-        :type diffusion_const_inactive: float
-        
-        :param exponent_tension_mediated_rac_inhib: exponent for exponential function relating Rac inhibition to membrane-cytoskeleton tension
-        :type exponent_tension_mediated_rac_inhib: float
-        
-        :param space_physical_bdry_polygon: coordinates of allowed physical space
-        :type space_physical_bdry_polygon: numpy.array, float
-        
-        :param space_migratory_bdry_polygon: coordinates of allowed migratory space
-        :type space_migratory_bdry_polygon: numpy.array, float
-        
-        :param edge_stiffness: stiffness of cell edges (assuming linear elasticity)
-        :type edge_stiffness: float
-        
-        :param all_cells_node_coords: node coordinates of all the other cells
-        :type all_cells_node_coords: np.array, float
-        
-        :param eta: eta, for overdamped mechanics calculation
-        :type eta: float
-        
-        :return: instance of a ``Cell`` object
-        :rtype: ``Cell``
         """
         
         self.verbose = verbose
@@ -414,23 +297,18 @@ class Cell():
         
         self.randomization = randomization
         
-        self.randomization_time_mean = 0.0
-        self.randomization_time_variance_factor = 0.0
+        self.randomization_time_mean = int(randomization_time_mean*60.0/T)
+        self.randomization_time_variance_factor = randomization_time_variance_factor
         self.next_randomization_event_tstep = None
-        self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
+        self.randomization_magnitude = randomization_magnitude
+        self.randomization_rac_kgtp_multipliers = np.empty(self.num_nodes, dtype=np.float64)
+        
             
         if randomization_scheme == "wipeout":
             self.randomization_scheme = 0
-            
-            self.randomization_time_mean = int(randomization_time_mean*60.0/T)
-            self.randomization_time_variance_factor = randomization_time_variance_factor
-            
-        elif randomization_scheme == "rac_active_rate_factors":
+        elif randomization_scheme == "kgtp_rac_multipliers":
             self.randomization_scheme = 1
-            
-            self.randomization_time_mean = int(randomization_time_mean*60.0/T)
-            self.randomization_time_variance_factor = randomization_time_variance_factor
-            
+            self.renew_randomization_rac_kgtp_multipliers()
         else:
             raise StandardError("Unknown randomization scheme given: {}.".format(randomization_scheme))
         

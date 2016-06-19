@@ -6,10 +6,10 @@ import visualization.datavis as datavis
 
 EXPERIMENT_NUMBER = 12
 
-experiment_description = "4-cells, testing adhesion"
+experiment_description = "new randomization test"
 
 BASE_OUTPUT_DIR = "C:\\cygwin\\home\\Brian Merchant\\numba-ncc\\output\\"
-DATE_STR = "2016_MAY_31"
+DATE_STR = "2016_MAY_18"
 
 experiment_dir = get_experiment_directory_path(BASE_OUTPUT_DIR, DATE_STR, EXPERIMENT_NUMBER)
 
@@ -20,7 +20,7 @@ NUM_NODES = 16
 
 CELL_DIAMETER = 40
 NUM_BOXES = 1
-NUM_CELLS_IN_BOXES = [2]
+NUM_CELLS_IN_BOXES = [1]
 
 boxes = np.arange(NUM_BOXES)
 box_heights = [2*CELL_DIAMETER, 4*CELL_DIAMETER]
