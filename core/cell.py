@@ -57,18 +57,18 @@ def is_angle_between_range(alpha, beta, angle):
 
 # =============================================
    
-def calculate_biased_distrib_factors(bias_range, bias_strength, size, bias_type):
-    index_directions = np.linspace(0, 2*np.pi, num=size)
-    distrib_factors = np.zeros(size, dtype=np.float64)
+def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_type):
+    index_directions = np.linspace(0, 2*np.pi, num=num_nodes)
+    distrib_factors = np.zeros(num_nodes, dtype=np.float64)
     alpha, beta = bias_range
     
-    biased_nodes = np.array([is_angle_between_range(alpha, beta, index_dir) for index_dir in index_directions])
-    num_biased_nodes = np.sum(biased_nodes)
-    num_unbiased_nodes = size - num_biased_nodes
+    biased_nodes = np.array([is_angle_between_range(alpha, beta, index_dirn) for index_dirn in index_directions])
+    num_biased_nodes = int(np.sum(biased_nodes))
+    num_unbiased_nodes = num_nodes - num_biased_nodes
     
     if bias_type == 'random':
         biased_distrib_factors = bias_strength*general_utils.calculate_normalized_randomization_factors(num_biased_nodes)
-        unbiased_distrib_factors = (1 - bias_strength)*general_utils.calculate_normalized_randomization_factors(size - num_biased_nodes)
+        unbiased_distrib_factors = (1 - bias_strength)*general_utils.calculate_normalized_randomization_factors(num_nodes - num_biased_nodes)
     elif bias_type == 'uniform':
         biased_distrib_factors = bias_strength*(1.0/num_biased_nodes)*np.ones(num_biased_nodes, dtype=np.float64)
         unbiased_distrib_factors = (1 - bias_strength)*bias_strength*(1.0/num_unbiased_nodes)*np.ones(num_unbiased_nodes, dtype=np.float64)
@@ -85,7 +85,9 @@ def calculate_biased_distrib_factors(bias_range, bias_strength, size, bias_type)
         else:
             distrib_factors[ni] = unbiased_distrib_factors[num_nodes_unbiased]
             num_nodes_unbiased += 1
-            
+    
+    assert(num_nodes_biased + num_nodes_unbiased == num_nodes)
+    
     return distrib_factors
     
 # =============================================
@@ -303,7 +305,6 @@ class Cell():
         self.randomization_magnitude = randomization_magnitude
         self.randomization_rac_kgtp_multipliers = np.empty(self.num_nodes, dtype=np.float64)
         
-            
         if randomization_scheme == "wipeout":
             self.randomization_scheme = 0
         elif randomization_scheme == "kgtp_rac_multipliers":
@@ -311,6 +312,8 @@ class Cell():
             self.renew_randomization_rac_kgtp_multipliers()
         else:
             raise StandardError("Unknown randomization scheme given: {}.".format(randomization_scheme))
+            
+        self.randomization_print_string = "next_randomization_event_tstep ({}): ".format(randomization_scheme) + "{}"
         
         # =============================================================
         
@@ -333,12 +336,10 @@ class Cell():
         self.init_rgtpase_cytosol_gdi_bound_frac = init_rgtpase_cytosol_gdi_bound_frac
         self.init_rgtpase_membrane_inactive_frac = init_rgtpase_membrane_inactive_frac
         self.init_rgtpase_membrane_active_frac = init_rgtpase_membrane_active_frac
-        self.biased_rgtpase_distrib_defn_for_randomization = ['unbiased random', biased_rgtpase_distrib_defn[1], biased_rgtpase_distrib_defn[2]]
+        self.biased_rgtpase_distrib_defn_for_randomization = ['unbiased random', 0.0, 0.0]
         self.initialize_cell(init_node_coords/self.L, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_gdi_bound_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac)
         
         self.last_trim_timestep = -1
-        
-        
         
 # -----------------------------------------------------------------
     def insert_state_array_into_system_info(self, state_array, tstep):
@@ -371,9 +372,7 @@ class Cell():
         
         intercellular_contact_factors = np.ones(self.num_nodes)
         migr_bdry_contact_factors = np.ones(self.num_nodes)
-        
-        # num_nodes, num_cells, this_ci, this_cell_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria
-    
+            
         close_point_on_other_cells_to_each_node_exists = np.zeros((self.num_nodes, self.num_cells_in_environment), dtype=np.int64)
         close_point_on_other_cells_to_each_node = np.zeros((self.num_nodes, self.num_cells_in_environment, 2), dtype=np.float64)
         close_point_on_other_cells_to_each_node_indices = np.zeros((self.num_nodes, self.num_cells_in_environment, 2), dtype=np.int64)
@@ -437,8 +436,7 @@ class Cell():
             label = parameterorg.info_labels[sys_info_index]
             setattr(self, 'cellwide_' + label + '_index', index)
         
-# -----------------------------------------------------------------
-            
+# -----------------------------------------------------------------            
     def calculate_when_randomization_event_occurs(self, mean=None, variance=None):
         if mean == None:
             mean = self.randomization_time_mean
@@ -451,8 +449,7 @@ class Cell():
         
         return next_shift_step
 
-# -----------------------------------------------------------------
-     
+# -----------------------------------------------------------------     
     def check_if_randomization_criteria_met(self, t):
         access_index = self.get_system_info_access_index(t)
         
@@ -476,7 +473,7 @@ class Cell():
         access_index = self.get_system_info_access_index(tpoint)
         
         for rgtpase_label in ['rac_', 'rho_']:
-            for label in parameterorg.chem_labels:
+            for label in parameterorg.chem_labels[:7]:
                 if rgtpase_label in label:
                     if '_membrane_' in label:
                         if '_inactive' in label:
@@ -505,8 +502,6 @@ class Cell():
                         # every node contains the same data regarding 
                         # cytosolic species
                         frac_factor = init_rgtpase_cytosol_gdi_bound_frac
-    
-                            
                         rgtpase_distrib = frac_factor*cellwide_distrib_factors
                     else:
                         continue
@@ -514,19 +509,7 @@ class Cell():
                     self.system_info[access_index, :, eval("parameterorg." + label + "_index")] = rgtpase_distrib
 
 # -----------------------------------------------------------------           
-            
-    def rotate_rgtpase_distribution(self, num_nodes, tpoint, current_rac_membrane_actives, current_rac_membrane_inactives, current_rho_membrane_actives, current_rho_membrane_inactives):
-        random_shift = np.random.choice([-1, 1])
-        
-        access_index = self.get_system_info_access_index(tpoint)
-        
-        self.system_info[access_index, :, parameterorg.rac_membrane_active_index] = np.roll(current_rac_membrane_actives, random_shift)
-        self.system_info[access_index, :, parameterorg.rac_membrane_inactive_index] = np.roll(current_rac_membrane_inactives, random_shift)
-        self.system_info[access_index, :, parameterorg.rho_membrane_active_index] = np.roll(current_rho_membrane_actives, random_shift)
-        self.system_info[access_index, :, parameterorg.rho_membrane_inactive_index] = np.roll(current_rho_membrane_inactives, random_shift)
-            
-        return random_shift
-        
+
     def renew_randomization_rac_kgtp_multipliers(self):
         rfs = np.random.random(self.num_nodes)
         rfs = rfs/np.sum(rfs)
@@ -577,10 +560,10 @@ class Cell():
         if np.isnan(max_coa) or np.isnan(min_coa):
             raise StandardError("Caught a nan!")
             
-        print "max_coa: ", np.max(transduced_coa_signals)
-        print "min_coa: ", np.min(transduced_coa_signals)
-        print "max_ext: ", np.max(external_gradient_on_nodes)
-        print "min_ext: ", np.min(external_gradient_on_nodes)
+#        print "max_coa: ", np.max(transduced_coa_signals)
+#        print "min_coa: ", np.min(transduced_coa_signals)
+#        print "max_ext: ", np.max(external_gradient_on_nodes)
+#        print "min_ext: ", np.min(external_gradient_on_nodes)
         #print "ic: ", (1.0/3.0)*(intercellular_contact_factors + np.roll(intercellular_contact_factors, 1) + np.roll(intercellular_contact_factors, -1))
         
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.coa_signal_index] = transduced_coa_signals
@@ -625,7 +608,7 @@ class Cell():
                     self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
                     
             if self.verbose == True:
-                print "next_randomization_event_tstep: ", self.next_randomization_event_tstep
+                print self.randomization_print_string.format(self.next_randomization_event_tstep)
 
             
         # ==================================
@@ -645,9 +628,9 @@ class Cell():
 #        print "rho_membrane_actives: ", rho_membrane_actives
 #        print "length_edge_resting: ", self.length_edge_resting
 #        print "stiffness_edge: ", self.stiffness_edge
-        print "force_rac_mag: ", self.force_rac_max_mag
-        print "force_rho_mag: ", self.force_rho_max_mag
-        print "force_adh_constant: ", self.force_adh_constant
+#        print "force_rac_mag: ", self.force_rac_max_mag
+#        print "force_rho_mag: ", self.force_rho_max_mag
+#        print "force_adh_constant: ", self.force_adh_constant
 #        print "area_resting: ", self.area_resting
 #        print "stiffness_cytoplasmic: ", self.stiffness_cytoplasmic
         
@@ -656,8 +639,8 @@ class Cell():
         
 #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
 #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
-        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
-        printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
+#        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
+#        printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
 #        printing_fcyto = np.round(np.linalg.norm(F_cytoplasmic, axis=1)*1e6, decimals=2)
 #        
 #        current_area = abs(geometry.calculate_polygon_area(num_nodes, node_coords))
@@ -665,9 +648,9 @@ class Cell():
         
 #        print "edge_forces_plus: ", np.min(printing_efplus), np.max(printing_efplus)
 #        print "edge_forces_minus: ", np.min(printing_efminus), np.max(printing_efminus) 
-        print "F_rgtpase: ", printing_frgtpase
-        print "F_adh: ", printing_fadh
-        print "F_rgtpase/F_adh: ", np.max(printing_frgtpase)/np.max(printing_fadh)
+#        print "F_rgtpase: ", printing_frgtpase
+#        print "F_adh: ", printing_fadh
+#        print "F_rgtpase/F_adh: ", np.max(printing_frgtpase)/np.max(printing_fadh)
 #        print "area_strain: ", area_strain
 #        print "stiff_cyto: ", self.stiffness_cytoplasmic
 #        print "F_cytoplasmic: ", np.min(printing_fcyto), np.max(printing_fcyto) 
