@@ -142,7 +142,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes):
+def calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, randomization_factors):
     result = np.empty(num_nodes, dtype=np.float64)
     rac_autoact = 0.0
     
@@ -152,7 +152,7 @@ def calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors
         else:
             rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, rac_membrane_active[i])
         
-        result[i] = (transduced_coa_signals[i] + 1)*(kgtp_rac_baseline + rac_autoact*(external_gradient_on_nodes[i] + 1))
+        result[i] = (transduced_coa_signals[i] + 1)*(randomization_factors[i]*kgtp_rac_baseline + rac_autoact*(external_gradient_on_nodes[i] + 1))
         
     return result
 

@@ -142,7 +142,7 @@ class Cell():
                  migr_bdry_contact_factor_mag=None,
                  intercellular_contact_factor_magnitudes=None,
                  closeness_dist_squared_criteria=None,
-                 cell_dependent_coa_signal_strengths=None, halfmax_coa_sensing_dist=None, coa_sensitivity_percent_drop_over_cell_diameter=None, coa_belt_offset=None, randomization=None, randomization_scheme=None, randomization_time_mean=None, randomization_time_variance_factor=None, randomization_width_baseline=None, randomization_width_halfmax_threshold=None, randomization_width_hf_exponent=None, randomization_centre=None, randomization_width=None, randomization_depth=None, randomization_function_type=None, skip_dynamics=None, randomization_rgtpase_distrib_strength=None, tension_mediated_rac_inhibition_half_strain=None, tension_fn_type=None, tension_mediated_rac_hill_exponent=None, verbose=False):
+                 cell_dependent_coa_signal_strengths=None, halfmax_coa_sensing_dist=None, coa_sensitivity_percent_drop_over_cell_diameter=None, coa_belt_offset=None, randomization=None, randomization_scheme=None, randomization_time_mean=None, randomization_time_variance_factor=None, randomization_magnitude=None, skip_dynamics=None, randomization_rgtpase_distrib_strength=None, tension_mediated_rac_inhibition_half_strain=None, tension_fn_type=None, tension_mediated_rac_hill_exponent=None, verbose=False):
         """Constructor for Cell object.
         
         :param integration_params: integration algorithm parameters
@@ -413,28 +413,26 @@ class Cell():
         # =============================================================
         
         self.randomization = randomization
-        self.randomization_scheme = randomization_scheme
-        if self.randomization_scheme == 2:
-            assert(type(randomization_time_mean)) == type([])
-            assert(type(randomization_time_variance_factor)) == type([])
+        
+        self.randomization_time_mean = 0.0
+        self.randomization_time_variance_factor = 0.0
+        self.next_randomization_event_tstep = None
+        self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
             
-            self.randomization_time_mean = [int(mean*60.0/T) for mean in randomization_time_mean]
-            self.randomization_time_variance_factor = randomization_time_variance_factor
-            self.next_randomization_event_tstep = [None, None]
-        else:
-            assert(type(randomization_time_mean) in [int, float])
-            assert(type(randomization_time_variance_factor) in [int, float])
+        if randomization_scheme == "wipeout":
+            self.randomization_scheme = 0
+            
             self.randomization_time_mean = int(randomization_time_mean*60.0/T)
             self.randomization_time_variance_factor = randomization_time_variance_factor
-            self.next_randomization_event_tstep = None
             
-        self.randomization_width_baseline = randomization_width_baseline
-        self.randomization_width_halfmax_threshold = randomization_width_halfmax_threshold/self.num_nodes
-        self.randomization_width_hf_exponent = randomization_width_hf_exponent
-        self.randomization_centre = randomization_centre/self.num_nodes
-        self.randomization_width = randomization_width
-        self.randomization_depth = randomization_depth
-        self.randomization_function_type = randomization_function_type
+        elif randomization_scheme == "rac_active_rate_factors":
+            self.randomization_scheme = 1
+            
+            self.randomization_time_mean = int(randomization_time_mean*60.0/T)
+            self.randomization_time_variance_factor = randomization_time_variance_factor
+            
+        else:
+            raise StandardError("Unknown randomization scheme given: {}.".format(randomization_scheme))
         
         # =============================================================
         
@@ -515,7 +513,7 @@ class Cell():
         self.system_info[access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64)
         self.system_info[access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(self.num_nodes, dtype=np.float64)
         
-        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
+        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
         self.system_info[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -560,21 +558,6 @@ class Cell():
         for index, sys_info_index in enumerate(self.all_cellwide_phase_var_indices):
             label = parameterorg.info_labels[sys_info_index]
             setattr(self, 'cellwide_' + label + '_index', index)
-
-# -----------------------------------------------------------------
-            
-    def calculate_when_randomization_event_occurs_polarization_sensitive(self, rac_membrane_active, rho_membrane_active, num_nodes, polarization_score=None):
-        if polarization_score == None:
-            polarization_score = analysis_utils.calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=0.2)
-        
-        if polarization_score <= 0.5:
-            next_shift_step = None
-        else:                
-            step_shift = max(1, np.int(np.abs(np.random.normal(loc=self.randomization_time_mean, scale=self.randomization_time_variance_factor*self.randomization_time_mean))))
-                
-            next_shift_step = self.curr_tpoint + step_shift
-        
-        return next_shift_step
         
 # -----------------------------------------------------------------
             
@@ -666,6 +649,12 @@ class Cell():
             
         return random_shift
         
+    def renew_randomization_rac_kgtp_multipliers(self):
+        rfs = np.random.random(self.num_nodes)
+        rfs = rfs/np.sum(rfs)
+        
+        self.randomization_rac_kgtp_multipliers = (self.randomization_magnitude*rfs + 1.0)
+        
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors):
         
@@ -718,7 +707,7 @@ class Cell():
         
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.coa_signal_index] = transduced_coa_signals
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.external_gradient_on_nodes_index] = external_gradient_on_nodes
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes)
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
         kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -728,52 +717,35 @@ class Cell():
         # ==================================
         # RANDOMIZATION
         if self.randomization == True:                
-            randomization_done = False
             if self.randomization_scheme == 0:
                 if self.next_randomization_event_tstep == None:
                     if self.check_if_randomization_criteria_met(self.curr_tpoint):
                         self.next_randomization_event_tstep = self.calculate_when_randomization_event_occurs()
+                        
                 if new_tpoint == self.next_randomization_event_tstep:
-                    randomization_done = True
                     self.next_randomization_event_tstep = None
+                    
                     # run and tumble: cell loses polarity approximately after T seconds
                     self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_gdi_bound_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, tpoint=new_tpoint)
+                    
                     self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
+                    rac_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_active_index]
+                    rho_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_active_index]
+                    rac_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_inactive_index]
+                    rho_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_inactive_index]
+                
+                    
             elif self.randomization_scheme == 1:
                 if self.next_randomization_event_tstep == None:
                     self.next_randomization_event_tstep = self.calculate_when_randomization_event_occurs()
+                    
                 if new_tpoint == self.next_randomization_event_tstep:
-                    randomization_done = True
                     self.next_randomization_event_tstep = None
-                    # rotation: cell rotates itself a tiny bit
-                    self.rotate_rgtpase_distribution(num_nodes, new_tpoint, rac_membrane_actives, rac_membrane_inactives, rho_membrane_actives, rho_membrane_inactives)                    
+                    
+                    # renew Rac kgtp rate multipliers
+                    self.renew_randomization_rac_kgtp_multipliers()                  
                     self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
-            elif self.randomization_scheme == 2:
-                for k in range(len(self.next_randomization_event_tstep)):
-                    if self.next_randomization_event_tstep[k] == None:
-                        if (k == 0 and self.check_if_randomization_criteria_met(self.curr_tpoint)) or (k == 1):
-                            self.next_randomization_event_tstep[k] = self.calculate_when_randomization_event_occurs(mean=self.randomization_time_mean[k], variance=self.randomization_time_variance_factor[k]*self.randomization_time_mean[k])
-                            
-                    if new_tpoint == self.next_randomization_event_tstep[k]:
-                        self.next_randomization_event_tstep[k] = None
-                        if k == 0:
-                            randomization_done = True
-                            self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_gdi_bound_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, tpoint=new_tpoint)
-                            self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
-                        elif k == 1:
-                            randomization_done = True
-                            self.rotate_rgtpase_distribution(num_nodes, new_tpoint, rac_membrane_actives, rac_membrane_inactives, rho_membrane_actives, rho_membrane_inactives)                    
-                            self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 2
-                        else:
-                            raise StandardError("In randomization_scheme 2, got more than two event times!")
-                    else:
-                        continue
-
-            if randomization_done:    
-                rac_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_active_index]
-                rho_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_active_index]
-                rac_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_inactive_index]
-                rho_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_inactive_index]
+                    
             if self.verbose == True:
                 print "next_randomization_event_tstep: ", self.next_randomization_event_tstep
 
@@ -866,7 +838,7 @@ class Cell():
         
         transduced_coa_signals = self.system_info[access_index, :, parameterorg.coa_signal_index]
         
-        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_points_on_other_cells_to_each_node_indices, close_points_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes
+        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_points_on_other_cells_to_each_node_indices, close_points_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes, self.randomization_rac_kgtp_multipliers
 
 # -----------------------------------------------------------------
     def trim_system_info(self, environment_tpoint):
