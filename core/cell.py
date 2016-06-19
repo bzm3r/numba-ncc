@@ -485,16 +485,16 @@ class Cell():
                             rgtpase_distrib = frac_factor*general_utils.calculate_normalized_randomization_factors(self.num_nodes)
                         elif distrib_type == "biased random":
                             if rgtpase_label == "rac_":
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(bias_direction_range, bias_strength, self.num_nodes, 'random')
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'random')
                             elif rgtpase_label == "rho_":
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(bias_direction_range + np.pi, bias_strength, self.num_nodes, 'random')
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'random')
                         elif distrib_type == "unbiased uniform":
                             rgtpase_distrib = frac_factor*np.ones(self.num_nodes)/self.num_nodes
                         elif distrib_type == "biased uniform":
                             if rgtpase_label == "rac_":
                                 rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(bias_direction_range, bias_strength, self.num_nodes, 'uniform')
                             elif rgtpase_label == "rho_":
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(bias_direction_range + np.pi, bias_strength, self.num_nodes, 'uniform')
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'uniform')
                         else:
                             raise StandardError("Invalid initial rGTPase distribution type provided! ({})".format(distrib_type))
                             
