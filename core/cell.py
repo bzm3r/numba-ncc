@@ -89,7 +89,21 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
     assert(num_nodes_biased + num_nodes_unbiased == num_nodes)
     
     return distrib_factors
+
+# =============================================
     
+@nb.jit(nopython=True)
+def generate_random_multipliers(num_nodes, threshold, magnitude):
+    rfs = np.ones(num_nodes, dtype=np.float64)
+    
+    for i in range(num_nodes):
+        if np.random.random() < threshold:
+            continue
+        else:
+            rfs[i] = magnitude*np.random.random()
+            
+    return rfs
+                
 # =============================================
 
 class Cell():
@@ -303,7 +317,7 @@ class Cell():
         self.randomization_time_variance_factor = randomization_time_variance_factor
         self.next_randomization_event_tstep = None
         self.randomization_magnitude = randomization_magnitude
-        self.randomization_rac_kgtp_multipliers = np.empty(self.num_nodes, dtype=np.float64)
+        self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
         
         if randomization_scheme == "wipeout":
             self.randomization_scheme = 0
@@ -511,10 +525,10 @@ class Cell():
 # -----------------------------------------------------------------           
 
     def renew_randomization_rac_kgtp_multipliers(self):
-        rfs = np.random.random(self.num_nodes)
-        rfs = rfs/np.sum(rfs)
-        
-        self.randomization_rac_kgtp_multipliers = (self.randomization_magnitude*rfs + 1.0)
+#        rfs = np.random.random(self.num_nodes)
+#        rfs = rfs/np.sum(rfs)
+#        
+        self.randomization_rac_kgtp_multipliers = generate_random_multipliers(self.num_nodes, 0.5, self.randomization_magnitude)
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors):
