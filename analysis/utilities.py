@@ -618,12 +618,11 @@ def rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_an
     return aligned_pre_data, aligned_post_data
     
 # =================================================================================
-    
-def analyze_single_cell_motion(experiment_dir, subexperiment_index, rpt_number, relevant_environment):
+
+# relevant_environment, storefile_path, si, rpt_number
+def analyze_single_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number):
     # calculate centroid positions
-    relevant_cell = relevant_environment.cells_in_environment[0]
-    
-    cell_centroids = calculate_cell_centroids_for_all_time(relevant_cell)*(relevant_cell.L/1e-6)
+    cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*relevant_environment.cells_in_environment[0].L/1e-6
     num_tsteps = cell_centroids.shape[0]
     
     net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]

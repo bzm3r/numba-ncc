@@ -111,7 +111,7 @@ def make_analysis_description_file(analysis_dir, analysis_description, environme
     notes_content = []
 
     notes_content.append("======= ANALYSIS DESCRIPTION: {} =======\n\n")
-    notes_content.append(experiment_description + '\n\n')
+    notes_content.append(analysis_description + '\n\n')
     
     notes_content.append("======= ENVIRONMENT DIRS: {} =======\n\n")
     for environment_dir in environment_dirs:
@@ -148,6 +148,12 @@ def get_analysis_directory_path(base_output_dir, date_str, analysis_number):
 def get_environment_directory_path(experiment_directory_path, environment_name):
     return os.path.join(experiment_directory_path, environment_name)
 
+def get_storefile_path(env_dir):
+    return os.path.join(env_dir, "store.hdf5")
+    
+def get_pickled_env_path(env_dir):
+    return os.path.join(env_dir, "environment.pkl")
+    
 # ========================================================================
 
 def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):

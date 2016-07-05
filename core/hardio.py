@@ -120,4 +120,7 @@ def get_data_until_timestep(cell_index, max_tstep, data_label, storefile_path):
             
 # ============================================================================== 
             
+def get_data_for_all_timesteps(cell_index, data_label, storefile_path):
+    return get_data_until_timestep(cell_index, None, data_label, storefile_path)
+
 

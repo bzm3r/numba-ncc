@@ -269,7 +269,7 @@ def prepare_coa_data(coa_scale, cell_index, unique_undrawn_timesteps, polygon_co
     return coa_signal
 # -------------------------------------
 
-def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scale, plate_width, plate_height, context):
+def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context):
     text_r, text_g, text_b = text_color
     context.set_source_rgb(text_r, text_g, text_b)
     context.select_font_face("Consolas", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
@@ -278,7 +278,7 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
     timestamp_string = "T = {} min".format(np.round(timestep*timestep_length/60.0))
     #timestamp_string = "NT = {} ".format(np.round(timestep))
     text_x_bearing, text_y_bearing, text_width, text_height = context.text_extents(timestamp_string)[:4]
-    context.move_to((plate_width - 1.2*text_width), (plate_height - 1.2*text_height))
+    context.move_to((img_width - 1.2*text_width), (img_height - 1.2*text_height))
     context.show_text(timestamp_string)
     
     return
@@ -293,7 +293,8 @@ def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_l
     context.set_source_rgb(*colors.RGB_WHITE)
     context.paint()
 
-    draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, context)
+    # timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context
+    draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, image_width_in_pixels, image_height_in_pixels, context)
     
     context.transform(transform_matrix)
     

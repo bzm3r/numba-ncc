@@ -598,43 +598,22 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
         
 # ==========================================================================================
         
-def present_collated_single_cell_motion_data(T, L, num_cells, storefile_path, experiment_dir):
-    labels = []
-    cell_centroid_data = []
-    persistences = []
-    
-    for ci in xrange(num_cells):
-        this_cell_centroid_data = analysis_utils.calculate_cell_centroids_for_all_time(ci, storefile_path)
-        cell_centroid_data.append(this_cell_centroid_data)
-        persistences.append(analysis_utils.calculate_persistence(this_cell_centroid_data))
-    
-    
-    if len(persistences) > 0:
-        mean_persistence = np.round(np.average(persistences), decimals=3)
-        std_persistence = np.round(np.std(persistences), decimals=3)
-    else:
-        mean_persistence = None
-        std_persistence = None
-    
+def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
     fig, ax = plt.subplots()
     
-    for i, label in enumerate(labels):
-        ccs = cell_centroid_data[i]
+    max_data_lim = np.max([np.max(np.abs(x[2])) for x in extracted_results])
+    
+    persistences = [x[3] for x in extracted_results]
+    mean_persistence = np.round(np.mean(persistences), 3)
+    std_persistence = np.round(np.std(persistences), 3)
+    
+    for i, extracted_result in enumerate(extracted_results):
+        si, rpt_number, ccs, persistence = extracted_result
         ccs = ccs - ccs[0]
         
-        if i == 0:
-            max_data_lim = np.max(np.abs(ccs))
-        else:
-            possible_max_data_lim = np.max(np.abs(ccs))
-            if  possible_max_data_lim > max_data_lim:
-                max_data_lim = possible_max_data_lim
-        
-        if len(persistences) > 0:
-            ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%20], label='({}, {}), ps.={}'.format(label[0], label[1], np.round(persistences[i], decimals=3)))
-        else:
-            ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%20], label='({}, {}), ps.={}'.format(label[0], label[1], None))
-        
-    ax.set_title("persistence: {} +/- {}".format(mean_persistence, std_persistence))
+        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300], label='({}, {}), ps.={}'.format(si, rpt_number, np.round(persistences[i], decimals=3)))
+
+    ax.set_title("Persistence (mean: {}, std: {})".format(mean_persistence, std_persistence))
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
