@@ -6,16 +6,15 @@ import core.geometry as geometry
 import os, shutil
 import subprocess
 import time
-import math
 import colors
 import sys
 import core.hardio as hardio
 import analysis.utilities as analysis_utils
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def create_transformation_matrix_entries(scale_x, scale_y, rotation_theta, translation_x, translation_y, plate_width, plate_height):
-    sin_theta = math.sin(rotation_theta)
-    cos_theta = math.cos(rotation_theta)
+    sin_theta = np.sin(rotation_theta)
+    cos_theta = np.cos(rotation_theta)
     
     xx = scale_x*cos_theta
     xy = -1*scale_y*sin_theta
@@ -290,12 +289,13 @@ def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_l
     
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
     context = cairo.Context(surface)
-    context.transform(transform_matrix)
         
     context.set_source_rgb(*colors.RGB_WHITE)
     context.paint()
 
     draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, context)
+    
+    context.transform(transform_matrix)
     
     for cell_index, anicell in enumerate(animation_cells):
         
@@ -348,15 +348,15 @@ class EnvironmentAnimation():
         self.translation_x = translation_x
         self.translation_y = translation_y
         
+        self.plate_height_in_micrometers = plate_height_in_micrometers
+        self.plate_width_in_micrometers = plate_width_in_micrometers
+        
         self.string_together_into_animation = string_together_pictures_into_animation
         self.animation_name = environment_name + '_animation.mp4'
         self.short_video_length_definition = short_video_length_definition
         self.short_video_duration = short_video_duration
         self.fps = 30
         self.origin_offset_in_pixels = origin_offset_in_pixels
-        
-        self.plate_height_in_micrometers = plate_height_in_micrometers
-        self.plate_width_in_micrometers = plate_width_in_micrometers
         
         self.image_height_in_pixels = np.int(np.round(plate_height_in_micrometers*global_scale, decimals=0))
         self.image_width_in_pixels = np.int(np.round(plate_width_in_micrometers*global_scale, decimals=0))
@@ -445,8 +445,16 @@ class EnvironmentAnimation():
     # ---------------------------------------------------------------------
         
     def calculate_transform_matrix(self):
-        xx, xy, x0, yx, yy, y0 = create_transformation_matrix_entries(self.global_scale, self.global_scale, self.rotation_theta, self.translation_x, self.translation_y, self.plate_width_in_micrometers, self.plate_width_in_micrometers)
-        return cairo.Matrix(xx, yx, xy, yy, x0, y0)
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, self.image_width_in_pixels, self.image_height_in_pixels)
+        context = cairo.Context(surface)
+        context.translate(0, self.image_height_in_pixels)
+        context.scale(1, -1)
+        context.scale(self.global_scale, self.global_scale)
+        context.rotate(self.rotation_theta)
+        context.translate(self.translation_x, self.translation_y)
+#        xx, xy, x0, yx, yy, y0 = create_transformation_matrix_entries(self.global_scale, self.global_scale, self.rotation_theta + np.pi, self.translation_x, self.translation_y, self.plate_width_in_micrometers, self.plate_width_in_micrometers)
+        #return cairo.Matrix(xx, yx, xy, yy, x0, y0)
+        return context.get_matrix()
     
     # ---------------------------------------------------------------------
         
