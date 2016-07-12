@@ -703,3 +703,89 @@ def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_p
     mean_run_period_speeds = [np.average(np.linalg.norm((rccs[1:] - rccs[:-1])/T, axis=1)) for rccs in run_centroids]
     
     return (tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds)
+    
+def calculate_protrusion_lifetimes_from_existence_array(protrusions_existence):
+    num_timesteps = protrusions_existence.shape[0]
+    num_nodes = protrusions_existence.shape[1]
+    
+    num_protrusions_over_time_per_node = np.zeros(num_nodes, dtype=np.int64)
+    protrusion_start_ends_per_node = np.zeros((num_nodes, num_timesteps, 2), dtype=np.int64)
+    
+    for ni in range(num_nodes):
+        relevant_protrusions_existence_slice = protrusions_existence[:, ni]
+        protrusion_index = 0
+        protrusion_start_found = False
+        protrusion_start_ends_for_this_node = np.zeros((num_timesteps, 2), dtype=np.int64)
+        
+        for ti in range(num_timesteps):
+            if relevant_protrusions_existence_slice[ti] == 1:
+                if protrusion_start_found == False:
+                    protrusion_start_found = True
+                    protrusion_start_ends_for_this_node[protrusion_index][0] = ti
+                else:
+                    continue
+            else:
+                if protrusion_start_found == False:
+                    continue
+                else:
+                    protrusion_start_found = False
+                    protrusion_start_ends_for_this_node[protrusion_index][1] = ti
+                    protrusion_index += 1
+                    
+        protrusion_start_ends_per_node[ni] = protrusion_start_ends_for_this_node
+        num_protrusions_over_time_per_node[ni] = protrusion_index
+
+    return num_protrusions_over_time_per_node, protrusion_start_ends_per_node
+
+def calculate_cell_protrusion_direction_lifetime(T, L, protrusions_existence, uivs_per_node_per_timestep, migration_axis):
+    num_protrusions_over_time_per_node, protrusion_start_ends_per_node = calculate_protrusion_lifetimes_from_existence_array(protrusions_existence)
+    
+    num_timesteps = protrusions_existence.shape[0]
+    num_nodes = protrusions_existence.shape[1]
+
+    migration_axis_direction = geometry.calculate_2D_vector_direction(migration_axis)
+    protrusion_directions = np.zeros_like((num_nodes, num_timesteps), dtype=np.float64)
+    protrusion_lifetimes = np.zeros_like((num_nodes, num_timesteps), dtype=np.float64)
+    
+    for ni in range(num_nodes):
+        num_protrusions_over_time = num_protrusions_over_time_per_node[ni]
+        protrusion_start_ends = protrusion_start_ends_per_node[ni]
+        this_node_uivs = uivs_per_node_per_timestep[:, ni]
+        
+        for pi in range(num_protrusions_over_time):
+            start, end = protrusion_start_ends[pi]
+            protrusion_dirn_vectors = -1*this_node_uivs[start:end]
+            
+            protrusion_direction_angles = geometry.calculate_2D_vector_directions(protrusion_dirn_vectors.shape[0], protrusion_dirn_vectors)
+            protrusion_directions_relative_to_migration_axis = np.mod((protrusion_direction_angles - migration_axis_direction)/(2*np.pi), 1.0)
+            protrusion_directions_relative_to_migration_axis = np.where(protrusion_directions_relative_to_migration_axis > 0.5, np.mod(protrusion_directions_relative_to_migration_axis, 0.5), protrusion_directions_relative_to_migration_axis)
+            
+            protrusion_directions[ni][pi] = np.average(protrusion_directions_relative_to_migration_axis)
+            protrusion_lifetimes[ni][pi] = (end - start)*T
+            
+    return num_protrusions_over_time_per_node, protrusion_directions, protrusion_lifetimes
+    
+def calculate_cells_protrusion_direction_lifetime(environment, storefile_path, max_tstep=None, migration_axis=np.array([1, 0])):
+    
+    num_cells = environment.num_cells
+    protrusion_directions_lifetimes_per_cell = []
+    
+    for ci in range(num_cells):
+        this_cell = environment.cells_in_environment[ci]
+        T, L = this_cell.T, this_cell.L
+        
+        rac_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rac_membrane_active", storefile_path)
+        rho_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rho_membrane_active", storefile_path)
+        
+        protrusions_existence = np.where(rac_membrane_actives > rho_membrane_actives, 1, 0)
+        
+        uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(ci, max_tstep, "unit_in_vec", storefile_path)
+        
+        protrusion_directions_lifetimes = calculate_cell_protrusion_direction_lifetime(T, L, protrusions_existence, uivs_per_node_per_timestep, migration_axis)
+        
+        protrusion_directions_lifetimes_per_cell.append(protrusion_directions_lifetimes)
+        
+    return protrusion_directions_lifetimes_per_cell
+    
+    
+    

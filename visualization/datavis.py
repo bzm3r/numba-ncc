@@ -102,7 +102,7 @@ def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, s
         fig.set_size_inches(12, 8)
         fig.savefig(os.path.join(save_dir, "group_" + save_name + '.png'), forward=True)
         plt.close(fig)
-        plt.close("alll")
+        plt.close("all")
     
         
 # ==============================================================================
@@ -135,20 +135,28 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile
     
     # ------------------------
     
-    max_data_lim = np.max(np.abs(relative_all_cell_centroids_per_tstep))
-    ax.set_xlim(-1.1*max_data_lim, 1.1*max_data_lim)
-    ax.set_ylim(-1.1*max_data_lim, 1.1*max_data_lim)
-    ax.set_aspect(u'equal')
+    min_x_data_lim = np.min(relative_all_cell_centroids_per_tstep[:,:,0])
+    max_x_data_lim = np.max(relative_all_cell_centroids_per_tstep[:,:,0])
+    delta_x = np.abs(min_x_data_lim - max_x_data_lim)
+    max_y_data_lim = np.max(np.abs(relative_all_cell_centroids_per_tstep[:,:,1]))
+    ax.set_xlim(min_x_data_lim - 0.1*delta_x, max_x_data_lim + 0.1*delta_x)
+    ax.set_ylim(-1.05*max_y_data_lim, 1.05*max_y_data_lim)
+    ax.set_aspect('equal')
     
-    ax.plot(relative_group_centroid_per_tstep[:,0], relative_group_centroid_per_tstep[:,1], '.', label="group centroid coordinates", color='k', markersize=0.5)
+    
+    group_net_displacement = relative_group_centroid_per_tstep[-1] - relative_group_centroid_per_tstep[0]
+    group_net_displacement_mag = np.linalg.norm(group_net_displacement)
+    group_net_distance = np.sum(np.linalg.norm(relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1], axis=-1))
+    group_persistence = np.round(group_net_displacement_mag/group_net_distance, 3)
+    
+    ax.plot(relative_group_centroid_per_tstep[:,0], relative_group_centroid_per_tstep[:,1], '.', label="group, pers.={}".format(group_persistence), color='k', markersize=0.5)
     
     for ci in xrange(num_cells):
         ccs = relative_all_cell_centroids_per_tstep[:,ci,:]
-        num_ccs = ccs.shape[0]
-        net_displacement = ccs[num_ccs-1] - ccs[0]
+        net_displacement = ccs[-1] - ccs[0]
         net_displacement_mag = np.linalg.norm(net_displacement)
-        net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:num_ccs-1], axis=-1))
-        persistence = net_displacement_mag/net_distance
+        net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:-1], axis=-1))
+        persistence = np.round(net_displacement_mag/net_distance, 3)
         
         ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
     
@@ -156,7 +164,9 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile
     ax.set_xlabel("micrometers")
     
     # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=2, mode="expand", borderaxespad=0.)
+    #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
 
     # ------------------------

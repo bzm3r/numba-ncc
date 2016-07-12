@@ -12,10 +12,14 @@ import numba as nb
 import time
 import core.hardio as hardio
 import copy
+import warnings
 
 """
 Environment of cells.
 """
+
+MODE_EXECUTE = 0
+MODE_OBSERVE = 1
 
 @nb.jit(nopython=True)
 def custom_floor(fp_number, roundoff_distance):
@@ -110,11 +114,14 @@ class Environment():
         self.full_output_dicts = [[] for cell in self.cells_in_environment]
         
         self.cell_indices = np.arange(self.num_cells)
+        self.exec_orders = np.zeros((self.num_timepoints, self.num_cells), dtype=np.int64)
         self.full_print = full_print
         
         for cell_index in xrange(self.num_cells):
             hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
-
+            
+        self.mode = MODE_EXECUTE
+            
 # -----------------------------------------------------------------
 
     def get_system_info_index(self, tpoint):
@@ -293,6 +300,8 @@ class Environment():
         execution_sequence = self.cell_indices
         np.random.shuffle(execution_sequence)
         
+        self.exec_orders[t] = np.copy(execution_sequence)
+        
         first_cell_index = execution_sequence[0]
         last_cell_index = execution_sequence[-1]
         
@@ -378,20 +387,32 @@ class Environment():
         
 # -----------------------------------------------------------------
         
-    def get_empty_self_copy(self, preserve_cell_structure=True):
+    def get_empty_self_copy(self):
         empty_self = copy.deepcopy(self)
         
-        if preserve_cell_structure:
-            empty_self.cells_in_environment = self.get_empty_cells()
-        else:
-            empty_self.cells_in_environment = None
+        empty_self.cells_in_environment = self.get_empty_cells()
         
         return empty_self
+
+# -----------------------------------------------------------------
+        
+    def is_empty(self):
+        for a_cell in self.cells_in_environment:
+            if a_cell.system_info != None:
+                return False
+        
+        return True
+
+# -----------------------------------------------------------------
+        
+    def empty_self(self, preserve_cell_structure=True):
+        self.cells_in_environment = self.get_empty_cells()     
         
 # ----------------------------------------------------------------- 
         
     def dump_to_store(self, tpoint):
         access_index = self.get_system_info_index(self.curr_tpoint)
+        
         for cell_index in xrange(self.num_cells):
             this_cell = self.cells_in_environment[cell_index]
             if this_cell.last_trim_timestep < 0:
@@ -403,7 +424,6 @@ class Environment():
             else:
                 continue
             
-            
         self.timestep_offset_due_to_dumping = self.curr_tpoint
         
         with open(self.empty_self_pickle_path, 'wb') as f:
@@ -412,92 +432,139 @@ class Environment():
         
 # ----------------------------------------------------------------- 
         
-    def initialize_cells_from_store(self):
+    def init_from_store(self, tpoint=None):
+        if tpoint == None:
+            tpoint = self.curr_tpoint
+        
         for a_cell in self.cells_in_environment:
-            a_cell.init_from_storefile(self.curr_tpoint, self.storefile_path)
+            a_cell.init_from_storefile(tpoint, self.storefile_path)
+            
+        self.last_timestep_when_environment_hard_saved = tpoint
+            
+# ----------------------------------------------------------------- 
+    
+    def load_curr_tpoint(self):
+        self.mode = MODE_OBSERVE
+        self.empty_self()
+        self.init_from_store(tpoint=self.curr_tpoint)            
+            
+    def load_next_tpoint(self):
+        self.mode = MODE_OBSERVE
+        self.empty_self()
+        self.orig_tpoint = self.curr_tpoint
+        self.curr_tpoint += 1
+        self.load_curr_tpoint()
+        
+    def load_last_tpoint(self):
+        self.mode = MODE_OBSERVE
+        self.empty_self()
+        if self.curr_tpoint == 0:
+            warnings.warn("Already at timestep 0!")
+        else:
+            self.orig_tpoint = self.curr_tpoint
+            self.curr_tpoint -= 1
+            self.load_curr_tpoint()
+            
+    def load_at_tpoint(self, tpoint):
+        self.mode = MODE_OBSERVE
+        self.empty_self()
+        if tpoint < 0:
+            warnings.warn("Given tstep is less than 0!")
+        elif tpoint > self.get_storefile_tstep_range():
+            warnings.warn("Given tstep is greater than range of data in storefile!")
+        else:
+            self.orig_tpoint = self.curr_tpoint 
+            self.curr_tpoint = tpoint
+            self.load_curr_tpoint()
+            
+    def get_storefile_tstep_range(self):
+        return hardio.get_storefile_tstep_range(self.num_cells, self.storefile_path)
     
 # ----------------------------------------------------------------- 
         
     def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
-        simulation_st = time.time()
-        num_cells = self.num_cells
-        num_nodes = self.num_nodes
-        
-        environment_cells = self.cells_in_environment
-        environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
-        environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
-        
-        cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
-        cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
+        if self.mode == MODE_EXECUTE:
+            simulation_st = time.time()
+            num_cells = self.num_cells
+            num_nodes = self.num_nodes
             
-        #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
-    
-        if self.environment_dir == None:
-            animation_obj = None
-            produce_intermediate_visuals = False
-            produce_final_visuals = False
-        else:
-            cell_group_indices = []
-            cell_Ls = []
-            cell_etas = []
-            cell_skip_dynamics = []
+            environment_cells = self.cells_in_environment
+            environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
+            environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
             
-            for a_cell in self.cells_in_environment:
-                cell_group_indices.append(a_cell.cell_group_index)
-                cell_Ls.append(a_cell.L/1e-6)
-                cell_etas.append(a_cell.eta)
-                cell_skip_dynamics.append(a_cell.skip_dynamics)
+            cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
+            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
                 
-            animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
-            
-        if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
-            if self.last_timestep_when_environment_hard_saved == None:
-                self.last_timestep_when_environment_hard_saved = self.curr_tpoint
-            
-            for t in self.timepoints[self.curr_tpoint:-1]:
-                if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
-                    self.last_timestep_when_environment_hard_saved = t
+            #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
+        
+            if self.environment_dir == None:
+                animation_obj = None
+                produce_intermediate_visuals = False
+                produce_final_visuals = False
+            else:
+                cell_group_indices = []
+                cell_Ls = []
+                cell_etas = []
+                cell_skip_dynamics = []
+                
+                for a_cell in self.cells_in_environment:
+                    cell_group_indices.append(a_cell.cell_group_index)
+                    cell_Ls.append(a_cell.L/1e-6)
+                    cell_etas.append(a_cell.eta)
+                    cell_skip_dynamics.append(a_cell.skip_dynamics)
                     
-                    if self.environment_dir != None:
-                        self.dump_to_store(t)
+                animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
+                
+            if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
+                if self.last_timestep_when_environment_hard_saved == None:
+                    self.last_timestep_when_environment_hard_saved = self.curr_tpoint
+                
+                for t in self.timepoints[self.curr_tpoint:-1]:
+                    if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
+                        self.last_timestep_when_environment_hard_saved = t
                         
-                if t != 0 and t in produce_intermediate_visuals:
-                    self.last_timestep_when_environment_hard_saved = t
-                    
-                    if self.environment_dir != None:
-                        self.dump_to_store(t)
+                        if self.environment_dir != None:
+                            self.dump_to_store(t)
+                            
+                    if t != 0 and t in produce_intermediate_visuals:
+                        self.last_timestep_when_environment_hard_saved = t
                         
-                    visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-                    if not os.path.exists(visuals_save_dir):
-                        os.makedirs(visuals_save_dir)
+                        if self.environment_dir != None:
+                            self.dump_to_store(t)
+                            
+                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
+                        if not os.path.exists(visuals_save_dir):
+                            os.makedirs(visuals_save_dir)
+                        
+                        print "Making intermediate visuals..."
+                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
                     
-                    print "Making intermediate visuals..."
-                    self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
+                    cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells)
+                    self.curr_tpoint += 1
+            else:
+                raise StandardError("max_t has already been reached.")
+            
+            simulation_et = time.time()
+            
+            if self.environment_dir != None:
+                self.dump_to_store(self.curr_tpoint)
                 
-                cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells)
-                self.curr_tpoint += 1
+            if produce_final_visuals == True:
+                t = self.num_timepoints
+                visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
+                
+                if not os.path.exists(visuals_save_dir):
+                    os.makedirs(visuals_save_dir)
+                    
+                    print "Making final visuals..."
+                    self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)
+                
+            simulation_time = np.round(simulation_et - simulation_st, decimals=2)
+            print "Time taken to complete simulation: {}s".format(simulation_time)
+                    
+            return simulation_time
         else:
-            raise StandardError("max_t has already been reached.")
-        
-        simulation_et = time.time()
-        
-        if self.environment_dir != None:
-            self.dump_to_store(self.curr_tpoint)
-            
-        if produce_final_visuals == True:
-            t = self.num_timepoints
-            visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-            
-            if not os.path.exists(visuals_save_dir):
-                os.makedirs(visuals_save_dir)
-                
-                print "Making final visuals..."
-                self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)
-            
-        simulation_time = np.round(simulation_et - simulation_st, decimals=2)
-        print "Time taken to complete simulation: {}s".format(simulation_time)
-                
-        return simulation_time
+            return 0.0
 
 # -----------------------------------------------------------------
     

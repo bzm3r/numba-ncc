@@ -171,7 +171,7 @@ def calculate_2D_vector_direction(vector):
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
 def calculate_2D_vector_directions(num_vectors, vectors):
-    vector_dirns = np.empty(num_vectors)
+    vector_dirns = np.zeros(num_vectors, dtype=np.float64)
     
     for i in range(num_vectors):
         vector_dirns[i] = calculate_2D_vector_direction(vectors[i])

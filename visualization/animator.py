@@ -461,13 +461,12 @@ class EnvironmentAnimation():
         
     def gather_data(self, timestep_to_draw_till, unique_undrawn_timesteps):
         polygon_coords_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes, 2), dtype=np.float64)
-        
         if self.show_velocities:
             velocity_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_velocity_labels, self.num_nodes, 2))
         else:
             velocity_line_coords_per_label_per_timepoint_per_cell = None
             
-        if self.show_coa:
+        if self.show_centroid_trail:
             centroid_coords_per_timepoint_per_cell = np.empty((self.num_cells, timestep_to_draw_till, 2), dtype=np.float64)
         else:
             centroid_coords_per_timepoint_per_cell = None

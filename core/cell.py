@@ -419,6 +419,7 @@ class Cell():
         self.system_info[access_index, :, [parameterorg.F_rgtpase_x_index, parameterorg.F_rgtpase_y_index]] = np.transpose(F_rgtpase)
         self.system_info[access_index, :, [parameterorg.F_cytoplasmic_x_index, parameterorg.F_cytoplasmic_y_index]] = np.transpose(F_cytoplasmic)
         self.system_info[access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
+        self.system_info[access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vecs)
         
         self.system_info[access_index, :, parameterorg.intercellular_contact_factor_magnitudes_index] = intercellular_contact_factors
         self.system_info[access_index, :, parameterorg.migr_bdry_contact_index] = migr_bdry_contact_factors
@@ -691,6 +692,7 @@ class Cell():
         self.system_info[next_tstep_system_info_access_index, :, [parameterorg.F_rgtpase_x_index, parameterorg.F_rgtpase_y_index]] = np.transpose(F_rgtpase)
         self.system_info[next_tstep_system_info_access_index, :, [parameterorg.F_cytoplasmic_x_index, parameterorg.F_cytoplasmic_y_index]] = np.transpose(F_cytoplasmic)
         self.system_info[next_tstep_system_info_access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
+        self.system_info[next_tstep_system_info_access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vecs)
         
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.intercellular_contact_factor_magnitudes_index] = intercellular_contact_factors
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.migr_bdry_contact_index] = migr_bdry_contact_factors
@@ -736,7 +738,8 @@ class Cell():
  # -----------------------------------------------------------------
         
     def init_from_storefile(self, environment_tpoint, storefile_path):
-        assert(self.system_info == None)
+        #assert(self.system_info == None)
+        self.curr_tpoint = environment_tpoint
         
         self.system_info = np.zeros((self.max_timepoints_on_ram + 1, self.num_nodes,  len(parameterorg.info_labels)))
         for info_label in parameterorg.info_labels:
