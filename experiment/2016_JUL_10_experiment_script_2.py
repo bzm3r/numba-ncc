@@ -8,7 +8,7 @@ import os
 scriptname = os.path.basename(__file__)[:-3]
 DATE_STR, EXPERIMENT_NUMBER = eu.get_date_and_experiment_number(scriptname)
 
-experiment_description = "Attempting to figure out mechanics bug."
+experiment_description = "Analyzing protrusion lifetime versus direction."
 
 BASE_OUTPUT_DIR = "C:\\cygwin\\home\\Brian Merchant\\numba-ncc\\output\\"
 
@@ -58,7 +58,7 @@ if make_migr_poly == False:
 
 environment_wide_variable_defns = {'num_timesteps': NUM_TIMESTEPS, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': TIMESTEP_LENGTH, 'num_nodes': NUM_NODES, 'verbose': True, 'closeness_dist_squared_criteria': (1e-6)**2, 'integration_params': {'rtol': 1e-4}, 'max_timepoints_on_ram': 10}
 
-base_parameter_dict = dict([('halfmax_coa_sensing_dist_multiplier', 4.4), ('kdgdi_rac_estimate_multiplier', 0.2), ('kdgdi_rho_estimate_multiplier', 0.2), ('kgdi_rac_estimate_multiplier', 1), ('kgdi_rho_estimate_multiplier', 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500), ('kdgtp_rac_multiplier', 20), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000), ('kdgtp_rho_multiplier', 20), ('kgtp_rac_autoact_multiplier', 250), ('kgtp_rac_multiplier', 20), ('kgtp_rho_autoact_multiplier', 125), ('kgtp_rho_multiplier', 20), ('max_protrusive_node_velocity', 1e-06), ('randomization', False), ('randomization_scheme', 'wipeout'), ('randomization_time_mean', 20), ('randomization_time_variance_factor', 0.25), ('randomization_magnitude', 1.0), ('sigma_rac', 2e-05), ('sigma_rho_multiplier', 0.2), ('force_adh_constant', 1.0), ('force_rac_exp', 3), ('force_rho_exp', 3), ('force_rac_threshold_multiplier', 0.5), ('force_rho_threshold_multiplier', 0.5), ('skip_dynamics', False), ('stiffness_cytoplasmic', 1e-1), ('stiffness_edge', 5e-10), ('tension_fn_type', 0), ('tension_mediated_rac_hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('threshold_rac_autoact_multiplier', 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5), ('threshold_rho_autoact_multiplier', 0.5), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25), ('coa_belt_offset_multiplier', 1.5)])
+base_parameter_dict = dict([('halfmax_coa_sensing_dist_multiplier', 4.4), ('kdgdi_rac_estimate_multiplier', 0.2), ('kdgdi_rho_estimate_multiplier', 0.2), ('kgdi_rac_estimate_multiplier', 1), ('kgdi_rho_estimate_multiplier', 1), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500), ('kdgtp_rac_multiplier', 20), ('kdgtp_rho_mediated_rac_inhib_multiplier', 3000), ('kdgtp_rho_multiplier', 20), ('kgtp_rac_autoact_multiplier', 250), ('kgtp_rac_multiplier', 20), ('kgtp_rho_autoact_multiplier', 125), ('kgtp_rho_multiplier', 20), ('max_protrusive_node_velocity', 1e-06), ('randomization', False), ('randomization_scheme', 'wipeout'), ('randomization_time_mean', 20), ('randomization_time_variance_factor', 0.25), ('randomization_magnitude', 1.0), ('sigma_rac', 2e-05), ('sigma_rho_multiplier', 0.2), ('force_adh_constant', 1.0), ('force_rac_exp', 3), ('force_rho_exp', 3), ('force_rac_threshold_multiplier', 0.5), ('force_rho_threshold_multiplier', 0.5), ('skip_dynamics', False), ('stiffness_cytoplasmic', 10), ('stiffness_edge', 5e-10), ('tension_fn_type', 0), ('tension_mediated_rac_hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('threshold_rac_autoact_multiplier', 0.5), ('threshold_rac_mediated_rho_inhib_multiplier', 0.5), ('threshold_rho_autoact_multiplier', 0.5), ('threshold_rho_mediated_rac_inhib_multiplier', 0.5), ('coa_sensitivity_percent_drop_over_cell_diameter', 0.25), ('coa_belt_offset_multiplier', 1.5)])
     
 cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = []#[0.025]
 intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = []
@@ -105,7 +105,7 @@ for si in xrange(num_sub_experiments):
 if __name__ == '__main__':
     RUN_EXPERIMENTS = True
     RUN_ANALYSIS = True
-    NUM_EXPERIMENT_REPEATS = 1
+    NUM_EXPERIMENT_REPEATS = 3
     if RUN_EXPERIMENTS == True:
         global_scale = 1
         

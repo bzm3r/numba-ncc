@@ -8,7 +8,7 @@ import os
 scriptname = os.path.basename(__file__)[:-3]
 DATE_STR, EXPERIMENT_NUMBER = eu.get_date_and_experiment_number(scriptname)
 
-experiment_description = "Attempting to figure out mechanics bug."
+experiment_description = "Analyzing protrusion lifetime versus direction."
 
 BASE_OUTPUT_DIR = "C:\\cygwin\\home\\Brian Merchant\\numba-ncc\\output\\"
 
@@ -105,7 +105,7 @@ for si in xrange(num_sub_experiments):
 if __name__ == '__main__':
     RUN_EXPERIMENTS = True
     RUN_ANALYSIS = True
-    NUM_EXPERIMENT_REPEATS = 1
+    NUM_EXPERIMENT_REPEATS = 3
     if RUN_EXPERIMENTS == True:
         global_scale = 1
         

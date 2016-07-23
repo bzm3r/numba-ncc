@@ -120,18 +120,41 @@ def calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, le
     return local_average_strains, EFplus, EFminus
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)  
-def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors):   
-    rgtpase_mediated_force_mags = np.zeros(num_nodes, dtype=np.float64)
+@nb.jit(nopython=True)
+def determine_rac_rho_domination(rac_membrane_actives, rho_membrane_actives):
+    num_nodes = rac_membrane_actives.shape[0]
     
-    for i in range(num_nodes):
-        nodal_rac_activity = rac_membrane_actives[i]
-        nodal_rho_activity = rho_membrane_actives[i]
-
-        if nodal_rho_activity > nodal_rac_activity:
-            rgtpase_mediated_force_mags[i] = hill_function(force_rho_exp, force_rho_threshold, nodal_rho_activity)*force_rho_max_mag
+    domination_array = np.empty(num_nodes, dtype=np.int64)
+    
+    for ni in range(num_nodes):
+        if rac_membrane_actives[ni] < rho_membrane_actives[ni]:
+            domination_array[ni] = 0
         else:
-            rgtpase_mediated_force_mags[i] = -1*hill_function(force_rac_exp, force_rac_threshold, nodal_rac_activity)*force_rac_max_mag
+            domination_array[ni] = 1
+            
+    return domination_array
+
+# -----------------------------------------------------------------
+    
+@nb.jit(nopython=True)  
+def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors, squeeze_effect_threshold):   
+    rgtpase_mediated_force_mags = np.zeros(num_nodes, dtype=np.float64)
+
+    for ni in range(num_nodes):
+        nodal_rac_activity = rac_membrane_actives[ni]
+        nodal_rho_activity = rho_membrane_actives[ni]
+
+        ni_coord = this_cell_coords[ni]
+        ni_plus2_coord = this_cell_coords[(ni + 2)%num_nodes]
+        ni_minus2_coord = this_cell_coords[(ni - 2)%num_nodes]
+        
+        if rac_membrane_actives[ni] < rho_membrane_actives[ni]:
+            if geometry.calculate_2D_vector_mag(ni_coord - ni_plus2_coord) < squeeze_effect_threshold or geometry.calculate_2D_vector_mag(ni_coord - ni_minus2_coord) < squeeze_effect_threshold:
+                rgtpase_mediated_force_mags[ni] = 0.0
+            else:
+                rgtpase_mediated_force_mags[ni] = hill_function(force_rho_exp, force_rho_threshold, nodal_rho_activity)*force_rho_max_mag
+        else:
+            rgtpase_mediated_force_mags[ni] = -1*hill_function(force_rac_exp, force_rac_threshold, nodal_rac_activity)*force_rac_max_mag
     
     result = np.empty((num_nodes, 2), dtype=np.float64)
     result = geometry.multiply_vectors_by_scalars(num_nodes, unit_inside_pointing_vectors, rgtpase_mediated_force_mags)
@@ -188,7 +211,7 @@ def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membra
     
     unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(this_cell_coords)
     
-    rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors)
+    rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_actives, rho_membrane_actives, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, unit_inside_pointing_vectors, closeness_dist_criteria)
 
     F_cytoplasmic = calculate_cytoplasmic_force(num_nodes, this_cell_coords, area_resting, stiffness_cytoplasmic, unit_inside_pointing_vectors)
     

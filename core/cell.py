@@ -394,7 +394,7 @@ class Cell():
         all_cells_centres = np.zeros((self.num_cells_in_environment, 2), dtype=np.float64)
         all_cells_node_forces = np.zeros((self.num_cells_in_environment, self.num_nodes, 2), dtype=np.float64)
         
-        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
+        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors  = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
         
         self.system_info[access_index, :, parameterorg.local_strains_index] = local_strains
         
@@ -419,7 +419,7 @@ class Cell():
         self.system_info[access_index, :, [parameterorg.F_rgtpase_x_index, parameterorg.F_rgtpase_y_index]] = np.transpose(F_rgtpase)
         self.system_info[access_index, :, [parameterorg.F_cytoplasmic_x_index, parameterorg.F_cytoplasmic_y_index]] = np.transpose(F_cytoplasmic)
         self.system_info[access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
-        self.system_info[access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vecs)
+        self.system_info[access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vectors)
         
         self.system_info[access_index, :, parameterorg.intercellular_contact_factor_magnitudes_index] = intercellular_contact_factors
         self.system_info[access_index, :, parameterorg.migr_bdry_contact_index] = migr_bdry_contact_factors
