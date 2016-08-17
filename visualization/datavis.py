@@ -104,7 +104,6 @@ def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, s
         plt.close(fig)
         plt.close("all")
     
-        
 # ==============================================================================
 
 def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):    
@@ -638,13 +637,139 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
     
-    if experiment_dir == None:
+    fig.set_size_inches(12, 8)
+    save_path = os.path.join(experiment_dir, "collated_single_cell_data" + ".png")
+    print "save_path: ", save_path
+    fig.savefig(save_path, forward=True)
+    plt.close(fig)
+    plt.close("all")
+        
+# ============================================================================
+
+def graph_protrusion_lifetimes(num_cells, T, storefile_path, bar_width=0.35, opacity=0.75, error_config = {'ecolor': '0.3'}, save_dir=None, max_tstep=None):
+    cell_results_time_collapsed = analysis_utils.calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path)
+    
+    bin_boundaries = [0.25, 0.5]
+    num_bins = len(bin_boundaries)
+    #bin_boundaries = 0.5*np.linspace(0, 1.0, num=num_bins, endpoint=False) + (0.5/num_bins)
+    binned_direction_data = [list() for x in range(num_bins)]    
+    for cell_result in cell_results_time_collapsed:
+        num_protrusions_per_node, protrusion_directions_per_node, protrusion_lifetimes_per_node = cell_result
+        
+        num_nodes = num_protrusions_per_node.shape[0]
+    
+        for ni in range(num_nodes):
+            num_protrusions = num_protrusions_per_node[ni]
+            protrusion_directions = protrusion_directions_per_node[ni]
+            protrusion_lifetimes = protrusion_lifetimes_per_node[ni]
+            
+            for pi in range(num_protrusions):
+                direction_data = protrusion_directions[pi][2]
+                plifetime = protrusion_lifetimes[pi]
+                
+                if direction_data < bin_boundaries[0]:
+                    binned_direction_data[0].append(plifetime)
+                else:
+                    binned_direction_data[1].append(plifetime)
+    
+    binned_direction_data = [np.array(x) for x in binned_direction_data]
+    
+    averaged_binned_direction_data = [np.average(x) if len(x) > 0 else -1 for x in binned_direction_data]
+    non_negative_binned_data = [x for x in averaged_binned_direction_data if x != -1]
+    if len(non_negative_binned_data) != 0:
+        min_data = np.min(non_negative_binned_data)
+        averaged_binned_direction_data_relative_to_min = [x/min_data for x in averaged_binned_direction_data]
+        std_binned_direction_data = [np.std(x) for x in averaged_binned_direction_data_relative_to_min]
+        
+        index = np.arange(num_bins)
+        
+        fig, ax = plt.subplots()
+        
+        protrusion_lifetime_rects = ax.bar(index, averaged_binned_direction_data_relative_to_min, bar_width, alpha=opacity, color='b', error_kw=error_config, label='')
+        
+        ax.set_xticks(index + 0.5*bar_width)
+        
+        ax.set_xticklabels(["[0, $\pi$/2) ({})".format(len(binned_direction_data[0])), "[$\pi$/2, $\pi$] ({})".format(len(binned_direction_data[1]))])
+        
+        ax.set_xlabel('Deviation of protrusion from $x$-axis (as multiples of $\pi$)')
+        ax.set_ylabel('Avg. protrusion lifetime as multiple of minimum lifetime')
+        ax.set_title('Protrusion lifetime versus direction')
+        ax.set_ylim(0.8, 1.2*np.max(averaged_binned_direction_data_relative_to_min))
+        
+        if save_dir == None:
+            plt.show()
+        else:
+            fig.set_size_inches(12, 8)
+            save_path = os.path.join(save_dir, "protrusion_lifetime_versus_direction" + ".png")
+            print "save_path: ", save_path
+            fig.savefig(save_path, forward=True)
+            plt.close(fig)
+            plt.close("all")
+        
+# ============================================================================
+    
+def graph_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, T, storefile_path, save_dir=None, max_tstep=None):
+    if max_tstep == None:
+        max_tstep = num_timepoints
+        
+    times = np.arange(max_tstep)*T/60.0
+        
+    forward_cone, backward_cone = analysis_utils.calculate_cells_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, storefile_path, max_tstep=max_tstep)
+    
+    fig, ax = plt.subplots()
+    
+    ax.plot(times, forward_cone, label='forward')
+    ax.plot(times, backward_cone, label='backward')
+    #ax.plot(times, other_cone, label='other')
+    
+    ax.legend(loc='best')
+    
+    ax.set_ylabel("number of protrusions")
+    ax.set_xlabel("time (min.)")
+    
+    if save_dir == None:
         plt.show()
     else:
         fig.set_size_inches(12, 8)
-        save_path = os.path.join(experiment_dir, "collated_single_cell_data" + ".png")
+        save_path = os.path.join(save_dir, "protrusion_number_given_direction" + ".png")
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
         plt.close("all")
     
+#    fig, ax = plt.subplots()
+#    
+#    reduced_times = times[::1000]
+#    reduced_forward_cone = forward_cone[::1000]
+#    reduced_backward_cone = backward_cone[::1000]
+#    reduced_other_cone = other_cone[::1000]
+#    
+#    delta_forward_cone = np.zeros_like(reduced_forward_cone)
+#    delta_backward_cone = np.zeros_like(reduced_backward_cone)
+#    delta_other_cone = np.zeros_like(reduced_other_cone)
+#    
+#    delta_forward_cone[1:] = reduced_forward_cone[1:] - reduced_forward_cone[:-1]
+#    delta_backward_cone[1:] = reduced_backward_cone[1:] - reduced_backward_cone[:-1]
+#    delta_other_cone[1:] = reduced_other_cone[1:] - reduced_other_cone[:-1]
+#    
+#    ax.plot(reduced_times, delta_forward_cone, label='$\Delta$ forward')
+#    ax.plot(reduced_times, delta_backward_cone, label='$\Delta$ backward')
+#    ax.plot(reduced_times, delta_other_cone, label='$\Delta$ other')
+#    
+#    ax.set_ylabel("change in number of protrusions")
+#    ax.set_xlabel("time (min.)")
+#    ax.legend(loc='best')
+#    
+#    if save_dir == None:
+#        plt.show()
+#    else:
+#        fig.set_size_inches(12, 8)
+#        save_path = os.path.join(save_dir, "change_in_protrusion_number_given_direction" + ".png")
+#        print "save_path: ", save_path
+#        fig.savefig(save_path, forward=True)
+#        plt.close(fig)
+#        plt.close("all")
+    
+    
+        
+        

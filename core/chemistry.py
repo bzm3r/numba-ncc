@@ -222,6 +222,18 @@ def calculate_kdgtp_rac(num_nodes, rho_membrane_active, exponent_rho_mediated_ra
         elif tension_fn_type == 5:
             exponent = np.log(2)/tension_mediated_rac_inhibition_half_strain
             strain_inhibition = np.exp(exponent*global_tension)
+        elif tension_fn_type == 6:
+            exponent = 2
+            constant  = 2/(tension_mediated_rac_inhibition_half_strain) 
+            strain_inhibition = constant*(global_tension**exponent)
+        elif tension_fn_type == 7:
+            exponent = 3
+            constant  = 2/(tension_mediated_rac_inhibition_half_strain) 
+            strain_inhibition = constant*(global_tension**exponent)
+        elif tension_fn_type == 8:
+            exponent = 3
+            constant  = 6.0/(tension_mediated_rac_inhibition_half_strain) 
+            strain_inhibition = constant*(global_tension**exponent)
         
         result[i] = (migr_bdry_contact_factor_average)*(modified_intercellular_contact_factor_average)*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
         

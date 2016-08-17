@@ -737,7 +737,7 @@ def calculate_protrusion_lifetimes_from_existence_array(protrusions_existence):
 
     return num_protrusions_over_time_per_node, protrusion_start_ends_per_node
 
-def calculate_cell_protrusion_direction_lifetime(T, L, protrusions_existence, uivs_per_node_per_timestep, migration_axis):
+def calculate_cell_protrusion_direction_lifetime(T, protrusions_existence, uivs_per_node_per_timestep, migration_axis):
     num_protrusions_over_time_per_node, protrusion_start_ends_per_node = calculate_protrusion_lifetimes_from_existence_array(protrusions_existence)
     
     num_timesteps = protrusions_existence.shape[0]
@@ -767,15 +767,10 @@ def calculate_cell_protrusion_direction_lifetime(T, L, protrusions_existence, ui
             
     return num_protrusions_over_time_per_node, protrusion_directions, protrusion_lifetimes
     
-def calculate_cells_protrusion_direction_lifetime(environment, storefile_path, max_tstep=None, migration_axis=np.array([1, 0])):
-    
-    num_cells = environment.num_cells
+def calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path, max_tstep=None, migration_axis=np.array([1, 0])):
     protrusion_directions_lifetimes_per_cell = []
     
     for ci in range(num_cells):
-        this_cell = environment.cells_in_environment[ci]
-        T, L = this_cell.T, this_cell.L
-        
         rac_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rac_membrane_active", storefile_path)
         rho_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rho_membrane_active", storefile_path)
         
@@ -783,11 +778,45 @@ def calculate_cells_protrusion_direction_lifetime(environment, storefile_path, m
         
         uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(ci, max_tstep, "unit_in_vec", storefile_path)
         
-        protrusion_directions_lifetimes = calculate_cell_protrusion_direction_lifetime(T, L, protrusions_existence, uivs_per_node_per_timestep, migration_axis)
+        protrusion_directions_lifetimes = calculate_cell_protrusion_direction_lifetime(T, protrusions_existence, uivs_per_node_per_timestep, migration_axis)
         
         protrusion_directions_lifetimes_per_cell.append(protrusion_directions_lifetimes)
         
     return protrusion_directions_lifetimes_per_cell
     
+def calculate_cells_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, storefile_path, max_tstep=None, migration_axis=np.array([1, 0])):
     
+    if max_tstep == None:
+        max_tstep = num_timepoints
+        
+    forward_cone = np.zeros(max_tstep, dtype=np.int64)
+    backward_cone = np.zeros(max_tstep, dtype=np.int64)
+    
+    migration_axis_direction = geometry.calculate_2D_vector_direction(migration_axis)/(2*np.pi)
+    
+    for ci in range(num_cells):  
+        rac_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rac_membrane_active", storefile_path)
+        rho_membrane_actives = hardio.get_data_until_timestep(ci, max_tstep, "rho_membrane_active", storefile_path)
+        protrusions_existence = np.where(rac_membrane_actives > rho_membrane_actives, 1, 0)
+        
+        uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(ci, max_tstep, "unit_in_vec", storefile_path)
+        
+        for ti in range(max_tstep):
+            protrusions_exist_for_this_timepoint = protrusions_existence[ti]
+            protrusion_dirn_vectors = -1*uivs_per_node_per_timestep[ti]
+            
+            protrusion_direction_angles = np.round(geometry.calculate_2D_vector_directions(protrusion_dirn_vectors.shape[0], protrusion_dirn_vectors)/(2*np.pi), decimals=3)
+            protrusion_directions_relative_to_migration_axis = np.mod(protrusion_direction_angles - migration_axis_direction, 1.0)
+            protrusion_directions_relative_to_migration_axis = np.where(protrusion_directions_relative_to_migration_axis > 0.5, 0.5 - np.mod(protrusion_directions_relative_to_migration_axis, 0.5), protrusion_directions_relative_to_migration_axis)
+            
+            for ni in range(num_nodes):
+                if protrusions_exist_for_this_timepoint[ni] == 1:
+                    protrusion_dirn = protrusion_directions_relative_to_migration_axis[ni]
+                    
+                    if protrusion_dirn < 0.25:
+                        forward_cone[ti] += 1
+                    else:
+                        backward_cone[ti] += 1
+        
+    return forward_cone, backward_cone
     

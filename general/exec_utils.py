@@ -105,6 +105,43 @@ def make_experiment_description_file(experiment_description, environment_dir, en
     
     with open(notes_fp, 'w') as notes_file:
         notes_file.writelines(notes_content)
+
+# ===========================================================================
+
+def make_template_experiment_description_file(experiment_description, environment_dir, base_parameter_dict, parameter_override_dict, environment_wide_variable_defns, user_cell_group_defns):
+    notes_fp = os.path.join(environment_dir, 'experiment_notes.txt')
+    notes_content = []
+
+    notes_content.append("======= EXPERIMENT DESCRIPTION: {} =======\n\n")
+    notes_content.append(experiment_description + '\n\n')
+    notes_content.append("======= CELL GROUPS IN EXPERIMENT: {} =======\n\n")
+    notes_content.append(repr(environment_wide_variable_defns) + '\n\n')
+    
+    num_cell_groups = len(user_cell_group_defns)
+    notes_content.append("======= CELL GROUPS IN EXPERIMENT: {} =======\n\n".format(num_cell_groups))    
+    notes_content.append(repr(user_cell_group_defns) + '\n\n')
+
+    notes_content.append("======= BASE PARAMETER DICT =======\n\n")
+    sorted_keys = sorted(base_parameter_dict.keys())
+    tuple_list = [(key, base_parameter_dict[key]) for key in sorted_keys]
+    notes_content.append(repr(tuple_list) + '\n\n')
+    
+    notes_content.append("======= PARAMETER OVERRIDE DICT =======\n\n")
+    sorted_keys = sorted(parameter_override_dict.keys())
+    tuple_list = [(key, parameter_override_dict[key]) for key in sorted_keys]
+    notes_content.append(repr(tuple_list) + '\n\n')
+    
+    notes_content.append("======= VARIABLE SETTINGS =======\n\n")
+    
+    for n, cell_group_defn in enumerate(user_cell_group_defns):
+        pd = cell_group_defn['parameter_override_dict']
+        sorted_pd_keys = sorted(pd.keys())
+        tuple_list = [(key, pd[key]) for key in sorted_pd_keys]
+        notes_content.append('CELL_GROUP: {}\n'.format(n))
+        notes_content.append(repr(tuple_list) + '\n\n')
+    
+    with open(notes_fp, 'w') as notes_file:
+        notes_file.writelines(notes_content)
         
 # =============================================================================
         
@@ -139,6 +176,11 @@ def form_base_environment_name_format_string(experiment_number, num_cells_total,
     
 def get_experiment_directory_path(base_output_dir, date_str, experiment_number):
     return os.path.join(base_output_dir, "{}/{}".format(date_str, 'EXP_{}'.format(experiment_number)))
+    
+# ========================================================================
+    
+def get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name):
+    return os.path.join(base_output_dir, "{}/{}".format(date_str, '{}_SET={}'.format(experiment_name, experiment_number)))
     
 # ========================================================================
     
@@ -221,6 +263,69 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
             
 # =======================================================================
 
+def run_template_experiments(experiment_directory, template_experiment_name, base_parameter_dict, parameter_override_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
+    
+    template_experiment_name_format_string = template_experiment_name + "_RPT={}"
+    for repeat_number in xrange(num_experiment_repeats):
+        for subexperiment_index, user_cell_group_defns in enumerate(user_cell_group_defns_per_subexperiment):
+            environment_name = template_experiment_name_format_string.format(repeat_number)
+            environment_dir = os.path.join(experiment_directory, environment_name)
+            
+            experiment_string = "{}, RPT {}".format(template_experiment_name, repeat_number)
+            an_environment = None
+            if os.path.exists(environment_dir):
+                print experiment_string + " directory exists."
+                
+                storefile_path = os.path.join(environment_dir, "store.hdf5")
+                env_pkl_path = os.path.join(environment_dir, "environment.pkl")
+                
+                if os.path.exists(storefile_path) and os.path.exists(env_pkl_path):
+                    print experiment_string + ' stored environment exists, checking to see if it has completed simulation...'
+                    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals)
+                    if an_environment.simulation_complete() == True:
+                        
+                        if extend_simulation != True:
+                            print "Simulation has been completed. Continuing..."
+                            del an_environment
+                            continue
+                        else:
+                            print "Extending simulation run time..."
+                            assert(new_num_timesteps != None)
+                            assert(new_num_timesteps > an_environment.num_timesteps)
+                            an_environment.extend_simulation_runtime(new_num_timesteps)
+                            assert(an_environment.simulation_complete() == False)
+                    else:
+                        print "Simulation incomplete. Finishing..."
+                else:
+                    if delete_and_rerun_experiments_without_stored_env == True:
+                        print experiment_string + " directory exists, but stored environment missing -- deleting and re-running experiment."
+                        shutil.rmtree(environment_dir)
+                    else:
+                        print experiment_string + " directory exists, but stored environment missing. Continuing regardless."
+                        continue
+            
+            print "RUNNING " + experiment_string
+            print "environment_dir: {}".format(environment_dir)
+            
+            if an_environment == None:
+                os.makedirs(environment_dir)
+                autogenerate_debug_file(environment_dir)
+                
+                make_template_experiment_description_file(experiment_descriptions_per_subexperiment[subexperiment_index], environment_dir, base_parameter_dict, parameter_override_dict, environment_wide_variable_defns, user_cell_group_defns)    
+                    
+                print "Creating environment..."
+                parameter_overrides = [x['parameter_override_dict'] for x in user_cell_group_defns]
+                
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                
+            an_environment.full_print = full_print
+            
+            simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
+                
+            print "Simulation run time: {}s".format(simulation_time)
+            
+# =======================================================================
+
 def raise_scriptname_error(scriptname, message=None):
     if message == None:
         raise StandardError("Given script name does not follow template YYYY_MMM_DD_experiment_script_X: {}".format(scriptname))
@@ -232,7 +337,7 @@ def check_if_date_is_proper(date_pieces, scriptname):
         raise_scriptname_error(scriptname, "Year is not a number")
     if not len(date_pieces[0]) == 4:
         raise_scriptname_error(scriptname, "Incorrect number of digits in year (4 needed)")
-    if not date_pieces[1] in MONTHS:
+    if not date_pieces[1].upper() in MONTHS:
         raise_scriptname_error(scriptname, "Unknown month given")
     if not date_pieces[2].isnumeric():
         raise_scriptname_error(scriptname, "Day is not a number")

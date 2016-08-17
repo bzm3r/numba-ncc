@@ -392,6 +392,10 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 @nb.jit(nopython=True)     
 def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointing_vector, polygon, num_bisection_iterations, max_movement_mag, success_exclusion_condition):
     
+#    if success_exclusion_condition == 1:
+#        movement_mag = geometry.calculate_2D_vector_mag(old_coord - new_coord)
+#        return old_coord + movement_mag*unit_inside_pointing_vector
+        
     num_poly_vertices = polygon.shape[0]
     min_x, max_x, min_y, max_y = geometry.calculate_polygon_bounding_box(polygon)
     

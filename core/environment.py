@@ -364,6 +364,9 @@ class Environment():
             
             datavis.graph_cell_velocity_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
+            datavis.graph_protrusion_lifetimes(self.num_cells, self.T, self.storefile_path, save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_protrusion_number_given_direction_per_timestep(self.num_cells, self.num_timepoints, self.num_nodes, self.T, self.storefile_path, save_dir=visuals_save_dir, max_tstep=t)
+            
             if self.num_cells > 2:
                 datavis.graph_delaunay_triangulation_area_over_time(self.num_cells, self.num_timepoints, self.T/60.0, self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
