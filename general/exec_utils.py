@@ -180,7 +180,7 @@ def get_experiment_directory_path(base_output_dir, date_str, experiment_number):
 # ========================================================================
     
 def get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name):
-    return os.path.join(base_output_dir, "{}/{}".format(date_str, '{}_SET={}'.format(experiment_name, experiment_number)))
+    return os.path.join(base_output_dir, "{}/SET={}/{}".format(date_str, experiment_number, experiment_name))
     
 # ========================================================================
     

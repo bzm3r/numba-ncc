@@ -164,14 +164,14 @@ def calculate_kgtp_rho(num_nodes, rho_membrane_active, intercellular_contact_fac
     for i in range(num_nodes):
         kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, rho_membrane_active[i])
         
-        i_minus_1 = (i - 1)%num_nodes
-        i_plus_1 = (i + 1)%num_nodes
+        #i_minus_1 = (i - 1)%num_nodes
+        #i_plus_1 = (i + 1)%num_nodes
         
-        migr_bdry_contact_factor_average = (migr_bdry_contact_factors[i_minus_1] + migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus_1])/3.0
+        #migr_bdry_contact_factor_average = (migr_bdry_contact_factors[i_minus_1] + migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus_1])/3.0
         
-        intercellular_contact_factor_average = (intercellular_contact_factors[i_minus_1] + intercellular_contact_factors[i] + intercellular_contact_factors[i_plus_1])/3.0
+        #intercellular_contact_factor_average = (intercellular_contact_factors[i_minus_1] + intercellular_contact_factors[i] + intercellular_contact_factors[i_plus_1])/3.0
         
-        result[i] = (migr_bdry_contact_factor_average)*(intercellular_contact_factor_average)*(kgtp_rho_autoact + kgtp_rho_baseline)
+        result[i] = (migr_bdry_contact_factors[i])*(intercellular_contact_factors[i])*(kgtp_rho_autoact + kgtp_rho_baseline)
         
     return result
 
@@ -185,57 +185,44 @@ def calculate_kdgtp_rac(num_nodes, rho_membrane_active, exponent_rho_mediated_ra
     for i in range(num_nodes):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, rho_membrane_active[i])
         
-        i_minus_1 = (i - 1)%num_nodes
-        i_plus_1 = (i + 1)%num_nodes
+        #i_minus_1 = (i - 1)%num_nodes
+        #i_plus_1 = (i + 1)%num_nodes
         
-        migr_bdry_contact_factor_average = (migr_bdry_contact_factors[i_minus_1] + migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus_1])/3.0
+        #migr_bdry_contact_factor_average = (migr_bdry_contact_factors[i_minus_1] + migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus_1])/3.0
         
-        modification_multiplier = 2
-        this_modified_ic_factor = intercellular_contact_factors[i]
-        if this_modified_ic_factor > 1.0:
-            this_modified_ic_factor = modification_multiplier*this_modified_ic_factor
-            
-        this_plus1_modified_ic_factor = intercellular_contact_factors[i_plus_1]
-        if this_plus1_modified_ic_factor > 1.0:
-            this_plus1_modified_ic_factor = modification_multiplier*this_plus1_modified_ic_factor
-            
-        this_minus1_modified_ic_factor = intercellular_contact_factors[i_minus_1]
-        if this_minus1_modified_ic_factor > 1.0:
-            this_minus1_modified_ic_factor = modification_multiplier*this_minus1_modified_ic_factor
-            
-        modified_intercellular_contact_factor_average = (this_modified_ic_factor + this_plus1_modified_ic_factor + this_minus1_modified_ic_factor)/3.0
+#        modification_multiplier = 2
+#        this_modified_ic_factor = intercellular_contact_factors[i]
+#        if this_modified_ic_factor > 1.0:
+#            this_modified_ic_factor = modification_multiplier*this_modified_ic_factor
+#            
+#        this_plus1_modified_ic_factor = intercellular_contact_factors[i_plus_1]
+#        if this_plus1_modified_ic_factor > 1.0:
+#            this_plus1_modified_ic_factor = modification_multiplier*this_plus1_modified_ic_factor
+#            
+#        this_minus1_modified_ic_factor = intercellular_contact_factors[i_minus_1]
+#        if this_minus1_modified_ic_factor > 1.0:
+#            this_minus1_modified_ic_factor = modification_multiplier*this_minus1_modified_ic_factor
+#            
+#        modified_intercellular_contact_factor_average = (this_modified_ic_factor + this_plus1_modified_ic_factor + this_minus1_modified_ic_factor)/3.0
+        
+        #ic_factor = intercellular_contact_factors[i]
         
         strain_inhibition = 1.0
-        if tension_fn_type == 0:
-            strain_inhibition = 2 - calculate_strain_mediated_rac_activation_reduction_using_neg_exp(local_strains[i], tension_mediated_rac_inhibition_exponent)
-        elif tension_fn_type == 1:
-            strain_inhibition = 2 - calculate_strain_mediated_rac_activation_reduction_using_inv_fn(local_strains[i], tension_mediated_rac_inhibition_multiplier)
-        elif tension_fn_type == 2:
-            strain_inhibition = 2 - calculate_strain_mediated_rac_activation_reduction_using_hill_fn(local_strains[i], tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain)
-        elif tension_fn_type == 3:
-            b = 1.0
-            m = (2.0 - b)/tension_mediated_rac_inhibition_half_strain
-            strain_inhibition = m*local_strains[i] + b
-        elif tension_fn_type == 4:
-            exponent = np.log(2)/tension_mediated_rac_inhibition_half_strain
-            strain_inhibition = np.exp(exponent*local_strains[i])
-        elif tension_fn_type == 5:
+        if tension_fn_type == 5:
             exponent = np.log(2)/tension_mediated_rac_inhibition_half_strain
             strain_inhibition = np.exp(exponent*global_tension)
         elif tension_fn_type == 6:
             exponent = 2
-            constant  = 2/(tension_mediated_rac_inhibition_half_strain) 
-            strain_inhibition = constant*(global_tension**exponent)
+            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
+            strain_inhibition = constant*(global_tension**exponent) + 1.0
         elif tension_fn_type == 7:
             exponent = 3
-            constant  = 2/(tension_mediated_rac_inhibition_half_strain) 
-            strain_inhibition = constant*(global_tension**exponent)
+            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
+            strain_inhibition = constant*(global_tension**exponent) + 1.0
         elif tension_fn_type == 8:
-            exponent = 3
-            constant  = 6.0/(tension_mediated_rac_inhibition_half_strain) 
-            strain_inhibition = constant*(global_tension**exponent)
+            strain_inhibition = 1.0
         
-        result[i] = (migr_bdry_contact_factor_average)*(modified_intercellular_contact_factor_average)*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
+        result[i] = (migr_bdry_contact_factors[i])*(intercellular_contact_factors[i])*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
         
     return result
         

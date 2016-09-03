@@ -383,7 +383,7 @@ class EnvironmentAnimation():
         self.cell_polygon_colors = []
         if color_each_group_differently == True and len(cell_polygon_colors) == 0:
             for ci in xrange(num_cells):
-                self.cell_polygon_colors.append((ci, colors.color_list_cell_groups10[cell_group_indices%10]))
+                self.cell_polygon_colors.append((ci, colors.color_list_cell_groups10[cell_group_indices[ci]%10]))
         else:
             self.cell_polygon_colors = cell_polygon_colors
         
