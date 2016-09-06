@@ -158,7 +158,7 @@ class Cell():
                  migr_bdry_contact_factor_mag=None,
                  intercellular_contact_factor_magnitudes=None,
                  closeness_dist_squared_criteria=None,
-                 cell_dependent_coa_signal_strengths=None, halfmax_coa_sensing_dist=None, coa_sensitivity_percent_drop_over_cell_diameter=None, coa_belt_offset=None, randomization=None, randomization_scheme=None, randomization_time_mean=None, randomization_time_variance_factor=None, randomization_magnitude=None, skip_dynamics=None, randomization_rgtpase_distrib_strength=None, tension_mediated_rac_inhibition_half_strain=None, tension_fn_type=None, tension_mediated_rac_hill_exponent=None, verbose=False):
+                 cell_dependent_coa_signal_strengths=None, coa_sensing_dist_at_value=None, coa_sensing_value_at_dist=None, max_coa_signal=None, randomization=None, randomization_scheme=None, randomization_time_mean=None, randomization_time_variance_factor=None, randomization_magnitude=None, skip_dynamics=None, randomization_rgtpase_distrib_strength=None, tension_mediated_rac_inhibition_half_strain=None, tension_fn_type=None, tension_mediated_rac_hill_exponent=None, verbose=False):
         """Constructor for Cell object.
         """
         
@@ -292,15 +292,11 @@ class Cell():
         #==============================================================
         self.cell_dependent_coa_signal_strengths = cell_dependent_coa_signal_strengths
         
-        self.halfmax_coa_sensing_dist = halfmax_coa_sensing_dist/self.L
+        self.coa_sensing_dist_at_value = coa_sensing_dist_at_value/self.L
         
-        self.coa_distribution_exponent = np.log(0.5)/self.halfmax_coa_sensing_dist
-        if coa_sensitivity_percent_drop_over_cell_diameter <= 0.0:
-            self.coa_sensitivity_exponent = 1
-        else:
-            self.coa_sensitivity_exponent = chemistry.calculate_coa_sensitivity_exponent(self.coa_distribution_exponent, coa_sensitivity_percent_drop_over_cell_diameter, 2*self.radius_resting)
-            
-        self.coa_belt_offset = coa_belt_offset/self.L
+        self.coa_distribution_exponent = np.log(coa_sensing_value_at_dist)/self.coa_sensing_dist_at_value
+        
+        self.max_coa_signal = max_coa_signal
         # =============================================================
         
         self.nodal_phase_var_indices = [parameterorg.rac_membrane_active_index, parameterorg.rac_membrane_inactive_index, parameterorg.rho_membrane_active_index, parameterorg.rho_membrane_inactive_index, parameterorg.x_index, parameterorg.y_index]
@@ -379,8 +375,8 @@ class Cell():
         rac_membrane_actives = self.system_info[access_index, :, parameterorg.rac_membrane_active_index]
         rho_membrane_actives = self.system_info[access_index, :, parameterorg.rho_membrane_active_index]
         
-        transduced_coa_signals = np.zeros(self.num_nodes, dtype=np.float64)
-        self.system_info[access_index, :, parameterorg.coa_signal_index] = transduced_coa_signals
+        coa_signals = np.zeros(self.num_nodes, dtype=np.float64)
+        self.system_info[access_index, :, parameterorg.coa_signal_index] = coa_signals
         external_gradient_on_nodes = np.zeros(self.num_nodes, dtype=np.float64)
         self.system_info[access_index, :, parameterorg.external_gradient_on_nodes_index] = np.zeros(self.num_nodes, dtype=np.float64)
         
@@ -404,7 +400,7 @@ class Cell():
         self.system_info[access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64)
         self.system_info[access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(self.num_nodes, dtype=np.float64)
         
-        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
         self.system_info[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -567,25 +563,19 @@ class Cell():
         rac_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_inactive_index]
         rho_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_inactive_index]
         
-        transduced_coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, self.coa_distribution_exponent, self.coa_sensitivity_exponent, self.coa_belt_offset, self.cell_dependent_coa_signal_strengths, intercellular_squared_dist_array, line_segment_intersection_matrix)
+        random_order_cell_indices = np.arange(num_cells)
+        np.random.shuffle(random_order_cell_indices)
+        #this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix
+        coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.cell_dependent_coa_signal_strengths, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix)
         
-        #print "transduced_coa_signals: ", transduced_coa_signals
-        
-        max_coa = np.max(transduced_coa_signals)
-        min_coa = np.min(transduced_coa_signals)
-        
-        if np.isnan(max_coa) or np.isnan(min_coa):
-            raise StandardError("Caught a nan!")
-            
-#        print "max_coa: ", np.max(transduced_coa_signals)
-#        print "min_coa: ", np.min(transduced_coa_signals)
+        print "max_coa: ", np.max(coa_signals)
+        print "min_coa: ", np.min(coa_signals)
 #        print "max_ext: ", np.max(external_gradient_on_nodes)
 #        print "min_ext: ", np.min(external_gradient_on_nodes)
-        #print "ic: ", (1.0/3.0)*(intercellular_contact_factors + np.roll(intercellular_contact_factors, 1) + np.roll(intercellular_contact_factors, -1))
         
-        self.system_info[next_tstep_system_info_access_index, :, parameterorg.coa_signal_index] = transduced_coa_signals
+        self.system_info[next_tstep_system_info_access_index, :, parameterorg.coa_signal_index] = coa_signals
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.external_gradient_on_nodes_index] = external_gradient_on_nodes
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
         kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -715,9 +705,9 @@ class Cell():
         
         intercellular_contact_factors = chemistry.calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, self.intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists)
         
-        transduced_coa_signals = self.system_info[access_index, :, parameterorg.coa_signal_index]
+        coa_signals = self.system_info[access_index, :, parameterorg.coa_signal_index]
         
-        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_points_on_other_cells_to_each_node_indices, close_points_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes, self.randomization_rac_kgtp_multipliers
+        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_intercellular_contact_factor_magnitudes_index, self.nodal_migr_bdry_contact_index, self.space_at_node_factor_rac, self.space_at_node_factor_rho, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_points_on_other_cells_to_each_node_indices, close_points_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, self.tension_fn_type, external_gradient_on_nodes, self.intercellular_contact_factor_magnitudes, self.randomization_rac_kgtp_multipliers
 
 # -----------------------------------------------------------------
     def trim_system_info(self, environment_tpoint):
