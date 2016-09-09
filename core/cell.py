@@ -646,8 +646,8 @@ class Cell():
         
 #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
 #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
-#        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
-#        printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
+        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
+        printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
 #        printing_fcyto = np.round(np.linalg.norm(F_cytoplasmic, axis=1)*1e6, decimals=2)
 #        
 #        current_area = abs(geometry.calculate_polygon_area(num_nodes, node_coords))
@@ -655,9 +655,13 @@ class Cell():
         
 #        print "edge_forces_plus: ", np.min(printing_efplus), np.max(printing_efplus)
 #        print "edge_forces_minus: ", np.min(printing_efminus), np.max(printing_efminus) 
-#        print "F_rgtpase: ", printing_frgtpase
-#        print "F_adh: ", printing_fadh
-#        print "F_rgtpase/F_adh: ", np.max(printing_frgtpase)/np.max(printing_fadh)
+        #print "F_rgtpase: ", printing_frgtpase
+        #print "F_adh: ", printing_fadh
+        printing_frgtpase_fadh_ratio = np.array([x/y for x, y in zip(printing_frgtpase, printing_fadh) if y > 1e-6])
+        if printing_frgtpase_fadh_ratio.shape[0] > 0:
+            print "F_rgtpase/F_adh: ", np.max(printing_frgtpase_fadh_ratio)
+        else:
+            print "F_rgtpase/F_adh: infinity"
 #        print "area_strain: ", area_strain
 #        print "stiff_cyto: ", self.stiffness_cytoplasmic
 #        print "F_cytoplasmic: ", np.min(printing_fcyto), np.max(printing_fcyto) 

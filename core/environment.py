@@ -99,7 +99,7 @@ class Environment():
         self.T = T
         self.num_timesteps = num_timesteps
         self.num_timepoints = num_timesteps + 1
-        self.timepoints = np.arange(self.curr_tpoint, self.num_timepoints)
+        self.timepoints = np.arange(0, self.num_timepoints)
         
         self.integration_params = integration_params
         
@@ -129,6 +129,15 @@ class Environment():
 
     def extend_simulation_runtime(self, new_num_timesteps):
         self.num_timesteps = new_num_timesteps
+        self.num_timepoints = self.num_timesteps + 1
+        self.timepoints = np.arange(0, self.num_timepoints)
+        
+        for a_cell in self.cells_in_environment:
+            a_cell.num_timepoints = self.num_timepoints
+            
+        old_exec_orders = np.copy(self.exec_orders)
+        self.exec_orders = np.zeros((self.num_timepoints, self.num_cells), dtype=np.int64)
+        self.exec_orders[:old_exec_orders.shape[0]] = old_exec_orders
         
         
     def simulation_complete(self):

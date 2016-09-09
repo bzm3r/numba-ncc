@@ -226,13 +226,19 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
                             del an_environment
                             continue
                         else:
-                            print "Extending simulation run time..."
                             assert(new_num_timesteps != None)
-                            assert(new_num_timesteps > an_environment.num_timesteps)
+                            assert(new_num_timesteps >= an_environment.num_timesteps)
+                            print "Extending simulation run time..."
                             an_environment.extend_simulation_runtime(new_num_timesteps)
                             assert(an_environment.simulation_complete() == False)
                     else:
                         print "Simulation incomplete. Finishing..."
+                        if extend_simulation == True:
+                            assert(new_num_timesteps != None)
+                            assert(new_num_timesteps >= an_environment.num_timesteps)
+                            print "Extending simulation run time..."
+                            an_environment.extend_simulation_runtime(new_num_timesteps)
+                            assert(an_environment.simulation_complete() == False)
                 else:
                     if delete_and_rerun_experiments_without_stored_env == True:
                         print PO_set_string + " directory exists, but stored environment missing -- deleting and re-running experiment."
@@ -291,11 +297,21 @@ def run_template_experiments(experiment_directory, template_experiment_name, bas
                         else:
                             print "Extending simulation run time..."
                             assert(new_num_timesteps != None)
-                            assert(new_num_timesteps > an_environment.num_timesteps)
+                            assert(new_num_timesteps >= an_environment.num_timesteps)
                             an_environment.extend_simulation_runtime(new_num_timesteps)
-                            assert(an_environment.simulation_complete() == False)
+                            if (an_environment.simulation_complete()):
+                                print "Simulation has been completed. Continuing..."
+                                del an_environment
+                                continue
+                            
                     else:
                         print "Simulation incomplete. Finishing..."
+                        if extend_simulation == True:
+                            print "Extending simulation run time..."
+                            assert(new_num_timesteps != None)
+                            assert(new_num_timesteps >= an_environment.num_timesteps)
+                            an_environment.extend_simulation_runtime(new_num_timesteps)
+                            assert(an_environment.simulation_complete() == False)
                 else:
                     if delete_and_rerun_experiments_without_stored_env == True:
                         print experiment_string + " directory exists, but stored environment missing -- deleting and re-running experiment."

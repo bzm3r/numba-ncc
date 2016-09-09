@@ -219,7 +219,10 @@ def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membra
     
     F_non_adh = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
     
-    F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, F_non_adh, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
+    if force_adh_constant > 1e-6:
+        F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, F_non_adh, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
+    else:
+        F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
     
     F = F_non_adh + F_adh
     
