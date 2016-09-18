@@ -178,7 +178,11 @@ def calculate_kdgtp_rac(num_nodes, rho_membrane_active, exponent_rho_mediated_ra
             constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
             strain_inhibition = constant*(global_tension**exponent) + 1.0
         elif tension_fn_type == 8:
-            strain_inhibition = 1.0
+            exponent = 4
+            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
+            strain_inhibition = constant*(global_tension**exponent) + 1.0
+        else:
+            tension_fn_type = 0.0/0.0
             
         i_plus1 = (i + 1)%num_nodes
         i_minus1 = (i - 1)%num_nodes

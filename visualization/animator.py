@@ -126,6 +126,35 @@ class AnimationCell():
                 context.move_to(x0, y0)
                 context.line_to(x1, y1)
                 context.stroke()
+        
+    # -------------------------------------
+        
+    def draw_rgtpase_showing_rac_random_spikes(self, context, polygon_coords, rgtpase_line_coords_per_gtpase, rac_random_spikes_info, rac_random_spike_color=(0, 153, 0)):        
+        context.set_line_width(self.rgtpase_line_width)
+        offset_coords = rgtpase_line_coords_per_gtpase[-1]
+        offset_directions = [1, -1, 1, -1]
+        
+        for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
+            offset_direction = offset_directions[i]
+            default_rgb = self.rgtpase_colors[i]
+            context.set_source_rgb(*default_rgb)
+            
+            
+            for n, drawing_data in enumerate(zip(polygon_coords, rgtpase_line_coords, offset_coords)):
+                polygon_coord, rgtpase_line_coord, offset_coord = drawing_data
+                if i == 0:
+                    if rac_random_spikes_info[n] > 1:
+                        context.set_source_rgb(*rac_random_spike_color)
+                    else:
+                        context.set_source_rgb(*default_rgb)
+                    
+                x0, y0 = polygon_coord + offset_direction*offset_coord
+                x1, y1 = rgtpase_line_coord
+                
+                context.new_path()
+                context.move_to(x0, y0)
+                context.line_to(x1, y1)
+                context.stroke()
                 
     # -------------------------------------
         
@@ -168,7 +197,7 @@ class AnimationCell():
             
     # -------------------------------------
     
-    def draw(self, context, polygon_coords, rgtpase_line_coords_per_label, velocity_line_coords_per_label, centroid_coords_per_frame, coa_line_coords):
+    def draw(self, context, polygon_coords, rgtpase_line_coords_per_label, rac_random_spikes_info, velocity_line_coords_per_label, centroid_coords_per_frame, coa_line_coords):
         if self.hidden == False:
             
             self.draw_cell_polygon(context, polygon_coords)
@@ -177,7 +206,10 @@ class AnimationCell():
                 self.draw_velocities(context, polygon_coords, velocity_line_coords_per_label)
                 
             if (self.show_rgtpase == True):
-                self.draw_rgtpase(context, polygon_coords, rgtpase_line_coords_per_label)
+                if rac_random_spikes_info != None:
+                    self.draw_rgtpase_showing_rac_random_spikes(context, polygon_coords, rgtpase_line_coords_per_label, rac_random_spikes_info)
+                else:
+                    self.draw_rgtpase(context, polygon_coords, rgtpase_line_coords_per_label)
             
             if (self.show_centroid_trail == True):
                 self.draw_centroid_trail(context, centroid_coords_per_frame)
@@ -267,6 +299,12 @@ def prepare_coa_data(coa_scale, cell_index, unique_undrawn_timesteps, polygon_co
     coa_signal = coa_mag*unit_inside_pointing_vecs + polygon_coords_per_timestep
     
     return coa_signal
+    
+def prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, storefile_path):
+    rac_random_spike_info = hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "randomization_event_occurred", storefile_path)
+    
+    return rac_random_spike_info
+    
 # -------------------------------------
 
 def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context):
@@ -285,7 +323,7 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
 
 # -------------------------------------
    
-def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str):
+def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str):
     
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
     context = cairo.Context(surface)
@@ -305,6 +343,11 @@ def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_l
         else:
             rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
             
+        if rac_random_spikes_info_per_timepoint_per_cell == None:
+            rac_random_spikes_info = None
+        else:
+            rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
+            
         if velocity_line_coords_per_label_per_timepoint_per_cell == None:
             velocity_data = None
         else:
@@ -319,8 +362,8 @@ def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_l
             coa_data = None
         else:
             coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
-            
-        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, velocity_data, centroid_data, coa_data)
+        
+        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
         
     if space_physical_bdry_polygon.shape[0] != 0:
         context.new_path()
@@ -343,7 +386,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # -------------------------------------    
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True):        
+    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True):        
         self.global_scale = global_scale
         self.rotation_theta = rotation_theta
         self.translation_x = translation_x
@@ -379,6 +422,8 @@ class EnvironmentAnimation():
         
         self.only_show_cells = only_show_cells
         self.background_color = background_color
+        
+        self.show_rac_random_spikes = show_rac_random_spikes
         
         self.cell_polygon_colors = []
         if color_each_group_differently == True and len(cell_polygon_colors) == 0:
@@ -475,6 +520,11 @@ class EnvironmentAnimation():
             rgtpase_line_coords_per_label_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_rgtpase_labels + 1, self.num_nodes, 2))
         else:
             rgtpase_line_coords_per_label_per_timepoint_per_cell = None
+        
+        if self.show_rac_random_spikes:
+            rac_random_spike_info_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes))
+        else:
+            rac_random_spike_info_per_timepoint_per_cell = None
             
         if self.show_coa:
             coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2), dtype=np.float64)
@@ -504,12 +554,15 @@ class EnvironmentAnimation():
                 
                 for x in xrange(self.num_rgtpase_labels + 1):
                     rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index,:,x,:,:] = rgtpase_data_for_undrawn_timesteps[x]
+                    
+            if self.show_rac_random_spikes:
+                rac_random_spike_info_per_timepoint_per_cell[cell_index,:,:] = prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, self.storefile_path)
                 
             if self.show_coa:
                 coa_line_coords_per_timepoint_per_cell[cell_index,:,:,:] = prepare_coa_data(self.coa_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timepoint_per_cell, self.storefile_path)
                 
                         
-        return polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell
+        return polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell
                                     
                                     
     # ---------------------------------------------------------------------
@@ -572,7 +625,7 @@ class EnvironmentAnimation():
         
         unique_undrawn_timesteps = np.array([x for x in unique_timesteps if self.image_drawn_array[x] == 0])
         
-        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell = self.gather_data(timestep_to_draw_till, unique_undrawn_timesteps)
+        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell = self.gather_data(timestep_to_draw_till, unique_undrawn_timesteps)
 
         animation_cells = self.create_animation_cells()
         
@@ -612,7 +665,7 @@ class EnvironmentAnimation():
             sys.stdout.flush()
             assert(self.image_drawn_array[t] == 0)
             self.image_drawn_array[t] = 1
-            draw_animation_frame_for_given_timestep(i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str)
+            draw_animation_frame_for_given_timestep(i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str)
             print ""
 
         print "Copying pre-drawn images..."                

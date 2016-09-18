@@ -93,14 +93,14 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
 # =============================================
     
 @nb.jit(nopython=True)
-def generate_random_multipliers(num_nodes, threshold, magnitude):
+def generate_random_multipliers(num_nodes, threshold, randoms, magnitude):
     rfs = np.ones(num_nodes, dtype=np.float64)
     
     for i in range(num_nodes):
-        if np.random.random() < threshold:
-            continue
+        if randoms[i] < threshold:
+            rfs[i] = magnitude
         else:
-            rfs[i] = magnitude*np.random.random()
+            continue
             
     return rfs
                 
@@ -527,7 +527,7 @@ class Cell():
 #        rfs = np.random.random(self.num_nodes)
 #        rfs = rfs/np.sum(rfs)
 #        
-        self.randomization_rac_kgtp_multipliers = generate_random_multipliers(self.num_nodes, 0.5, self.randomization_magnitude)
+        self.randomization_rac_kgtp_multipliers = generate_random_multipliers(self.num_nodes, 0.25, np.random.rand(self.num_nodes), self.randomization_magnitude)
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors):
@@ -597,11 +597,12 @@ class Cell():
                     self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_gdi_bound_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, tpoint=new_tpoint)
                     
                     self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
+                    
                     rac_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_active_index]
                     rho_membrane_actives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_active_index]
                     rac_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rac_membrane_inactive_index]
                     rho_membrane_inactives = self.system_info[next_tstep_system_info_access_index, :, parameterorg.rho_membrane_inactive_index]
-                
+                    
                     
             elif self.randomization_scheme == 1:
                 if self.next_randomization_event_tstep == None:
@@ -611,8 +612,9 @@ class Cell():
                     self.next_randomization_event_tstep = None
                     
                     # renew Rac kgtp rate multipliers
-                    self.renew_randomization_rac_kgtp_multipliers()                  
-                    self.system_info[next_tstep_system_info_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
+                    self.renew_randomization_rac_kgtp_multipliers()
+                    
+                self.system_info[next_tstep_system_info_access_index, :, parameterorg.randomization_event_occurred_index] = self.randomization_rac_kgtp_multipliers
                     
             if self.verbose == True:
                 print self.randomization_print_string.format(self.next_randomization_event_tstep)
@@ -672,8 +674,8 @@ class Cell():
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(num_nodes, dtype=np.float64)
         
-#        if self.verbose == True:
-#            print "local_strains: ", local_strains
+        if self.verbose == True:
+            print "global strain: ", np.sum(local_strains)/num_nodes
             
         local_tension_strains = np.where(local_strains < 0, 0, local_strains)
 

@@ -279,10 +279,10 @@ def graph_important_cell_variables_over_time(T, cell_index, storefile_path, pola
 def graph_strains(T, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None):
     fig, ax = plt.subplots()
     
-    average_strains = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)*100
-    time_points = T*np.arange(average_strains.shape[0])
+    total_strains = np.sum(hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)*100
+    time_points = T*np.arange(total_strains.shape[0])
     
-    ax.plot(time_points, average_strains, 'k', label='avg_strains')
+    ax.plot(time_points, total_strains, 'k', label='avg_strains')
         
     # Shrink current axis by 20%
     box = ax.get_position()
