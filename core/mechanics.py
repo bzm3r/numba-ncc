@@ -148,13 +148,25 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
         ni_plus2_coord = this_cell_coords[(ni + 2)%num_nodes]
         ni_minus2_coord = this_cell_coords[(ni - 2)%num_nodes]
         
-        if rac_membrane_actives[ni] < rho_membrane_actives[ni]:
-            if geometry.calculate_2D_vector_mag(ni_coord - ni_plus2_coord) < squeeze_effect_threshold or geometry.calculate_2D_vector_mag(ni_coord - ni_minus2_coord) < squeeze_effect_threshold:
-                rgtpase_mediated_force_mags[ni] = 0.0
-            else:
-                rgtpase_mediated_force_mags[ni] = hill_function(force_rho_exp, force_rho_threshold, nodal_rho_activity)*force_rho_max_mag
+        difference = (rac_membrane_actives[ni] - rho_membrane_actives[ni])
+        k = 0.0
+        
+        if difference < 0:
+            k = -1*force_rho_max_mag
         else:
-            rgtpase_mediated_force_mags[ni] = -1*hill_function(force_rac_exp, force_rac_threshold, nodal_rac_activity)*force_rac_max_mag
+            k = -1*force_rac_max_mag
+            
+        rgtpase_mediated_force_mags[ni] = k*difference
+            
+            
+        
+#        if rac_membrane_actives[ni] < rho_membrane_actives[ni]:
+#            if geometry.calculate_2D_vector_mag(ni_coord - ni_plus2_coord) < squeeze_effect_threshold or geometry.calculate_2D_vector_mag(ni_coord - ni_minus2_coord) < squeeze_effect_threshold:
+#                rgtpase_mediated_force_mags[ni] = 0.0
+#            else:
+#                rgtpase_mediated_force_mags[ni] = hill_function(force_rho_exp, force_rho_threshold, nodal_rho_activity)*force_rho_max_mag
+#        else:
+#            rgtpase_mediated_force_mags[ni] = -1*hill_function(force_rac_exp, force_rac_threshold, nodal_rac_activity)*force_rac_max_mag
     
     result = np.empty((num_nodes, 2), dtype=np.float64)
     result = geometry.multiply_vectors_by_scalars(num_nodes, unit_inside_pointing_vectors, rgtpase_mediated_force_mags)
