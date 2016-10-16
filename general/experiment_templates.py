@@ -331,7 +331,7 @@ def many_cells_coa_test(date_str, experiment_number, baseline_parameter_dict, pa
 def corridor_migration_experiment(date_str, experiment_number, baseline_parameter_dict, parameter_overrides_dict, randomization=True, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6, timestep_length=2, num_nodes=16, num_cells_width=2, num_cells_height=1, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, default_coa=1.2, default_cil=20, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, animation_time_resolution='normal'):    
     total_num_cells = num_cells_width*num_cells_height
     
-    experiment_name_format_string = "corridor_migration_{}_NC=({}, {})".format("{}", num_cells_width, num_cells_height)
+    experiment_name_format_string = "corridor_migration_{}_NC=({}, {})_COA={}".format("{}", num_cells_width, num_cells_height, default_coa)
     
     parameter_overrides_dict = update_pd_with_randomization_info(parameter_overrides_dict, randomization, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
     

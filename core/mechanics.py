@@ -149,13 +149,18 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
         ni_minus2_coord = this_cell_coords[(ni - 2)%num_nodes]
         
         difference = (rac_membrane_actives[ni] - rho_membrane_actives[ni])
-        k = 0.0
         
+        if difference > 0:
+            if difference > force_rac_threshold:
+                difference = force_rac_threshold
+            
+        k = 0.0
         if difference < 0:
             k = -1*force_rho_max_mag
         else:
             k = -1*force_rac_max_mag
-            
+        
+        
         rgtpase_mediated_force_mags[ni] = k*difference
             
             
