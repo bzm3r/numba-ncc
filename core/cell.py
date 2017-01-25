@@ -237,13 +237,13 @@ class Cell():
         self.kgtp_rac_baseline = kgtp_rac_baseline*self.T
         self.kgtp_rac_autoact_baseline = kgtp_rac_autoact_baseline*self.T
         
-        self.threshold_rac_autoact = threshold_rac_autoact/(self.C_total*self.num_nodes)
+        self.threshold_rac_autoact = threshold_rac_autoact/(self.C_total*self.num_nodes*self.length_edge_resting)
         self.exponent_rac_autoact = exponent_rac_autoact
         
         self.kdgtp_rac_baseline = kdgtp_rac_baseline*self.T
         self.kdgtp_rho_mediated_rac_inhib_baseline = kdgtp_rho_mediated_rac_inhib_baseline*self.T
         
-        self.threshold_rho_mediated_rac_inhib = threshold_rho_mediated_rac_inhib/(self.H_total*self.num_nodes)
+        self.threshold_rho_mediated_rac_inhib = threshold_rho_mediated_rac_inhib/(self.H_total*self.num_nodes*self.length_edge_resting)
         self.exponent_rho_mediated_rac_inhib = exponent_rho_mediated_rac_inhib
         
         self.tension_mediated_rac_inhibition_exponent = np.log(0.5)/(-1*tension_mediated_rac_inhibition_half_strain)
@@ -259,13 +259,13 @@ class Cell():
         self.kgtp_rho_baseline = kgtp_rho_baseline*self.T
         self.kgtp_rho_autoact_baseline = kgtp_rho_autoact_baseline*self.T
         
-        self.threshold_rho_autoact = threshold_rho_autoact/(self.H_total*self.num_nodes)
+        self.threshold_rho_autoact = threshold_rho_autoact/(self.H_total*self.num_nodes*self.length_edge_resting)
         self.exponent_rho_autoact = exponent_rho_autoact
         
         self.kdgtp_rho_baseline = kdgtp_rho_baseline*self.T
         self.kdgtp_rac_mediated_rho_inhib_baseline = kdgtp_rac_mediated_rho_inhib_baseline*self.T
         
-        self.threshold_rac_mediated_rho_inhib = threshold_rac_mediated_rho_inhib/(self.C_total*self.num_nodes)
+        self.threshold_rac_mediated_rho_inhib = threshold_rac_mediated_rho_inhib/(self.C_total*self.num_nodes*self.length_edge_resting)
         self.exponent_rac_mediated_rho_inhib = exponent_rac_mediated_rho_inhib
         
         self.kgdi_rho = kgdi_rho*self.T

@@ -112,24 +112,33 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
         local_strain = local_strains[i]
         if local_strain > 0:
             only_tensile_local_strains[i] = local_strain
+                                      
+    edgeplus_lengths = geometry.calculate_edgeplus_lengths(num_nodes, node_coords)
+    avg_edge_lengths = geometry.calculate_average_edge_length_around_nodes(num_nodes, edgeplus_lengths)
     
-    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, randomization_rac_kgtp_multipliers)
-    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, rho_membrane_actives,  exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
+    conc_rac_membrane_actives = chemistry.calculate_concentrations(num_nodes, rac_membrane_actives, avg_edge_lengths)
+    
+    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, randomization_rac_kgtp_multipliers)
+    
+    conc_rho_membrane_actives = chemistry.calculate_concentrations(num_nodes, rho_membrane_actives, avg_edge_lengths)
+    
+    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
 
     kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
     
-    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
+    kgtps_rho = chemistry.calculate_kgtp_rho(num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
     
-    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, rac_membrane_actives, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
+    kdgtps_rho = chemistry.calculate_kdgtp_rho(num_nodes, conc_rac_membrane_actives, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
     
     kdgdis_rho = kdgdi_rho*np.ones(num_nodes, dtype=np.float64)
     
-    edgeplus_lengths = geometry.calculate_edgeplus_lengths(num_nodes, node_coords)
+    conc_rac_membrane_inactives = chemistry.calculate_concentrations(num_nodes, rac_membrane_inactives, avg_edge_lengths)
+    conc_rho_membrane_inactives = chemistry.calculate_concentrations(num_nodes, rho_membrane_inactives, avg_edge_lengths)
     
-    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, rac_membrane_actives, diffusion_const_active, edgeplus_lengths)
-    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rac_membrane_inactives, diffusion_const_inactive, edgeplus_lengths)
-    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, rho_membrane_actives, diffusion_const_active, edgeplus_lengths)
-    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, rho_membrane_inactives, diffusion_const_active, edgeplus_lengths)
+    diffusion_rac_membrane_active = chemistry.calculate_diffusion(num_nodes, conc_rac_membrane_actives, diffusion_const_active, edgeplus_lengths, avg_edge_lengths)
+    diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(num_nodes, conc_rac_membrane_inactives, diffusion_const_inactive, edgeplus_lengths, avg_edge_lengths)
+    diffusion_rho_membrane_active = chemistry.calculate_diffusion(num_nodes, conc_rho_membrane_actives, diffusion_const_active, edgeplus_lengths, avg_edge_lengths)
+    diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(num_nodes, conc_rho_membrane_inactives, diffusion_const_active, edgeplus_lengths, avg_edge_lengths)
     
     delta_rac_activated = np.zeros(num_nodes, dtype=np.float64)
     delta_rac_inactivated = np.zeros(num_nodes, dtype=np.float64)

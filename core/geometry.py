@@ -636,6 +636,19 @@ def calculate_edgeplus_lengths(num_nodes, node_coords):
         edgeplus_lengths[ni] = calculate_dist_between_points_given_vectors(this_node_coord, plus_node_coord)
     
     return edgeplus_lengths
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)     
+def calculate_average_edge_length_around_nodes(num_nodes, edgeplus_lengths):
+    avg_edge_lengths = np.zeros(num_nodes, dtype=np.float64)
+    
+    for ni in range(num_nodes):
+        this_node_edgeplus_length = edgeplus_lengths[ni]
+        last_node_edgeplus_length = edgeplus_lengths[(ni - 1)%num_nodes]
+
+        avg_edge_lengths[ni] = 0.5*this_node_edgeplus_length + 0.5*last_node_edgeplus_length
+    
+    return avg_edge_lengths
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     

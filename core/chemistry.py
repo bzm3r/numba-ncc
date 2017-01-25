@@ -122,27 +122,27 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors):
+def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors):
     result = np.empty(num_nodes, dtype=np.float64)
-    rac_autoact = 0.0
+    kgtp_rac_autoact = 0.0
     
     for i in range(num_nodes):
         if migr_bdry_contact_factors[i] > 1.0:
-            rac_autoact = 0.0
+            kgtp_rac_autoact = 0.0
         else:
-            rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, rac_membrane_active[i])
+            kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-        result[i] = coa_signals[i]*(randomization_factors[i]*kgtp_rac_baseline + rac_autoact*(external_gradient_on_nodes[i] + 1))
+        result[i] = coa_signals[i]*(randomization_factors[i]*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1))
         
     return result
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True) 
-def calculate_kgtp_rho(num_nodes, rho_membrane_active, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline):
+def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline):
     
     result = np.empty(num_nodes)
     for i in range(num_nodes):
-        kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, rho_membrane_active[i])
+        kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active)
         
         i_plus1 = (i + 1)%num_nodes
         i_minus1 = (i - 1)%num_nodes
@@ -157,13 +157,13 @@ def calculate_kgtp_rho(num_nodes, rho_membrane_active, intercellular_contact_fac
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)            
-def calculate_kdgtp_rac(num_nodes, rho_membrane_active, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type):
+def calculate_kdgtp_rac(num_nodes, avg_edge_lengths, conc_rho_membrane_active, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type):
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
     
     for i in range(num_nodes):        
-        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, rho_membrane_active[i])
+        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_active)
         
         strain_inhibition = 1.0
         if tension_fn_type == 5:
@@ -197,12 +197,12 @@ def calculate_kdgtp_rac(num_nodes, rho_membrane_active, exponent_rho_mediated_ra
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)    
-def calculate_kdgtp_rho(num_nodes, rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline):
+def calculate_kdgtp_rho(num_nodes, avg_edge_lengths, conc_rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline):
     
     result = np.empty(num_nodes, dtype=np.float64)
     
     for i in range(num_nodes):
-        kdgtp_rac_mediated_rho_inhib = kdgtp_rac_mediated_rho_inhib_baseline*hill_function(exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, rac_membrane_active[i])
+        kdgtp_rac_mediated_rho_inhib = kdgtp_rac_mediated_rho_inhib_baseline*hill_function(exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, conc_rac_membrane_active)
         
         result[i] = 1.0*(kdgtp_rho_baseline + kdgtp_rac_mediated_rho_inhib)
         
@@ -210,25 +210,42 @@ def calculate_kdgtp_rho(num_nodes, rac_membrane_active, exponent_rac_mediated_rh
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
-def calculate_diffusion(num_nodes, species, diffusion_constant, edgeplus_lengths):
+def calculate_concentrations(num_nodes, species, avg_edge_lengths):
     result = np.empty(num_nodes, dtype=np.float64)
     
     for i in range(num_nodes):
-        i_minus_1_index = (i - 1)%num_nodes
-        i_plus_1_index = (i + 1)%num_nodes
+        result = species[i]/avg_edge_lengths[i]
         
-        length_edgeplus = edgeplus_lengths[i]
-        length_edgeminus = edgeplus_lengths[i_minus_1_index]
+    return result
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_flux_terms(num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths):
+    result = np.empty(num_nodes, dtype=np.float64)
+    
+    for i in range(num_nodes):
+        i_plus1_index = (i + 1)%num_nodes
+                                         
+        result[i] = -diffusion_constant*(concentrations[i_plus1_index] - concentrations[i])/edgeplus_lengths[i]
         
-        delta_i_plus_1 = (species[i_plus_1_index] - species[i])/(length_edgeplus*length_edgeplus)
+    return result
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_diffusion(num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths,):
+    result = np.empty(num_nodes, dtype=np.float64)
+    
+    fluxes = calculate_flux_terms(num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths)
+    
+    for i in range(num_nodes):
+        i_minus1_index = (i - 1)%num_nodes
+
         
-        delta_i_minus_1 = (species[i_minus_1_index] - species[i])/(length_edgeminus*length_edgeminus)
-        
-        result[i] = diffusion_constant*(delta_i_plus_1 + delta_i_minus_1)
+        result[i] = fluxes[i_minus1_index] - fluxes[i]
         
     return result
     
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------
 @nb.jit(nopython=True)   
 def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists):
 
