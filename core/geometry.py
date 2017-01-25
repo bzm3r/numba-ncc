@@ -1143,6 +1143,7 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
     
 #@nb.jit(nopython=True)      
 def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
+    #delta_dist_matrix = np.zeros((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
     
@@ -1171,10 +1172,31 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells
                             distance_squared_matrix[other_ci][other_ni][ci][ni] = squared_dist
                             
     return distance_squared_matrix, line_segment_intersection_matrix
-
 # -----------------------------------------------------------------
-# what if point array is flattened?
-#     
+@nb.jit(nopython=True)
+def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
+    # 1 if info has been updated, 0 otherwise
+    info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
+    
+    for ni in range(num_nodes_per_cell):
+        for other_ci in range(num_cells):
+            if other_ci != last_updated_cell_index:
+                relevant_info_update_tracker_slice = info_update_tracker[last_updated_cell_index][ni][other_ci]
+                for other_ni in range(num_nodes_per_cell):
+                    if relevant_info_update_tracker_slice[other_ni] != 1:
+                        info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
+                        info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
+                            
+                        this_node = all_cells_node_coords[last_updated_cell_index][ni]
+                        other_node = all_cells_node_coords[other_ci][other_ni]
+                        squared_dist = calculate_squared_dist(this_node, other_node)
+                        
+                        distance_squared_matrix[last_updated_cell_index][ni][other_ci][other_ni] = squared_dist
+                        distance_squared_matrix[other_ci][other_ni][last_updated_cell_index][ni] = squared_dist
+                            
+    return distance_squared_matrix
+
+# ---------------------------------------------------------------------------------
 @nb.jit(nopython=True)
 def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
     
@@ -1189,7 +1211,7 @@ def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell
                     if relevant_info_update_tracker_slice[other_ni] != 1:
                         info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
                         info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
-                        
+
                         does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(last_updated_cell_index, ni, other_ci, other_ni, all_cells_node_coords, cells_bounding_box_array)
                             
                         line_segment_intersection_matrix[last_updated_cell_index][ni][other_ci][other_ni] = does_line_segment_between_nodes_intersect
@@ -1197,12 +1219,27 @@ def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell
                             
                         this_node = all_cells_node_coords[last_updated_cell_index][ni]
                         other_node = all_cells_node_coords[other_ci][other_ni]
-                        
                         squared_dist = calculate_squared_dist(this_node, other_node)
+                        
                         distance_squared_matrix[last_updated_cell_index][ni][other_ci][other_ni] = squared_dist
                         distance_squared_matrix[other_ci][other_ni][last_updated_cell_index][ni] = squared_dist
                             
     return distance_squared_matrix, line_segment_intersection_matrix
+    
+# -------------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_centroid_dift(prev_cell_centroids, curr_cell_centroids):
+    num_cells, num_nodes = prev_cell_centroids.shape
+    drift = 0.0
+    
+    for ci in range(num_cells):
+        prev_centroid = prev_cell_centroids[ci]
+        curr_centroid = curr_cell_centroids[ci]
+        
+        drift += calculate_dist_between_points_given_vectors(prev_centroid, curr_centroid)
+        
+    return drift
+        
     
     
     

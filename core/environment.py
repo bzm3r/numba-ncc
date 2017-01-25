@@ -8,6 +8,7 @@ import visualization.datavis as datavis
 import analysis.utilities as analysis_utils
 import visualization.animator as animator
 import dill
+import cPickle
 import numba as nb
 import time
 import core.hardio as hardio
@@ -66,7 +67,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
@@ -81,6 +82,8 @@ class Environment():
             self.verbose = verbose
             self.environment_name = environment_name
             self.environment_dir = environment_dir
+            
+        self.init_random_state(seed)
             
         if environment_dir != None:
             self.storefile_path = os.path.join(environment_dir, "store.hdf5")
@@ -109,6 +112,7 @@ class Environment():
         
         self.num_cell_groups = len(self.cell_group_defns)
         self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns])
+        self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc*self.num_cells
         self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
         self.full_output_dicts = [[] for cell in self.cells_in_environment]
@@ -121,7 +125,25 @@ class Environment():
             hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
             
         self.mode = MODE_EXECUTE
-            
+
+# -----------------------------------------------------------------
+    def write_random_state_file(self, random_state_fp):
+        with open(random_state_fp, 'wb') as f:
+            cPickle.dump(np.random.get_state(), f)
+        
+    def set_random_state_from_file(self, random_state_fp):
+        with open(random_state_fp, 'rb') as f:
+            np.random.set_state(cPickle.load(f))
+        
+    def init_random_state(self, seed):
+        if self.environment_dir != None:
+            random_state_fp = os.path.join(self.environment_dir, "random_state.pkl")
+            if os.path.exists(random_state_fp):
+                self.set_random_state_from_file(random_state_fp)
+            else:
+                np.random.seed(seed)
+                self.write_random_state_file(random_state_fp)
+                
 # -----------------------------------------------------------------
 
     def get_system_info_index(self, tpoint):
@@ -305,7 +327,7 @@ class Environment():
 
 # -----------------------------------------------------------------
             
-    def execute_system_dynamics_in_random_sequence(self, t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells):        
+    def execute_system_dynamics_in_random_sequence(self, t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells, centroid_drift, recalc_geometry):        
         execution_sequence = self.cell_indices
         np.random.shuffle(execution_sequence)
         
@@ -322,7 +344,10 @@ class Environment():
                         print "-"*40
                     else:
                         print "="*40
-                        
+                    
+                    print "centroid_drift: ", centroid_drift
+                    if recalc_geometry:
+                        print "**GEOMETRY RECALC IN PROGRESS**"
                     print "Time step: {}/{}".format(t, self.num_timesteps)
                     print "Executing dyanmics for cell: ", cell_index
             
@@ -336,15 +361,17 @@ class Environment():
                 environment_cells_node_forces[cell_index] = this_cell_forces
                 
                 cells_bounding_box_array[cell_index] = geometry.calculate_polygon_bounding_box(this_cell_coords)
-                cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
-                #cells_node_distance_matrix = geometry.update_distance_squared_matrix(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
+                if recalc_geometry:
+                    cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                else:
+                    cells_node_distance_matrix = geometry.update_distance_squared_matrix(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
                 
             
             if self.verbose == True:
                 if self.full_print:
                     if cell_index == last_cell_index:
                         print "="*40
-                
+
         return cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces
             
 # -----------------------------------------------------------------
@@ -423,6 +450,9 @@ class Environment():
 # ----------------------------------------------------------------- 
         
     def dump_to_store(self, tpoint):
+        random_state_fp = os.path.join(self.environment_dir, "random_state.pkl")
+        self.write_random_state_file(random_state_fp)
+        
         access_index = self.get_system_info_index(self.curr_tpoint)
         
         for cell_index in xrange(self.num_cells):
@@ -445,6 +475,7 @@ class Environment():
 # ----------------------------------------------------------------- 
         
     def init_from_store(self, tpoint=None):
+        self.init_random_state(None)
         if tpoint == None:
             tpoint = self.curr_tpoint
         
@@ -496,6 +527,8 @@ class Environment():
         
     def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
         if self.mode == MODE_EXECUTE:
+            allowed_drift_before_geometry_recalc = self.allowed_drift_before_geometry_recalc
+            centroid_drift = allowed_drift_before_geometry_recalc*1.2
             simulation_st = time.time()
             num_cells = self.num_cells
             num_nodes = self.num_nodes
@@ -531,6 +564,7 @@ class Environment():
                 if self.last_timestep_when_environment_hard_saved == None:
                     self.last_timestep_when_environment_hard_saved = self.curr_tpoint
                 
+                prev_centroids = geometry.calculate_centroids(environment_cells_node_coords)
                 for t in self.timepoints[self.curr_tpoint:-1]:
                     if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
                         self.last_timestep_when_environment_hard_saved = t
@@ -550,9 +584,22 @@ class Environment():
                         
                         print "Making intermediate visuals..."
                         self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
-                    
-                    cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells)
+
+                    if allowed_drift_before_geometry_recalc == 0 or centroid_drift > allowed_drift_before_geometry_recalc:
+                        recalc_geometry = True
+                    else:
+                        recalc_geometry = False
+                        
+                    cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells, centroid_drift, recalc_geometry)
                     self.curr_tpoint += 1
+                    if allowed_drift_before_geometry_recalc > 0:
+                        curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
+                        if recalc_geometry:
+                            centroid_drift = 0.0
+                        else:
+                            delta_drift = np.sum(geometry.calculate_centroid_dift(prev_centroids, curr_centroids))/1e-6
+                            centroid_drift += delta_drift
+                        prev_centroids = curr_centroids
             else:
                 raise StandardError("max_t has already been reached.")
             

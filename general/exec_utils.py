@@ -370,10 +370,10 @@ def get_date_and_experiment_number(scriptname):
         raise_scriptname_error(scriptname)        
     else:
         date_pieces = name_pieces[:3]
-        check_if_date_is_proper(date_pieces, scriptname)
+        #check_if_date_is_proper(date_pieces, scriptname)
         DATE_STR = '_'.join([piece.upper() for piece in name_pieces[:3]])
         
-        check_if_experiment_number_is_proper(name_pieces[5], scriptname)
+        #check_if_experiment_number_is_proper(name_pieces[5], scriptname)
         EXPERIMENT_NUMBER = int(name_pieces[5])
         
         return DATE_STR, EXPERIMENT_NUMBER
