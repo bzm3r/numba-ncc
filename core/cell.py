@@ -399,14 +399,21 @@ class Cell():
         # update chemistry parameters
         self.system_info[access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64)
         self.system_info[access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(self.num_nodes, dtype=np.float64)
+    
+        edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.num_nodes, node_coords)        
+        avg_edge_lengths = geometry.calculate_average_edge_length_around_nodes(self.num_nodes, edgeplus_lengths)
         
-        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        conc_rac_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rac_membrane_actives, avg_edge_lengths)
         
-        self.system_info[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
+        conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
         
-        self.system_info[access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, local_tension_strains, self.tension_fn_type)
+        self.system_info[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
-        self.system_info[access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
+        self.system_info[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
+        
+        self.system_info[access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, local_tension_strains, self.tension_fn_type)
+        
+        self.system_info[access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, conc_rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
         
         # update mechanics parameters
         self.system_info[access_index, :, [parameterorg.F_x_index, parameterorg.F_y_index]] = np.transpose(F)
@@ -575,12 +582,8 @@ class Cell():
         
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.coa_signal_index] = coa_signals
         self.system_info[next_tstep_system_info_access_index, :, parameterorg.external_gradient_on_nodes_index] = external_gradient_on_nodes
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+                        
         
-        kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
-        
-        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kgtp_rac_index] = kgtp_rac_per_node
-        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kgtp_rho_index] = kgtp_rho_per_node
         
         # ==================================
         # RANDOMIZATION
@@ -614,6 +617,8 @@ class Cell():
                     # renew Rac kgtp rate multipliers
                     self.renew_randomization_rac_kgtp_multipliers()
                     
+                    print "(set_next_state) randomization_rac_kgtp_multipliers:",  self.randomization_rac_kgtp_multipliers
+                    
                 self.system_info[next_tstep_system_info_access_index, :, parameterorg.randomization_event_occurred_index] = self.randomization_rac_kgtp_multipliers
                     
             if self.verbose == True:
@@ -645,7 +650,7 @@ class Cell():
         
         
         F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(num_nodes, self.num_cells_in_environment, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.force_rac_exp, self.force_rac_threshold, self.force_rac_max_mag, self.force_rho_exp, self.force_rho_threshold, self.force_rho_max_mag, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
-        
+                        
 #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
 #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
         #printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
@@ -678,10 +683,24 @@ class Cell():
             print "global strain: ", np.sum(local_strains)/num_nodes
             
         local_tension_strains = np.where(local_strains < 0, 0, local_strains)
+        
+        edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.num_nodes, node_coords)        
+        avg_edge_lengths = geometry.calculate_average_edge_length_around_nodes(self.num_nodes, edgeplus_lengths)
+        
+        conc_rac_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rac_membrane_actives, avg_edge_lengths)
+        
+        conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
+        
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        
+        kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
+        
+        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kgtp_rac_index] = kgtp_rac_per_node
+        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kgtp_rho_index] = kgtp_rho_per_node
 
-        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, local_tension_strains, self.tension_fn_type)
+        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_exponent, self.tension_mediated_rac_inhibition_multiplier, self.tension_mediated_rac_hill_exponent, self.tension_mediated_rac_inhibition_half_strain, local_tension_strains, self.tension_fn_type)
 
-        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
+        self.system_info[next_tstep_system_info_access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, conc_rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
         
         # update mechanics parameters
         self.system_info[next_tstep_system_info_access_index, :, [parameterorg.F_x_index, parameterorg.F_y_index]] = np.transpose(F)

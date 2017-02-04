@@ -142,7 +142,7 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
     
     result = np.empty(num_nodes)
     for i in range(num_nodes):
-        kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active)
+        kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active[i])
         
         i_plus1 = (i + 1)%num_nodes
         i_minus1 = (i - 1)%num_nodes
@@ -157,13 +157,13 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)            
-def calculate_kdgtp_rac(num_nodes, avg_edge_lengths, conc_rho_membrane_active, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type):
+def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_active, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type):
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
     
     for i in range(num_nodes):        
-        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_active)
+        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_active[i])
         
         strain_inhibition = 1.0
         if tension_fn_type == 5:
@@ -197,12 +197,12 @@ def calculate_kdgtp_rac(num_nodes, avg_edge_lengths, conc_rho_membrane_active, e
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)    
-def calculate_kdgtp_rho(num_nodes, avg_edge_lengths, conc_rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline):
+def calculate_kdgtp_rho(num_nodes, conc_rac_membrane_active, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline):
     
     result = np.empty(num_nodes, dtype=np.float64)
     
     for i in range(num_nodes):
-        kdgtp_rac_mediated_rho_inhib = kdgtp_rac_mediated_rho_inhib_baseline*hill_function(exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, conc_rac_membrane_active)
+        kdgtp_rac_mediated_rho_inhib = kdgtp_rac_mediated_rho_inhib_baseline*hill_function(exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, conc_rac_membrane_active[i])
         
         result[i] = 1.0*(kdgtp_rho_baseline + kdgtp_rac_mediated_rho_inhib)
         
@@ -214,7 +214,7 @@ def calculate_concentrations(num_nodes, species, avg_edge_lengths):
     result = np.empty(num_nodes, dtype=np.float64)
     
     for i in range(num_nodes):
-        result = species[i]/avg_edge_lengths[i]
+        result[i] = species[i]/avg_edge_lengths[i]
         
     return result
 
