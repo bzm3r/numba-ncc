@@ -594,10 +594,10 @@ def check_if_nodes_inside_other_cells(this_cell_index, num_nodes, num_cells, all
     this_cell_node_coords = all_cells_node_coords[this_cell_index]
     
     for other_ci in range(num_cells):
-            if other_ci !=  this_cell_index:
-                are_nodes_inside_current_cell = are_points_inside_polygon(num_nodes, this_cell_node_coords, num_nodes, all_cells_node_coords[other_ci])
-                for ni in range(num_nodes):
-                    are_nodes_inside_other_cells[ni][other_ci] = are_nodes_inside_current_cell[ni]
+        if other_ci !=  this_cell_index:
+            are_nodes_inside_current_cell = are_points_inside_polygon(num_nodes, this_cell_node_coords, num_nodes, all_cells_node_coords[other_ci])
+            for ni in range(num_nodes):
+                are_nodes_inside_other_cells[ni][other_ci] = are_nodes_inside_current_cell[ni]
                     
     return are_nodes_inside_other_cells
     
@@ -1156,7 +1156,6 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
     
 #@nb.jit(nopython=True)      
 def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
-    #delta_dist_matrix = np.zeros((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
     

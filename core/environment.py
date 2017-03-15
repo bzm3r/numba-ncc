@@ -67,7 +67,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), num_nodes=16, integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
@@ -106,8 +106,6 @@ class Environment():
         
         self.integration_params = integration_params
         
-        self.num_nodes = num_nodes
-        
         self.micrometer = 1e-6
         
         self.num_cell_groups = len(self.cell_group_defns)
@@ -115,6 +113,11 @@ class Environment():
         self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc*self.num_cells
         self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
+        num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment])
+        self.num_nodes= num_nodes_per_cell[0]
+        for n in num_nodes_per_cell[1:]:
+            if n != self.num_nodes:
+                raise StandardError("There exists a cell with number of nodes different from other cells!")
         self.full_output_dicts = [[] for cell in self.cells_in_environment]
         
         self.cell_indices = np.arange(self.num_cells)
@@ -181,48 +184,6 @@ class Environment():
     
         return np.array(cells_in_environment)
         
-        
-# -----------------------------------------------------------------
-
-    def make_intercellular_contact_factor_magnitudes(self, cell_group_index, this_cell_group_defn):
-        intercellular_contact_factor_magnitudes_defn = this_cell_group_defn['intercellular_contact_factor_magnitudes_defn']
-        
-        num_defns = len(intercellular_contact_factor_magnitudes_defn.keys())
-        
-        if num_defns != self.num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
-        
-        intercellular_contact_factor_magnitudes = []
-        for cgi in range(self.num_cell_groups):
-            cg = self.cell_group_defns[cgi]
-            cg_name = cg['cell_group_name']
-            intercellular_contact_factor_mag = intercellular_contact_factor_magnitudes_defn[cg_name]
-            
-            intercellular_contact_factor_magnitudes += (self.cell_group_defns[cgi]['num_cells'])*[intercellular_contact_factor_mag]
-                
-        return np.array(intercellular_contact_factor_magnitudes)
-        
-# -----------------------------------------------------------------
-
-    def cell_dependent_coa_signal_strengths(self, cell_group_index, this_cell_group_defn):
-        cell_dependent_coa_signal_strengths_defn = this_cell_group_defn['cell_dependent_coa_signal_strengths_defn']
-        
-        num_defns = len(cell_dependent_coa_signal_strengths_defn.keys())
-        
-        if num_defns != self.num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
-        
-        cell_dependent_coa_signal_strengths = []
-        for cgi in range(self.num_cell_groups):
-            cg = self.cell_group_defns[cgi]
-            cg_name = cg['cell_group_name']
-            cg_num_nodes = self.num_nodes
-            coa_signal_strength = cell_dependent_coa_signal_strengths_defn[cg_name]/cg_num_nodes
-            
-            cell_dependent_coa_signal_strengths += (self.cell_group_defns[cgi]['num_cells'])*[coa_signal_strength]
-                
-        return np.array(cell_dependent_coa_signal_strengths)
-        
 # -----------------------------------------------------------------
  
     def create_cell_group(self, num_timesteps, cell_group_defn, cell_group_index, cell_index_offset):
@@ -230,38 +191,42 @@ class Environment():
 #            print(variable_name + ' = ' + "cell_group_defn['" + variable_name + "']")
         cell_group_name = cell_group_defn['cell_group_name']
         num_cells = cell_group_defn['num_cells']
-        init_cell_radius = cell_group_defn['init_cell_radius']
-        num_nodes = self.num_nodes
-        C_total = cell_group_defn['C_total']
-        H_total = cell_group_defn['H_total']
         cell_group_bounding_box = cell_group_defn['cell_group_bounding_box']
-        chem_mech_space_defns = cell_group_defn['chem_mech_space_defns']
+        
+        cell_parameter_dict = copy.deepcopy(cell_group_defn['parameter_dict'])
+        init_cell_radius = cell_parameter_dict['init_cell_radius']
+        num_nodes = cell_parameter_dict['num_nodes']
         
         biased_rgtpase_distrib_defns = cell_group_defn['biased_rgtpase_distrib_defns']
         cells_with_bias_info = biased_rgtpase_distrib_defns.keys()    
             
         integration_params = self.integration_params
-        intercellular_contact_factor_magnitudes = self.make_intercellular_contact_factor_magnitudes(cell_group_index, cell_group_defn)
-        coa_factor_production_rates = self.cell_dependent_coa_signal_strengths(cell_group_index, cell_group_defn)
 
         init_cell_bounding_boxes = self.calculate_cell_bounding_boxes(num_cells, init_cell_radius, cell_group_bounding_box)
         
         cells_in_group = []
         
         for cell_number, bounding_box in enumerate(init_cell_bounding_boxes):
-            bias_defn = []
-            if len(cells_with_bias_info) > 0:
-                if cell_number in cells_with_bias_info:
-                    bias_defn = biased_rgtpase_distrib_defns[cell_number]
-                else:
-                    bias_defn = biased_rgtpase_distrib_defns["default"]
-            else:
-                raise StandardError("No default initial rGTPase distribution bias information provided!")
+            bias_defn = biased_rgtpase_distrib_defns["default"]
+            
+            if cell_number in cells_with_bias_info:
+                bias_defn = biased_rgtpase_distrib_defns[cell_number]
+            
             init_node_coords, length_edge_resting, area_resting = self.create_default_init_cell_node_coords(bounding_box, init_cell_radius, num_nodes)
             
-            cell_index = cell_index_offset + cell_number
+            cell_parameter_dict.update([('biased_rgtpase_distrib_defn', bias_defn), ('init_node_coords', init_node_coords), ('length_edge_resting', length_edge_resting), ('area_resting', area_resting)])
             
-            cells_in_group.append(cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, C_total, H_total, self.num_cells, init_node_coords, self.max_timepoints_on_ram, biased_rgtpase_distrib_defn=bias_defn, intercellular_contact_factor_magnitudes=intercellular_contact_factor_magnitudes, radius_resting=init_cell_radius, length_edge_resting=length_edge_resting, area_resting=area_resting, space_physical_bdry_polygon=self.space_physical_bdry_polygon, space_migratory_bdry_polygon=self.space_migratory_bdry_polygon, cell_dependent_coa_signal_strengths=coa_factor_production_rates, verbose=self.verbose, **chem_mech_space_defns))
+            cell_index = cell_index_offset + cell_number
+
+            # cell_label, cell_group_index, cell_index, integration_params, num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict
+            
+            undefined_labels = parameterorg.find_undefined_labels(cell_parameter_dict)
+            if len(undefined_labels) > 0:
+                raise StandardError("The following labels are not yet defined: {}".format(undefined_labels))
+            
+            new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict)
+            
+            cells_in_group.append(new_cell)
             
         return cells_in_group, init_cell_bounding_boxes
 # -----------------------------------------------------------------
@@ -326,7 +291,6 @@ class Environment():
         return cell_node_coords, length_edge_resting, area_resting
 
 # -----------------------------------------------------------------
-            
     def execute_system_dynamics_in_random_sequence(self, t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells, centroid_drift, recalc_geometry):        
         execution_sequence = self.cell_indices
         np.random.shuffle(execution_sequence)
@@ -351,11 +315,12 @@ class Environment():
                     print "Time step: {}/{}".format(t, self.num_timesteps)
                     print "Executing dyanmics for cell: ", cell_index
             
+            # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, external_gradient_fn, be_talkative=False
             current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
-                this_cell_forces = current_cell.curr_node_forces*current_cell.ML_T2
+                this_cell_forces = current_cell.curr_node_forces*current_cell.M_T2
                 
                 environment_cells_node_coords[cell_index] = this_cell_coords
                 environment_cells_node_forces[cell_index] = this_cell_forces
@@ -535,7 +500,7 @@ class Environment():
             
             environment_cells = self.cells_in_environment
             environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
-            environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
+            environment_cells_node_forces = np.array([x.curr_node_forces*x.M_T2 for x in environment_cells])
             
             cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
             cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)

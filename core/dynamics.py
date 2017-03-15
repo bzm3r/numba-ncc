@@ -35,7 +35,7 @@ def unpack_state_array(num_nodal_phase_var_indices, num_nodes, state_array):
 
 # ----------------------------------------------------------------------------------------
 #@nb.jit(nopython=True)       
-def pack_state_array_from_system_info(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info, access_index):
+def pack_state_array_from_system_history(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info, access_index):
     system_info_at_tstep = system_info[access_index]
     state_array = pack_state_array(nodal_phase_var_indices, ode_cellwide_phase_var_indices, system_info_at_tstep)
     
@@ -53,7 +53,7 @@ def calculate_sum(num_elements, sequence):
 # ----------------------------------------------------------------------------------------
     
 #@nb.jit(nopython=True)  
-def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes, num_nodal_phase_vars, num_ode_cellwide_phase_vars, nodal_rac_membrane_active_index, length_edge_resting, nodal_rac_membrane_inactive_index, nodal_rho_membrane_active_index, nodal_rho_membrane_inactive_index, nodal_x_index, nodal_y_index, kgtp_rac_baseline, kdgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rho_baseline, kgtp_rac_autoact_baseline, kgtp_rho_autoact_baseline, kdgtp_rho_mediated_rac_inhib_baseline, kdgtp_rac_mediated_rho_inhib_baseline, kgdi_rac, kdgdi_rac, kgdi_rho, kdgdi_rho, threshold_rac_autoact, threshold_rho_autoact, threshold_rho_mediated_rac_inhib, threshold_rac_mediated_rho_inhib, exponent_rac_autoact, exponent_rho_autoact, exponent_rho_mediated_rac_inhib, exponent_rac_mediated_rho_inhib, diffusion_const_active, diffusion_const_inactive, nodal_intercellular_contact_factor_magnitudes_index, nodal_migr_bdry_contact_index, space_at_node_factor_rac, space_at_node_factor_rho, eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_constant, closeness_dist_criteria, area_resting, stiffness_cytoplasmic, transduced_coa_signals, space_physical_bdry_polygon, exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, tension_fn_type, external_gradient_on_nodes, intercellular_contact_factor_magnitudes, randomization_rac_kgtp_multipliers):
+def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes, num_nodal_phase_vars, num_ode_cellwide_phase_vars, nodal_rac_membrane_active_index, length_edge_resting, nodal_rac_membrane_inactive_index, nodal_rho_membrane_active_index, nodal_rho_membrane_inactive_index, nodal_x_index, nodal_y_index, kgtp_rac_baseline, kdgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rho_baseline, kgtp_rac_autoact_baseline, kgtp_rho_autoact_baseline, kdgtp_rho_mediated_rac_inhib_baseline, kdgtp_rac_mediated_rho_inhib_baseline, kgdi_rac, kdgdi_rac, kgdi_rho, kdgdi_rho, threshold_rac_autoact, threshold_rho_autoact, threshold_rho_mediated_rac_inhib, threshold_rac_mediated_rho_inhib, exponent_rac_autoact, exponent_rho_autoact, exponent_rho_mediated_rac_inhib, exponent_rac_mediated_rho_inhib, diffusion_const_active, diffusion_const_inactive, nodal_intercellular_contact_factor_magnitudes_index, nodal_migr_bdry_contact_index, eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, stiffness_edge, threshold_force_rac_activity, threshold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, closeness_dist_criteria, area_resting, stiffness_cytoplasmic, transduced_coa_signals, space_physical_bdry_polygon, exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, intercellular_contact_factors, tension_mediated_rac_inhibition_exponent, external_gradient_on_nodes, intercellular_contact_factor_magnitudes, randomization_rac_kgtp_multipliers):
             
     nodal_phase_vars = state_array
     
@@ -92,8 +92,9 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     rac_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rac_membrane_actives) - calculate_sum(num_nodes, rac_membrane_inactives)
     rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_actives) - calculate_sum(num_nodes, rho_membrane_inactives)                            
+
     
-    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, num_cells, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, force_rac_exp, force_rac_threshold, force_rac_max_mag, force_rho_exp, force_rho_threshold, force_rho_max_mag, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria)
+    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, num_cells, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, threshold_force_rac_activity, threshold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria)
     
 #    print "rac_membrane_actives: ", rac_membrane_actives
 #    print "F: ", F
@@ -125,7 +126,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     conc_rho_membrane_actives = chemistry.calculate_concentrations(num_nodes, rho_membrane_actives, avg_edge_lengths)
     
-    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type)
+    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, local_strains)
 
     kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
     
@@ -167,7 +168,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
         
     # calculate volume exclusion effects
     num_bisection_iterations = 2
-    max_movement_mag = (force_rac_max_mag/eta)
+    max_movement_mag = (max_force_rac/eta)
     success_condition_stay_out = 0
     success_condition_stay_in = 1
     

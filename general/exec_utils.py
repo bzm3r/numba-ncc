@@ -58,6 +58,7 @@ def update_pd(pd, key, orig_value, new_value):
     else:
         new_pd = copy.deepcopy(pd)
         new_pd.update([(key, new_value)])
+        del pd
         
         return new_pd
         
@@ -108,7 +109,7 @@ def make_experiment_description_file(experiment_description, environment_dir, en
 
 # ===========================================================================
 
-def make_template_experiment_description_file(experiment_description, environment_dir, base_parameter_dict, parameter_override_dict, environment_wide_variable_defns, user_cell_group_defns):
+def make_template_experiment_description_file(experiment_description, environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns):
     notes_fp = os.path.join(environment_dir, 'experiment_notes.txt')
     notes_content = []
 
@@ -121,20 +122,16 @@ def make_template_experiment_description_file(experiment_description, environmen
     notes_content.append("======= CELL GROUPS IN EXPERIMENT: {} =======\n\n".format(num_cell_groups))    
     notes_content.append(repr(user_cell_group_defns) + '\n\n')
 
-    notes_content.append("======= BASE PARAMETER DICT =======\n\n")
-    sorted_keys = sorted(base_parameter_dict.keys())
-    tuple_list = [(key, base_parameter_dict[key]) for key in sorted_keys]
-    notes_content.append(repr(tuple_list) + '\n\n')
-    
-    notes_content.append("======= PARAMETER OVERRIDE DICT =======\n\n")
-    sorted_keys = sorted(parameter_override_dict.keys())
-    tuple_list = [(key, parameter_override_dict[key]) for key in sorted_keys]
+    notes_content.append("======= PARAMETER DICT =======\n\n")
+    sorted_keys = sorted(parameter_dict.keys())
+    tuple_list = [(key, parameter_dict[key]) for key in sorted_keys]
     notes_content.append(repr(tuple_list) + '\n\n')
     
     notes_content.append("======= VARIABLE SETTINGS =======\n\n")
     
     for n, cell_group_defn in enumerate(user_cell_group_defns):
-        pd = cell_group_defn['parameter_override_dict']
+        print cell_group_defn.keys()
+        pd = cell_group_defn['parameter_dict']
         sorted_pd_keys = sorted(pd.keys())
         tuple_list = [(key, pd[key]) for key in sorted_pd_keys]
         notes_content.append('CELL_GROUP: {}\n'.format(n))
@@ -269,7 +266,7 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
             
 # =======================================================================
 
-def run_template_experiments(experiment_directory, template_experiment_name, base_parameter_dict, parameter_override_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
+def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
@@ -327,12 +324,11 @@ def run_template_experiments(experiment_directory, template_experiment_name, bas
                 os.makedirs(environment_dir)
                 autogenerate_debug_file(environment_dir)
                 
-                make_template_experiment_description_file(experiment_descriptions_per_subexperiment[subexperiment_index], environment_dir, base_parameter_dict, parameter_override_dict, environment_wide_variable_defns, user_cell_group_defns)    
+                make_template_experiment_description_file(experiment_descriptions_per_subexperiment[subexperiment_index], environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns)    
                     
                 print "Creating environment..."
-                parameter_overrides = [x['parameter_override_dict'] for x in user_cell_group_defns]
                 
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
                 
             an_environment.full_print = full_print
             
@@ -371,7 +367,7 @@ def get_date_and_experiment_number(scriptname):
     else:
         date_pieces = name_pieces[:3]
         #check_if_date_is_proper(date_pieces, scriptname)
-        DATE_STR = '_'.join([piece.upper() for piece in name_pieces[:3]])
+        DATE_STR = '_'.join([piece.upper() for piece in date_pieces])
         
         #check_if_experiment_number_is_proper(name_pieces[5], scriptname)
         EXPERIMENT_NUMBER = int(name_pieces[5])

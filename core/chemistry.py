@@ -132,7 +132,7 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         else:
             kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-        result[i] = coa_signals[i]*(randomization_factors[i]*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1))
+        result[i] = (coa_signals[i] + 1.0)*(randomization_factors[i]*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1))
         
     return result
 
@@ -157,33 +157,15 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)            
-def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_active, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, tension_mediated_rac_inhibition_multiplier, tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, local_strains, tension_fn_type):
+def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_exponent, local_strains):
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
+    strain_inhibition = np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
     
     for i in range(num_nodes):        
-        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_active[i])
+        kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])
         
-        strain_inhibition = 1.0
-        if tension_fn_type == 5:
-            exponent = np.log(2)/tension_mediated_rac_inhibition_half_strain
-            strain_inhibition = np.exp(exponent*global_tension)
-        elif tension_fn_type == 6:
-            exponent = 2
-            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
-            strain_inhibition = constant*(global_tension**exponent) + 1.0
-        elif tension_fn_type == 7:
-            exponent = 3
-            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
-            strain_inhibition = constant*(global_tension**exponent) + 1.0
-        elif tension_fn_type == 8:
-            exponent = 4
-            constant  = (2.0 - 1.0)/(tension_mediated_rac_inhibition_half_strain**exponent) 
-            strain_inhibition = constant*(global_tension**exponent) + 1.0
-        else:
-            tension_fn_type = 0.0/0.0
-            
         i_plus1 = (i + 1)%num_nodes
         i_minus1 = (i - 1)%num_nodes
         
@@ -300,7 +282,7 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                             if dist_squared_between_nodes < 1e-6:
                                 coa_signal = max_coa_signal*1.0
                             else:
-                                coa_signal = max_coa_signal*np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
+                                coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
                     
                     
                     if max_coa_signal < 0.0:

@@ -9,21 +9,21 @@ import numpy as np
 import environment
 import geometry
 
-#g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_gdi_bound_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
+#g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
 
 
-mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
+output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
-chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'external_gradient_on_nodes']
+output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'external_gradient_on_nodes']
 
-info_labels = mech_labels + chem_labels
+output_info_labels = output_mech_labels + output_chem_labels
 
-for index, label in enumerate(info_labels):
+for index, label in enumerate(output_info_labels):
     exec("{}_index = {}".format(label, repr(index)))
     
-num_info_labels = len(mech_labels + chem_labels)
+num_info_labels = len(output_mech_labels + output_chem_labels)
 
-info_indices_dict = {x: i for i, x in enumerate(mech_labels + chem_labels)}
+info_indices_dict = {x: i for i, x in enumerate(output_mech_labels + output_chem_labels)}
 
 g_rate_labels = ['kgtp', 'kdgtp', 'kgdi', 'kdgdi']
 
@@ -32,64 +32,146 @@ g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 
 
 
 #-----------------------------------------------------------------
+rho_gtpase_parameter_labels = ['C_total', 'H_total', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'diffusion_const_active', 'diffusion_const_inactive', 'kgtp_rac_baseline', 'kdgtp_rac_baseline', 'kgtp_rho_baseline', 'kdgtp_rho_baseline', 'kgtp_rac_autoact_baseline', 'kgtp_rho_autoact_baseline', 'kdgtp_rho_mediated_rac_inhib_baseline', 'kdgtp_rac_mediated_rho_inhib_baseline', 'kgdi_rac', 'kdgdi_rac', 'kgdi_rho', 'kdgdi_rho', 'threshold_rac_activity', 'threshold_rho_activity', 'hill_exponent', 'tension_mediated_rac_inhibition_half_strain']
 
-standard_chem_mech_space_parameter_labels = ['init_rgtpase_cytosol_gdi_bound_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'kgtp_rac_baseline', 'kdgtp_rac_baseline', 'kgtp_rho_baseline', 'kdgtp_rho_baseline', 'kgtp_rac_autoact_baseline', 'kgtp_rho_autoact_baseline', 'kdgtp_rho_mediated_rac_inhib_baseline', 'kdgtp_rac_mediated_rho_inhib_baseline', 'kgdi_rac', 'kdgdi_rac', 'kgdi_rho', 'kdgdi_rho', 'threshold_rac_autoact', 'threshold_rho_autoact', 'threshold_rac_mediated_rho_inhib', 'threshold_rho_mediated_rac_inhib', 'exponent_rac_autoact', 'exponent_rho_autoact', 'exponent_rho_mediated_rac_inhib', 'exponent_rac_mediated_rho_inhib','stiffness_edge', 'space_physical_bdry_polygon', 'space_migratory_bdry_polygon', 'eta', 'sigma_rac', 'sigma_rho_multiplier', 'force_adh_constant', 'force_rac_exp', 'force_rho_exp', 'force_rac_threshold', 'force_rho_threshold', 'factor_migr_bdry_contact', 'diffusion_const_active', 'diffusion_const_inactive', 'space_at_node_factor_rac', 'space_at_node_factor_rho', 'stiffness_cytoplasmic', 'migr_bdry_contact_factor_mag', 'intercellular_contact_factor_magnitudes', 'closeness_dist_squared_criteria', 'cell_dependent_coa_signal_strengths', 'randomization', 'randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'skip_dynamics', 'tension_mediated_rac_inhibition_half_strain', 'tension_mediated_rac_hill_exponent', 'tension_fn_type', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge', 'stiffness_cytoplasmic', 'eta', 'max_protrusive_nodal_velocity', 'max_force_rac', 'max_force_rho', 'threshold_force_rac_activity', 'threshold_force_rho_activity', 'force_adh_const']
+
+space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
+
+interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria',]
+
+randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+
+model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius']
+
+all_parameter_labels = rho_gtpase_parameter_labels + mech_parameter_labels + space_parameter_labels + interaction_parameter_labels + randomization_parameter_labels + model_run_parameter_labels
 
 
 #-----------------------------------------------------------------
 
-standard_parameter_dictionary_keys = ['C_total', 'H_total', 'num_nodes', 'num_cells', 'init_cell_radius', 'cell_group_bounding_box', 'biased_rgtpase_distrib_defn', 'stiffness_edge', 'stiffness_cytoplasmic', 'kgtp_rac_multiplier', 'kgtp_rac_autoact_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier', 'kgtp_rho_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rho_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'kdgdi_rac_estimate_multiplier', 'kdgdi_rho_estimate_multiplier', 'kgdi_rac_estimate_multiplier', 'kgdi_rho_estimate_multiplier', 'threshold_tension_mediated_rac_inhib', 'exponent_tension_mediated_rac_inhib', 'threshold_rac_autoact_multiplier', 'threshold_rho_autoact_multiplier', 'threshold_rho_mediated_rac_inhib_multiplier', 'threshold_rac_mediated_rho_inhib_multiplier', 'space_at_node_factor_rac', 'space_at_node_factor_rho', 'migr_bdry_contact_factor_mag', 'init_rgtpase_cytosol_gdi_bound_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'exponent_rac_autoact', 'exponent_rho_autoact', 'exponent_rho_mediated_rac_inhib', 'exponent_rac_mediated_rho_inhib', 'sigma_rac', 'force_rac_exp', 'force_rho_exp', 'force_rac_threshold_multiplier', 'force_rho_threshold_multiplier', 'sigma_rho_multiplier', 'max_protrusive_node_velocity', 'randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization', 'tension_mediated_rac_inhibition_half_strain', 'tension_mediated_rac_hill_exponent', 'tension_fn_type', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+polygon_model_parameters = ['num_nodes', 'init_cell_radius']
+polygon_model_parameter_justifications = [None, 20e-6]
+
+user_rho_gtpase_biochemistry_parameters = ['C_total', 'H_total', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'diffusion_const', 'kgdi_multiplier', 'kdgdi_multiplier', 'kgtp_rac_multiplier', 'kgtp_rac_autoact_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier', 'threshold_rac_activity_multiplier', 'kgtp_rho_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rho_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'threshold_rho_activity_multiplier', 'hill_exponent', 'tension_mediated_rac_inhibition_half_strain', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+rho_gtpase_biochemistry_parameter_justifications = [[2e6, 3e6], [0.5e6, 1.5e6], [0, 1], [0, 1], [0, 1], [0.02e-12, 0.45e-12], [1, 2], [1, 2], [1, 500], [1, 500], [1, 2000], [1, 2000], [0.25, 0.5], [1, 500], [1, 500], [1, 2000], [1, 2000], [0.25, 0.5], 3, [0.01, 0.99], [-1, 10], 110e-6, 0.5]
+
+if len(user_rho_gtpase_biochemistry_parameters) != len(rho_gtpase_biochemistry_parameter_justifications):
+    raise StandardError("Not enough justifications provided for user_rho_gtpase_biochemistry_parameters!")
+
+user_interaction_parameters = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria']
+interaction_parameter_justifications = [None, None, None, 0.25e-12]
+if len(user_interaction_parameters) != len(interaction_parameter_justifications):
+    raise StandardError("Not enough justifications provided for user_interaction_parameters!")
+
+user_space_parameters = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
+space_parameter_justifications = [None, None]
+if len(user_space_parameters) != len(space_parameter_justifications):
+    raise StandardError("Not enough justifications provided for user_space_parameters!")
+
+user_mechanical_parameters = ['stiffness_edge', 'stiffness_cytoplasmic', 'eta', 'max_protrusive_nodal_velocity', 'max_force_rac', 'force_rho_multiplier', 'length_3D_dimension', 'force_adh_const', 'skip_dynamics']
+mechanical_parameter_justifications = [[1000, 8000], None, [0.1, 100], [2.5e-8, 10e-8], [0.5*10e3*10e-6, 2*10e3*10e-6], [0, 1], 0.1e-6, [0, 100], None]
+if len(user_mechanical_parameters) != len(mechanical_parameter_justifications):
+    raise StandardError("Not enough justifications provided for user_mechanical_parameters!")
+
+user_randomization_parameters = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude']
+randomization_parameter_justifications = [None, None, None, None]
+if len(user_randomization_parameters) != len(randomization_parameter_justifications):
+    raise StandardError("Not enough justifications provided for user_randomization_parameters!")
+    
+user_model_run_parameters = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn']
+model_run_parameter_justifications = [[3, 100], None, None]
+
+user_parameter_dictionary_keys = polygon_model_parameters + user_rho_gtpase_biochemistry_parameters + user_interaction_parameters + user_mechanical_parameters + user_randomization_parameters + user_space_parameters + user_model_run_parameters
+
+parameter_justifications = polygon_model_parameter_justifications + rho_gtpase_biochemistry_parameter_justifications + interaction_parameter_justifications + mechanical_parameter_justifications + randomization_parameter_justifications + space_parameter_justifications + model_run_parameter_justifications
+
+#-----------------------------------------------------------------
+def verify_user_parameters(justify_parameters, user_parameter_dict):
+    global user_parameter_dictionary_keys
+    global paramter_justifications
+    
+    for key in user_parameter_dict.keys():
+        key_index = -1
+        if key not in user_parameter_dictionary_keys:
+            raise StandardError("Unknown parameter given: {}".format(key))
+        else:
+            key_index = user_parameter_dictionary_keys.index(key)
+            
+            justification = parameter_justifications[key_index]
+            
+            if justify_parameters and justification != None:
+                value = user_parameter_dict[key]
+                
+                if type(justification) == list:
+                    assert(len(justification) == 2)
+                    if not (justification[0] <= value <= justification[1]):
+                        raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
+                elif value != justification:
+                    raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
+                    
 
 #-----------------------------------------------------------------
 
-def make_chem_mech_space_parameter_defn_dict(C_total=3e6, H_total=1.5e6, num_nodes=15, num_cells=1, init_cell_radius=12.5e-6, cell_group_bounding_box=np.array([0, 50, 0, 50])*1e-6, stiffness_edge=2e-10, stiffness_cytoplasmic=100, kgtp_rac_multiplier=40, kgtp_rac_autoact_multiplier=1000, kdgtp_rac_multiplier=17, kdgtp_rho_mediated_rac_inhib_multiplier=30, kgtp_rho_multiplier=200, kgtp_rho_autoact_multiplier=350, kdgtp_rho_multiplier=250, kdgtp_rac_mediated_rho_inhib_multiplier=67, kdgdi_rac_estimate_multiplier=1, kdgdi_rho_estimate_multiplier=1, kgdi_rac_estimate_multiplier=1, kgdi_rho_estimate_multiplier=1, threshold_tension_mediated_rac_inhib=0.2*0.75, exponent_tension_mediated_rac_inhib=3, biased_rgtpase_distrib_defn=None, threshold_rac_autoact_multiplier=0.5, threshold_rho_autoact_multiplier=0.5, threshold_rho_mediated_rac_inhib_multiplier=0.5, threshold_rac_mediated_rho_inhib_multiplier=0.5, space_at_node_factor_rac=1, space_at_node_factor_rho=1, migr_bdry_contact_factor_mag=2, init_rgtpase_cytosol_gdi_bound_frac = 0.8, init_rgtpase_membrane_inactive_frac = 0.1, init_rgtpase_membrane_active_frac = 0.1, intercellular_contact_factor_magnitudes=np.array([2]), coa_sensing_dist_at_value=100, coa_sensing_value_at_dist=0.25, max_protrusive_node_velocity=0.25e-6, sigma_rac=2e-4, force_adh_constant=1.0, sigma_rho_multiplier=0.2, force_rac_exp=3, force_rho_exp=3, force_rac_threshold_multiplier=0.5, force_rho_threshold_multiplier=0.5, closeness_dist_squared_criteria=(0.5e-6)**2, exponent_rac_autoact=3, exponent_rho_autoact=3, exponent_rho_mediated_rac_inhib=3, exponent_rac_mediated_rho_inhib=3, randomization_scheme='wipeout', randomization_time_mean=20, randomization_time_variance_factor=0.25, randomization_magnitude=1.0, randomization=False, skip_dynamics=False, tension_mediated_rac_inhibition_half_strain=0.025, tension_mediated_rac_hill_exponent=3, tension_fn_type=0, max_coa_signal=2.0):
-    
-    kgtp_rac_factor = 1.5e-4 # per second
-    kdgtp_rac_factor = 1.8e-4 # per second
-    
-    kgtp_rho_factor = 1.5e-4 # per second    
-    kdgtp_rho_factor = 3.5e-4 # per second
 
-    kdgdi_rac_estimate = 0.1*kdgdi_rac_estimate_multiplier # per second
-    kgdi_rac_estimate = 0.1*kgdi_rac_estimate_multiplier # per second
+def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
+    verify_user_parameters(justify_parameters, user_parameter_dict)
+    cell_parameter_dict = {}
     
-    kdgdi_rho_estimate = 0.1*kdgdi_rho_estimate_multiplier # per second
-    kgdi_rho_estimate = 0.1*kgdi_rho_estimate_multiplier # per second
+    kgtp_rac_unmodified = 2e-4 # per second
+    kdgtp_rac_unmodified = 2e-4 # per second
     
-    assert(init_rgtpase_cytosol_gdi_bound_frac + init_rgtpase_membrane_inactive_frac + init_rgtpase_membrane_active_frac == 1)
+    kgtp_rho_unmodified = 2e-4 # per second    
+    kdgtp_rho_unmodified = 2e-4 # per second
+    
+    cell_parameter_dict['num_nodes'] = user_parameter_dict['num_nodes']
+    cell_parameter_dict['skip_dynamics'] = user_parameter_dict['skip_dynamics']
+     
+    C_total, H_total = user_parameter_dict['C_total'], user_parameter_dict['H_total']
+    
+    cell_parameter_dict['C_total'] = C_total
+    cell_parameter_dict['H_total'] = H_total
+    
+    assert(user_parameter_dict['init_rgtpase_cytosol_frac'] + user_parameter_dict['init_rgtpase_membrane_inactive_frac'] + user_parameter_dict['init_rgtpase_membrane_active_frac'] == 1)
+    
+    cell_parameter_dict['init_rgtpase_cytosol_frac'] = user_parameter_dict['init_rgtpase_cytosol_frac']
+    cell_parameter_dict['init_rgtpase_membrane_inactive_frac'] = user_parameter_dict['init_rgtpase_membrane_inactive_frac']
+    cell_parameter_dict['init_rgtpase_membrane_active_frac'] = user_parameter_dict['init_rgtpase_membrane_active_frac']
     
     #--------------   
-    kgtp_rac_baseline = kgtp_rac_factor*(kgtp_rac_multiplier + 1) # per second
-    kdgtp_rac_baseline = kdgtp_rac_factor*(kdgtp_rac_multiplier + 1) # per second
+    cell_parameter_dict['kgtp_rac_baseline'] = kgtp_rac_unmodified*user_parameter_dict['kgtp_rac_multiplier'] # per second
+    cell_parameter_dict['kdgtp_rac_baseline'] = kdgtp_rac_unmodified*user_parameter_dict['kdgtp_rac_multiplier'] # per second
     #--------------
-    kgtp_rho_baseline = kgtp_rho_factor*(kgtp_rho_multiplier + 1) # per second
-    kdgtp_rho_baseline = kdgtp_rho_factor*(kdgtp_rho_multiplier + 1) # per second
+    cell_parameter_dict['kgtp_rho_baseline'] = kgtp_rho_unmodified*user_parameter_dict['kgtp_rho_multiplier'] # per second
+    cell_parameter_dict['kdgtp_rho_baseline'] = kdgtp_rho_unmodified*user_parameter_dict['kdgtp_rho_multiplier']# per second
     #--------------
-    kgtp_rac_autoact_baseline = kgtp_rac_autoact_multiplier*kgtp_rac_factor # per second
-    kgtp_rho_autoact_baseline = kgtp_rho_autoact_multiplier*kgtp_rho_factor # per second
+    cell_parameter_dict['kgtp_rac_autoact_baseline'] = user_parameter_dict['kgtp_rac_autoact_multiplier']*kgtp_rac_unmodified # per second
+    cell_parameter_dict['kgtp_rho_autoact_baseline'] = user_parameter_dict['kgtp_rho_autoact_multiplier']*kgtp_rho_unmodified # per second
     #--------------
-    kdgtp_rho_mediated_rac_inhib_baseline = kdgtp_rac_factor*kdgtp_rho_mediated_rac_inhib_multiplier # per second
-    kdgtp_rac_mediated_rho_inhib_baseline = kdgtp_rho_factor*kdgtp_rac_mediated_rho_inhib_multiplier # per second
+    cell_parameter_dict['kdgtp_rho_mediated_rac_inhib_baseline'] = kdgtp_rac_unmodified*user_parameter_dict['kdgtp_rho_mediated_rac_inhib_multiplier'] # per second
+    cell_parameter_dict['kdgtp_rac_mediated_rho_inhib_baseline'] = kdgtp_rho_unmodified*user_parameter_dict['kdgtp_rac_mediated_rho_inhib_multiplier'] # per second
     #--------------
-    kgdi_rac = kgdi_rac_estimate # per second
-    kdgdi_rac = kdgdi_rac_estimate # per second
+    kgdi = 0.15
+    kdgdi = 0.02
+    cell_parameter_dict['kgdi_rac'] = kgdi*user_parameter_dict['kgdi_multiplier'] # per second
+    cell_parameter_dict['kdgdi_rac'] = kdgdi*user_parameter_dict['kdgdi_multiplier'] # per second
     #--------------
-    kgdi_rho = kgdi_rho_estimate # per second
-    kdgdi_rho = kdgdi_rho_estimate # per second
+    cell_parameter_dict['kgdi_rho'] = kgdi*user_parameter_dict['kgdi_multiplier'] # per second
+    cell_parameter_dict['kdgdi_rho'] = kdgdi*user_parameter_dict['kdgdi_multiplier'] # per second
     #--------------
-    threshold_rac_autoact = threshold_rac_autoact_multiplier*C_total
-    threshold_rho_autoact = threshold_rho_autoact_multiplier*H_total
+    cell_parameter_dict['threshold_rac_activity'] = user_parameter_dict['threshold_rac_activity_multiplier']*C_total
+    cell_parameter_dict['threshold_rho_activity'] = user_parameter_dict['threshold_rho_activity_multiplier']*H_total
     #--------------
-    threshold_rho_mediated_rac_inhib = threshold_rho_mediated_rac_inhib_multiplier*H_total
-    threshold_rac_mediated_rho_inhib = threshold_rac_mediated_rho_inhib_multiplier*C_total
+    cell_parameter_dict['diffusion_const_active'] = user_parameter_dict['diffusion_const'] # micrometers squared per second
+    cell_parameter_dict['diffusion_const_inactive'] = user_parameter_dict['diffusion_const'] # micrometers squared per second
     #--------------
-    force_rac_threshold = force_rac_threshold_multiplier*C_total
-    force_rho_threshold = force_rho_threshold_multiplier*H_total
-    #--------------
-    diffusion_const = 0.15*1e-12
-    diffusion_const_active = diffusion_const # micrometers squared per second
-    diffusion_const_inactive = diffusion_const # micrometers squared per second
-    #--------------
+    cell_parameter_dict['hill_exponent'] = user_parameter_dict['hill_exponent']
+    cell_parameter_dict['tension_mediated_rac_inhibition_half_strain'] = user_parameter_dict['tension_mediated_rac_inhibition_half_strain']
+    cell_parameter_dict['max_coa_signal'] = user_parameter_dict['max_coa_signal']
+    cell_parameter_dict['coa_sensing_dist_at_value'] = user_parameter_dict['coa_sensing_dist_at_value']
+    cell_parameter_dict['coa_sensing_value_at_dist'] = user_parameter_dict['coa_sensing_value_at_dist']
+    
+    num_nodes, init_cell_radius = user_parameter_dict['num_nodes'], user_parameter_dict['init_cell_radius']
+    cell_parameter_dict['num_nodes'], cell_parameter_dict['init_cell_radius'] = num_nodes, init_cell_radius
     
     cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
     cell_node_coords = np.transpose(np.array([init_cell_radius*np.cos(cell_node_thetas), init_cell_radius*np.sin(cell_node_thetas)]))
@@ -97,36 +179,106 @@ def make_chem_mech_space_parameter_defn_dict(C_total=3e6, H_total=1.5e6, num_nod
     edge_lengths = geometry.calculate_2D_vector_mags(num_nodes, edge_vectors)
         
     length_edge_resting = np.average(edge_lengths)
-        
-    eta = (sigma_rac*length_edge_resting)/max_protrusive_node_velocity
-    #--------------
-    factor_migr_bdry_contact = 10
-    #--------------
-    stiffness_cytoplasmic = stiffness_cytoplasmic#0.00001 # Newtons
-    #--------------
 
-    ignore_list = ['intercellular_contact_factor_magnitudes', 'space_physical_bdry_polygon', 'space_migratory_bdry_polygon', 'cell_dependent_coa_signal_strengths']
-    relevant_labels = [label for label in standard_chem_mech_space_parameter_labels if label not in ignore_list]
-    parameter_definition_dict = dict(zip(relevant_labels, [eval(label) for label in relevant_labels]))
+    length_3D_dimension = user_parameter_dict['length_3D_dimension']
+    cell_parameter_dict['eta'] = user_parameter_dict['eta']/length_3D_dimension
+    cell_parameter_dict['stiffness_edge'] = user_parameter_dict['stiffness_edge']*length_3D_dimension
+    cell_parameter_dict['stiffness_cytoplasmic'] = user_parameter_dict['stiffness_cytoplasmic']
+    cell_parameter_dict['length_edge_resting'] = length_edge_resting
+    cell_parameter_dict['max_protrusive_nodal_velocity'] = user_parameter_dict['max_protrusive_nodal_velocity']
+    cell_parameter_dict['max_force_rac'] = user_parameter_dict['max_force_rac']
+    cell_parameter_dict['max_force_rho'] = user_parameter_dict['force_rho_multiplier']*user_parameter_dict['max_force_rac']
+    cell_parameter_dict['threshold_force_rac_activity'] = user_parameter_dict['threshold_rac_activity_multiplier']*C_total
+    cell_parameter_dict['threshold_force_rho_activity'] = user_parameter_dict['threshold_rho_activity_multiplier']*H_total
+    cell_parameter_dict['force_adh_const'] = user_parameter_dict['force_adh_const']
+    #--------------
+    cell_parameter_dict['closeness_dist_squared_criteria'] = user_parameter_dict['closeness_dist_squared_criteria']
+    cell_parameter_dict['interaction_factor_migr_bdry_contact'] = user_parameter_dict['interaction_factor_migr_bdry_contact']
+    cell_parameter_dict['interaction_factors_intercellular_contact_per_celltype'] = user_parameter_dict['interaction_factors_intercellular_contact_per_celltype']
+    cell_parameter_dict['interaction_factors_coa_per_celltype'] = user_parameter_dict['interaction_factors_coa_per_celltype']
+    #--------------
+    cell_parameter_dict['space_physical_bdry_polygon'] = user_parameter_dict['space_physical_bdry_polygon']
+    cell_parameter_dict['space_migratory_bdry_polygon'] = user_parameter_dict['space_migratory_bdry_polygon']
+    #--------------
+    cell_parameter_dict['randomization_scheme'] = user_parameter_dict['randomization_scheme']
+    cell_parameter_dict['randomization_time_mean'] = user_parameter_dict['randomization_time_mean']
+    cell_parameter_dict['randomization_time_variance_factor'] = user_parameter_dict['randomization_time_variance_factor']
+    cell_parameter_dict['randomization_magnitude'] = user_parameter_dict['randomization_magnitude']
     
-    return parameter_definition_dict
+    return cell_parameter_dict
 
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", parameter_overrides=[], num_nodes=15, T=(1/0.5), integration_params={}, closeness_dist_squared_criteria=(0.5e-6)**2, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0):
+def expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
+        intercellular_contact_factor_magnitudes_defn = this_cell_group_defn['interaction_factors_intercellular_contact_per_celltype']
+        
+        num_defns = len(intercellular_contact_factor_magnitudes_defn.keys())
+        
+        if num_defns != num_cell_groups:
+            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
+        
+        intercellular_contact_factor_magnitudes = []
+        for cgi in range(num_cell_groups):
+            cg = cell_group_defns[cgi]
+            cg_name = cg['cell_group_name']
+            intercellular_contact_factor_mag = intercellular_contact_factor_magnitudes_defn[cg_name]
+            
+            intercellular_contact_factor_magnitudes += (cell_group_defns[cgi]['num_cells'])*[intercellular_contact_factor_mag]
+                
+        return np.array(intercellular_contact_factor_magnitudes)
     
+# ==============================================================
+
+def expand_interaction_factors_coa_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
+        cell_dependent_coa_signal_strengths_defn = this_cell_group_defn['interaction_factors_coa_per_celltype']
+        
+        num_defns = len(cell_dependent_coa_signal_strengths_defn.keys())
+        
+        if num_defns != num_cell_groups:
+            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
+        
+        cell_dependent_coa_signal_strengths = []
+        for cgi in range(num_cell_groups):
+            cg = cell_group_defns[cgi]
+            cg_name = cg['cell_group_name']
+            cg_num_nodes = this_cell_group_defn['parameter_dict']['num_nodes']
+            coa_signal_strength = cell_dependent_coa_signal_strengths_defn[cg_name]/cg_num_nodes
+            
+            cell_dependent_coa_signal_strengths += (cell_group_defns[cgi]['num_cells'])*[coa_signal_strength]
+                
+        return np.array(cell_dependent_coa_signal_strengths)
+    
+# ==============================================================
+
+def find_undefined_labels(cell_group_parameter_dict):
+    given_labels = cell_group_parameter_dict.keys()
+    undefined_labels = []
+    global all_parameter_labels
+    
+    for label in all_parameter_labels:
+        if label not in given_labels:
+            undefined_labels.append(label)
+            
+    return undefined_labels
+        
+    
+# ==============================================================
+
+def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0):
+    
+    num_cell_groups = len(user_cell_group_defns)
+        
     for cell_group_defn_index, user_cell_group_defn in enumerate(user_cell_group_defns):
-        C_total = user_cell_group_defn['C_total']
-        H_total = user_cell_group_defn['H_total']
-        num_nodes = num_nodes
-        num_cells = user_cell_group_defn['num_cells']
-        init_cell_radius = user_cell_group_defn['init_cell_radius']
-        cell_group_bounding_box = user_cell_group_defn['cell_group_bounding_box']
+        user_cell_group_parameter_dict = user_cell_group_defn['parameter_dict']
         
-        parameter_dict = make_chem_mech_space_parameter_defn_dict(C_total=C_total, H_total=H_total, num_nodes=num_nodes, num_cells=num_cells, init_cell_radius=init_cell_radius, cell_group_bounding_box=cell_group_bounding_box, closeness_dist_squared_criteria=closeness_dist_squared_criteria, **(parameter_overrides[cell_group_defn_index]))
+        user_cell_group_parameter_dict['interaction_factors_intercellular_contact_per_celltype'] = expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell_groups, user_cell_group_defns, user_cell_group_defn)
+        user_cell_group_parameter_dict['interaction_factors_coa_per_celltype'] = expand_interaction_factors_coa_per_celltype_array(num_cell_groups, user_cell_group_defns, user_cell_group_defn)
+        cell_group_parameter_dict = make_cell_group_parameter_dict(True, user_cell_group_parameter_dict)
+            
+        user_cell_group_defn.update([('parameter_dict', cell_group_parameter_dict)])
         
-        user_cell_group_defn.update([('chem_mech_space_defns', parameter_dict)])
+        
     
-    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, num_nodes=num_nodes, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc)
+    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc)
     
     return the_environment
