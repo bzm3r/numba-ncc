@@ -12,7 +12,7 @@ import geometry
 #g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
 
 
-output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'intercellular_contact_factor_magnitudes', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
+output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'interaction_factors_intercellular_contact_per_celltype', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
 output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'external_gradient_on_nodes']
 
@@ -210,43 +210,43 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
 # ==============================================================
 
 def expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
-        intercellular_contact_factor_magnitudes_defn = this_cell_group_defn['interaction_factors_intercellular_contact_per_celltype']
+        interaction_factors_intercellular_contact_per_celltype_defn = this_cell_group_defn['interaction_factors_intercellular_contact_per_celltype']
         
-        num_defns = len(intercellular_contact_factor_magnitudes_defn.keys())
+        num_defns = len(interaction_factors_intercellular_contact_per_celltype_defn.keys())
         
         if num_defns != num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
+            raise StandardError("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
         
-        intercellular_contact_factor_magnitudes = []
+        interaction_factors_intercellular_contact_per_celltype = []
         for cgi in range(num_cell_groups):
             cg = cell_group_defns[cgi]
             cg_name = cg['cell_group_name']
-            intercellular_contact_factor_mag = intercellular_contact_factor_magnitudes_defn[cg_name]
+            intercellular_contact_factor_mag = interaction_factors_intercellular_contact_per_celltype_defn[cg_name]
             
-            intercellular_contact_factor_magnitudes += (cell_group_defns[cgi]['num_cells'])*[intercellular_contact_factor_mag]
+            interaction_factors_intercellular_contact_per_celltype += (cell_group_defns[cgi]['num_cells'])*[intercellular_contact_factor_mag]
                 
-        return np.array(intercellular_contact_factor_magnitudes)
+        return np.array(interaction_factors_intercellular_contact_per_celltype)
     
 # ==============================================================
 
 def expand_interaction_factors_coa_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
-        cell_dependent_coa_signal_strengths_defn = this_cell_group_defn['interaction_factors_coa_per_celltype']
+        interaction_factors_coa_per_celltype_defn = this_cell_group_defn['interaction_factors_coa_per_celltype']
         
-        num_defns = len(cell_dependent_coa_signal_strengths_defn.keys())
+        num_defns = len(interaction_factors_coa_per_celltype_defn.keys())
         
         if num_defns != num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in intercellular_contact_factor_magnitudes_defn.")
+            raise StandardError("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
         
-        cell_dependent_coa_signal_strengths = []
+        interaction_factors_coa_per_celltype = []
         for cgi in range(num_cell_groups):
             cg = cell_group_defns[cgi]
             cg_name = cg['cell_group_name']
             cg_num_nodes = this_cell_group_defn['parameter_dict']['num_nodes']
-            coa_signal_strength = cell_dependent_coa_signal_strengths_defn[cg_name]/cg_num_nodes
+            coa_signal_strength = interaction_factors_coa_per_celltype_defn[cg_name]/cg_num_nodes
             
-            cell_dependent_coa_signal_strengths += (cell_group_defns[cgi]['num_cells'])*[coa_signal_strength]
+            interaction_factors_coa_per_celltype += (cell_group_defns[cgi]['num_cells'])*[coa_signal_strength]
                 
-        return np.array(cell_dependent_coa_signal_strengths)
+        return np.array(interaction_factors_coa_per_celltype)
     
 # ==============================================================
 

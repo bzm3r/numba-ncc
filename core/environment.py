@@ -149,7 +149,7 @@ class Environment():
                 
 # -----------------------------------------------------------------
 
-    def get_system_info_index(self, tpoint):
+    def get_system_history_index(self, tpoint):
         return tpoint - self.timestep_offset_due_to_dumping
 
     def extend_simulation_runtime(self, new_num_timesteps):
@@ -380,7 +380,7 @@ class Environment():
     def get_empty_cell(self, cell_index):
         empty_cell = copy.deepcopy(self.cells_in_environment[cell_index])
         
-        empty_cell.system_info = None
+        empty_cell.system_history = None
         
         return empty_cell
         
@@ -402,7 +402,7 @@ class Environment():
         
     def is_empty(self):
         for a_cell in self.cells_in_environment:
-            if a_cell.system_info != None:
+            if a_cell.system_history != None:
                 return False
         
         return True
@@ -418,16 +418,16 @@ class Environment():
         random_state_fp = os.path.join(self.environment_dir, "random_state.pkl")
         self.write_random_state_file(random_state_fp)
         
-        access_index = self.get_system_info_index(self.curr_tpoint)
+        access_index = self.get_system_history_index(self.curr_tpoint)
         
         for cell_index in xrange(self.num_cells):
             this_cell = self.cells_in_environment[cell_index]
             if this_cell.last_trim_timestep < 0:
-                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[:access_index+1], self.storefile_path)
-                this_cell.trim_system_info(tpoint)
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_history[:access_index+1], self.storefile_path)
+                this_cell.trim_system_history(tpoint)
             elif this_cell.last_trim_timestep < tpoint:
-                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_info[1:access_index+1], self.storefile_path)
-                this_cell.trim_system_info(tpoint)
+                hardio.append_cell_data_to_dataset(cell_index, this_cell.system_history[1:access_index+1], self.storefile_path)
+                this_cell.trim_system_history(tpoint)
             else:
                 continue
             
