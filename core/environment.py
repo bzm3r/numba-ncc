@@ -109,11 +109,11 @@ class Environment():
         self.micrometer = 1e-6
         
         self.num_cell_groups = len(self.cell_group_defns)
-        self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns])
+        self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns], dtype=np.int64)
         self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc*self.num_cells
         self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
-        num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment])
+        num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment], dtype=np.int64)
         self.num_nodes= num_nodes_per_cell[0]
         for n in num_nodes_per_cell[1:]:
             if n != self.num_nodes:

@@ -1154,7 +1154,7 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
     
 # -----------------------------------------------------------------
     
-#@nb.jit(nopython=True)      
+@nb.jit(nopython=True)      
 def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
