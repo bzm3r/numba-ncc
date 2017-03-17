@@ -49,65 +49,44 @@ all_parameter_labels = rho_gtpase_parameter_labels + mech_parameter_labels + spa
 
 #-----------------------------------------------------------------
 
-polygon_model_parameters = ['num_nodes', 'init_cell_radius']
-polygon_model_parameter_justifications = [None, 20e-6]
+polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None}
 
-user_rho_gtpase_biochemistry_parameters = ['C_total', 'H_total', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'diffusion_const', 'kgdi_multiplier', 'kdgdi_multiplier', 'kgtp_rac_multiplier', 'kgtp_rac_autoact_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier', 'threshold_rac_activity_multiplier', 'kgtp_rho_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rho_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'threshold_rho_activity_multiplier', 'hill_exponent', 'tension_mediated_rac_inhibition_half_strain', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
-rho_gtpase_biochemistry_parameter_justifications = [[2e6, 3e6], [0.5e6, 1.5e6], [0, 1], [0, 1], [0, 1], [0.02e-12, 0.45e-12], [1, 2], [1, 2], [1, 500], [1, 500], [1, 2000], [1, 2000], [0.25, 0.5], [1, 500], [1, 500], [1, 2000], [1, 2000], [0.25, 0.5], 3, [0.01, 0.99], [-1, 10], 110e-6, 0.5]
+user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.25, 0.5], 'kgtp_rac_autoact_multiplier': [1, 500], 'C_total': [2000000.0, 3000000.0], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [500000.0, 1500000.0], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 500], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.25, 0.5]}
 
-if len(user_rho_gtpase_biochemistry_parameters) != len(rho_gtpase_biochemistry_parameter_justifications):
-    raise StandardError("Not enough justifications provided for user_rho_gtpase_biochemistry_parameters!")
 
-user_interaction_parameters = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria']
-interaction_parameter_justifications = [None, None, None, 0.25e-12]
-if len(user_interaction_parameters) != len(interaction_parameter_justifications):
-    raise StandardError("Not enough justifications provided for user_interaction_parameters!")
+user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': 2.5e-13}
 
-user_space_parameters = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
-space_parameter_justifications = [None, None]
-if len(user_space_parameters) != len(space_parameter_justifications):
-    raise StandardError("Not enough justifications provided for user_space_parameters!")
+user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
-user_mechanical_parameters = ['stiffness_edge', 'stiffness_cytoplasmic', 'eta', 'max_protrusive_nodal_velocity', 'max_force_rac', 'force_rho_multiplier', 'length_3D_dimension', 'force_adh_const', 'skip_dynamics']
-mechanical_parameter_justifications = [[1000, 8000], None, [0.1, 100], [2.5e-8, 10e-8], [0.5*10e3*10e-6, 2*10e3*10e-6], [0, 1], 0.1e-6, [0, 100], None]
-if len(user_mechanical_parameters) != len(mechanical_parameter_justifications):
-    raise StandardError("Not enough justifications provided for user_mechanical_parameters!")
+user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [5000.0, 20000.0], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [100000.0, 900000.0]}
 
-user_randomization_parameters = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude']
-randomization_parameter_justifications = [None, None, None, None]
-if len(user_randomization_parameters) != len(randomization_parameter_justifications):
-    raise StandardError("Not enough justifications provided for user_randomization_parameters!")
+user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None}
     
-user_model_run_parameters = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn']
-model_run_parameter_justifications = [[3, 100], None, None]
+user_model_run_parameters = {'skip_dynamics': None, 'biased_rgtpase_distrib_defn': None, 'num_nodes': [3, 100]}
 
-user_parameter_dictionary_keys = polygon_model_parameters + user_rho_gtpase_biochemistry_parameters + user_interaction_parameters + user_mechanical_parameters + user_randomization_parameters + user_space_parameters + user_model_run_parameters
-
-parameter_justifications = polygon_model_parameter_justifications + rho_gtpase_biochemistry_parameter_justifications + interaction_parameter_justifications + mechanical_parameter_justifications + randomization_parameter_justifications + space_parameter_justifications + model_run_parameter_justifications
+all_user_parameters_with_justifications = {}
+for parameter_dict in [polygon_model_parameters, user_rho_gtpase_biochemistry_parameters, user_interaction_parameters, user_space_parameters, user_mechanical_parameters, user_randomization_parameters, user_model_run_parameters]:
+    all_user_parameters_with_justifications.update(parameter_dict)
 
 #-----------------------------------------------------------------
 def verify_user_parameters(justify_parameters, user_parameter_dict):
-    global user_parameter_dictionary_keys
-    global paramter_justifications
+    global all_user_parameters_with_justifications
     
     for key in user_parameter_dict.keys():
-        key_index = -1
-        if key not in user_parameter_dictionary_keys:
+        try:
+            justification = all_user_parameters_with_justifications[key]
+        except:
             raise StandardError("Unknown parameter given: {}".format(key))
-        else:
-            key_index = user_parameter_dictionary_keys.index(key)
+
+        if justify_parameters and justification != None:
+            value = user_parameter_dict[key]
             
-            justification = parameter_justifications[key_index]
-            
-            if justify_parameters and justification != None:
-                value = user_parameter_dict[key]
-                
-                if type(justification) == list:
-                    assert(len(justification) == 2)
-                    if not (justification[0] <= value <= justification[1]):
-                        raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
-                elif value != justification:
+            if type(justification) == list:
+                assert(len(justification) == 2)
+                if not (justification[0] <= value <= justification[1]):
                     raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
+            elif value != justification:
+                raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
                     
 
 #-----------------------------------------------------------------
@@ -181,13 +160,13 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     length_edge_resting = np.average(edge_lengths)
 
     length_3D_dimension = user_parameter_dict['length_3D_dimension']
-    cell_parameter_dict['eta'] = user_parameter_dict['eta']/length_3D_dimension
+    cell_parameter_dict['eta'] = user_parameter_dict['eta']*length_3D_dimension
     cell_parameter_dict['stiffness_edge'] = user_parameter_dict['stiffness_edge']*length_3D_dimension
     cell_parameter_dict['stiffness_cytoplasmic'] = user_parameter_dict['stiffness_cytoplasmic']
     cell_parameter_dict['length_edge_resting'] = length_edge_resting
-    cell_parameter_dict['max_protrusive_nodal_velocity'] = user_parameter_dict['max_protrusive_nodal_velocity']
-    cell_parameter_dict['max_force_rac'] = user_parameter_dict['max_force_rac']
+    cell_parameter_dict['max_force_rac'] = user_parameter_dict['max_force_rac']*length_edge_resting*200e-9
     cell_parameter_dict['max_force_rho'] = user_parameter_dict['force_rho_multiplier']*user_parameter_dict['max_force_rac']
+    cell_parameter_dict['max_protrusive_nodal_velocity'] = cell_parameter_dict['max_force_rac']/cell_parameter_dict['eta']
     cell_parameter_dict['threshold_force_rac_activity'] = user_parameter_dict['threshold_rac_activity_multiplier']*C_total
     cell_parameter_dict['threshold_force_rho_activity'] = user_parameter_dict['threshold_rho_activity_multiplier']*H_total
     cell_parameter_dict['force_adh_const'] = user_parameter_dict['force_adh_const']

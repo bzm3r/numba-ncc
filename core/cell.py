@@ -157,9 +157,7 @@ class Cell():
 #        K = F L^{-2}
 #        
 #        eta L^-1 = M T^-1 L^-1 
-#        F / L = M L T^-2 L^-1 = M T^-2
-#        
-#        (eta L^-1) V = M T^-1 L^-1 L T^-1 = M T^-2
+#
 
         self.skip_dynamics = parameters_dict['skip_dynamics']
         
@@ -167,17 +165,17 @@ class Cell():
         eta_with_dimensions = parameters_dict['eta']/self.num_nodes
         self.L = T*max_velocity_with_dimensions
         self.T = T
-        self.M_T2 = max_velocity_with_dimensions*eta_with_dimensions
+        self.ML_T2 = max_velocity_with_dimensions*eta_with_dimensions
         
         self.max_protrusive_nodal_velocity = max_velocity_with_dimensions*(self.T/self.L)
-        self.eta = eta_with_dimensions/(self.M_T2/(self.L/self.T))
+        self.eta = eta_with_dimensions/(self.ML_T2/(self.L/self.T))
         
       
 #        print "*********************************"
 #        print "cell_index: {}".format(cell_index)
 #        print "L: {}".format(self.L)
 #        print "T: {}".format(self.T)
-#        print "M_T2: {}".format(self.M_T2)
+#        print "ML_T2: {}".format(self.ML_T2)
 #        print "*********************************"
         
         # ======================================================
@@ -194,13 +192,13 @@ class Cell():
         self.diffusion_const_inactive = parameters_dict['diffusion_const_inactive']*(self.T/(self.L**2))
         
         # K L = F L^-1 = M T^-2
-        self.stiffness_edge = (parameters_dict['stiffness_edge'])/(self.M_T2)
-        self.stiffness_cytoplasmic = parameters_dict['stiffness_cytoplasmic']/(self.M_T2)#stiffness_cytoplasmic/(self.ML_T2)
+        self.stiffness_edge = (parameters_dict['stiffness_edge'])/(self.ML_T2/self.L)
+        self.stiffness_cytoplasmic = parameters_dict['stiffness_cytoplasmic']/(self.ML_T2)
         
         # ======================================================
         
-        self.max_force_rac = parameters_dict['max_force_rac']/self.M_T2
-        self.max_force_rho = parameters_dict['max_force_rho']/self.M_T2
+        self.max_force_rac = parameters_dict['max_force_rac']/self.ML_T2
+        self.max_force_rho = parameters_dict['max_force_rho']/self.ML_T2
         self.threshold_force_rac_activity = parameters_dict['threshold_rac_activity']/(self.C_total*self.num_nodes)
         self.threshold_force_rho_activity = parameters_dict['threshold_rho_activity']/(self.H_total*self.num_nodes)
 
