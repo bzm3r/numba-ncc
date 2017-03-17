@@ -165,7 +165,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['stiffness_cytoplasmic'] = user_parameter_dict['stiffness_cytoplasmic']
     cell_parameter_dict['length_edge_resting'] = length_edge_resting
     cell_parameter_dict['max_force_rac'] = user_parameter_dict['max_force_rac']*length_edge_resting*200e-9
-    cell_parameter_dict['max_force_rho'] = user_parameter_dict['force_rho_multiplier']*user_parameter_dict['max_force_rac']
+    cell_parameter_dict['max_force_rho'] = user_parameter_dict['force_rho_multiplier']*cell_parameter_dict['max_force_rac']
     cell_parameter_dict['max_protrusive_nodal_velocity'] = cell_parameter_dict['max_force_rac']/cell_parameter_dict['eta']
     cell_parameter_dict['threshold_force_rac_activity'] = user_parameter_dict['threshold_rac_activity_multiplier']*C_total
     cell_parameter_dict['threshold_force_rho_activity'] = user_parameter_dict['threshold_rho_activity_multiplier']*H_total

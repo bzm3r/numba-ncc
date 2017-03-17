@@ -67,7 +67,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
@@ -78,14 +78,19 @@ class Environment():
             self.verbose = False
             self.environment_name = None
             self.environment_dir = None
+            self.full_print = False
+            self.persist = False
+            self.max_timepoints_on_ram = None
         else:
             self.verbose = verbose
             self.environment_name = environment_name
             self.environment_dir = environment_dir
-            
-        self.init_random_state(seed)
-            
+            self.full_print = full_print
+            self.persist = persist
+            self.max_timepoints_on_ram = max_timepoints_on_ram
+        
         if environment_dir != None:
+            self.init_random_state(seed)
             self.storefile_path = os.path.join(environment_dir, "store.hdf5")
             self.empty_self_pickle_path = os.path.join(environment_dir, "environment.pkl")
         else:
@@ -111,7 +116,6 @@ class Environment():
         self.num_cell_groups = len(self.cell_group_defns)
         self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns], dtype=np.int64)
         self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc*self.num_cells
-        self.max_timepoints_on_ram = max_timepoints_on_ram
         self.cells_in_environment = self.make_cells()
         num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment], dtype=np.int64)
         self.num_nodes= num_nodes_per_cell[0]
@@ -125,7 +129,8 @@ class Environment():
         self.full_print = full_print
         
         for cell_index in xrange(self.num_cells):
-            hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
+            if self.environment_dir != None:
+                hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
             
         self.mode = MODE_EXECUTE
 
@@ -320,7 +325,7 @@ class Environment():
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
-                this_cell_forces = current_cell.curr_node_forces*current_cell.M_T2
+                this_cell_forces = current_cell.curr_node_forces*current_cell.ML_T2
                 
                 environment_cells_node_coords[cell_index] = this_cell_coords
                 environment_cells_node_forces[cell_index] = this_cell_forces
@@ -500,7 +505,7 @@ class Environment():
             
             environment_cells = self.cells_in_environment
             environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
-            environment_cells_node_forces = np.array([x.curr_node_forces*x.M_T2 for x in environment_cells])
+            environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
             
             cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
             cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
@@ -536,19 +541,20 @@ class Environment():
                         
                         if self.environment_dir != None:
                             self.dump_to_store(t)
-                            
-                    if t != 0 and t in produce_intermediate_visuals:
-                        self.last_timestep_when_environment_hard_saved = t
                         
-                        if self.environment_dir != None:
-                            self.dump_to_store(t)
+                    if produce_intermediate_visuals != False:
+                        if t != 0 and t in produce_intermediate_visuals:
+                            self.last_timestep_when_environment_hard_saved = t
                             
-                        visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
-                        if not os.path.exists(visuals_save_dir):
-                            os.makedirs(visuals_save_dir)
-                        
-                        print "Making intermediate visuals..."
-                        self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
+                            if self.environment_dir != None:
+                                self.dump_to_store(t)
+                                
+                            visuals_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
+                            if not os.path.exists(visuals_save_dir):
+                                os.makedirs(visuals_save_dir)
+                            
+                            print "Making intermediate visuals..."
+                            self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
 
                     if allowed_drift_before_geometry_recalc == 0 or centroid_drift > allowed_drift_before_geometry_recalc:
                         recalc_geometry = True

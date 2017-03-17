@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 import general.exec_utils as eu
-import analysis.utilities as au
+import core.utilities as cu
 import visualization.datavis as datavis
 import os
 

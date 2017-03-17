@@ -8,9 +8,11 @@ Created on Sat Jun  6 12:21:52 2015
 from __future__ import division
 import numpy as np
 import core.geometry as geometry
+import core.hardio as hardio
+import core.parameterorg as parameterorg
 import moore_data_table
 import numba as nb
-import core.hardio as hardio
+
 
 # ==============================================================================
 @nb.jit(nopython=True)
@@ -116,11 +118,8 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     return polarity/num_nodes
     
 # ==============================================================================
-    
-def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
-    rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
-    rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
-    
+
+def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     num_nodes = rac_membrane_active_per_tstep.shape[1]
     
     scores_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
@@ -133,6 +132,23 @@ def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_dif
         averaged_score = np.average(scores_per_tstep)
         
     return averaged_score, scores_per_tstep
+
+def calculate_rgtpase_polarity_score_from_cell(a_cell, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
+    if max_tstep == None:
+        rac_membrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rac_membrane_active_index]
+        rho_memgrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rho_membrane_active_index]
+    else:
+        rac_membrane_active_per_tstep = a_cell.system_history[:max_tstep, :, parameterorg.rac_membrane_active_index]
+        rho_memgrane_active_per_tstep = a_cell.system_history[:max_tstep, :, parameterorg.rho_membrane_active_index]
+        
+    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, max_tstep=max_tstep, weigh_by_timepoint=weigh_by_timepoint) 
+    
+def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
+    rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
+    rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
+    
+    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, max_tstep=max_tstep, weigh_by_timepoint=weigh_by_timepoint)
+        
     
 # ==============================================================================
 

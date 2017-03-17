@@ -140,7 +140,8 @@ class Cell():
         self.num_nodes = parameters_dict['num_nodes']
         self.num_cells_in_environment = num_cells_in_environment
         
-        self.max_timepoints_on_ram = max_timepoints_on_ram
+        if max_timepoints_on_ram == None:
+            self.max_timepoints_on_ram = self.num_timesteps
         
         verify_parameter_completeness(parameters_dict)
         
@@ -580,10 +581,11 @@ class Cell():
         np.random.shuffle(random_order_cell_indices)
         coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix)
         
-        print "max_coa: ", np.max(coa_signals)
-        print "min_coa: ", np.min(coa_signals)
-#        print "max_ext: ", np.max(external_gradient_on_nodes)
-#        print "min_ext: ", np.min(external_gradient_on_nodes)
+        if self.verbose == True:
+            print "max_coa: ", np.max(coa_signals)
+            print "min_coa: ", np.min(coa_signals)
+#           print "max_ext: ", np.max(external_gradient_on_nodes)
+#           print "min_ext: ", np.min(external_gradient_on_nodes)
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.coa_signal_index] = coa_signals
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.external_gradient_on_nodes_index] = external_gradient_on_nodes
@@ -730,7 +732,7 @@ class Cell():
         if self.skip_dynamics == False:            
             intercellular_squared_dist_array = intercellular_squared_dist_array/(self.L**2)
             all_cells_node_coords = all_cells_node_coords/self.L
-            all_cells_node_forces = all_cells_node_forces/self.M_T2
+            all_cells_node_forces = all_cells_node_forces/self.ML_T2
             
             num_cells = all_cells_node_coords.shape[0]
             

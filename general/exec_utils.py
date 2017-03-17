@@ -266,6 +266,23 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
             
 # =======================================================================
 
+def run_simple_experiment_and_return_cell_worker(task_defn):
+    environment_wide_variable_defns, user_cell_group_defn = task_defn
+    return run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_cell_group_defn)
+
+# =======================================================================
+
+def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_cell_group_defn):
+    
+    an_environment = parameterorg.make_environment_given_user_cell_group_defns(user_cell_group_defns=[user_cell_group_defn], **environment_wide_variable_defns)          
+    an_environment.full_print = False
+            
+    an_environment.execute_system_dynamics({}, produce_intermediate_visuals=False, produce_final_visuals=False)
+    
+    return an_environment.cells_in_environment[0]
+    
+# =======================================================================
+
 def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"

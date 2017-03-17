@@ -7,7 +7,7 @@ Created on Sun Aug 07 16:00:16 2016
 
 import numpy as np
 import general.exec_utils as eu
-import analysis.utilities as au
+import core.utilities as cu
 import visualization.datavis as datavis
 import os
 
@@ -129,6 +129,35 @@ def fill_experiment_name_format_string_with_randomization_info(experiment_name_f
         
     return experiment_name
 # ===========================================================================
+
+def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=2, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1):    
+    parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)    
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
+    
+    num_boxes = 1
+    num_cells_in_boxes = [1]
+    box_heights = [1*cell_diameter]
+    box_widths = [1*cell_diameter]
+
+    x_space_between_boxes = []
+    plate_width, plate_height = 1000, 1000
+
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(num_boxes, num_cells_in_boxes, box_heights, box_widths,x_space_between_boxes, plate_width, plate_height, "CENTER", "CENTER")
+    
+    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon*1e-6
+    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon*1e-6
+    
+    environment_wide_variable_defns = {'parameter_explorer_run': True, 'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': False, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
+    
+    cell_dependent_coa_signal_strengths_defn_dict = dict([(x, default_coa) for x in boxes])
+    intercellular_contact_factor_magnitudes_defn_dict = dict([(x, default_cil) for x in boxes])
+    
+    biased_rgtpase_distrib_defn_dict = {'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}
+    
+    user_cell_group_defn = {'cell_group_name': 0, 'num_cells': 1, 'init_cell_radius': cell_diameter*0.5*1e-6, 'cell_group_bounding_box': np.array([box_x_offsets[0], box_x_offsets[0] + box_widths[0], box_y_offsets[0], box_heights[0] + box_y_offsets[0]])*1e-6, 'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dict, 'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dict, 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dict, 'parameter_dict': parameter_dict} 
+        
+    return (environment_wide_variable_defns, user_cell_group_defn)
     
 def single_cell_polarization_test(date_str, experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):    
     experiment_name_format_string = "single_cell_{}"
