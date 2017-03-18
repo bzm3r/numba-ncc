@@ -9,7 +9,7 @@ import time
 import colors
 import sys
 import core.hardio as hardio
-import analysis.utilities as analysis_utils
+import core.utilities as cu
 
 #@nb.jit(nopython=True)
 def create_transformation_matrix_entries(scale_x, scale_y, rotation_theta, translation_x, translation_y, plate_width, plate_height):
@@ -539,7 +539,7 @@ class EnvironmentAnimation():
             polygon_coords_per_timepoint_per_cell[cell_index,:,:,:] = polygon_coords_per_timestep
             
             if self.show_centroid_trail:
-                centroid_coords_per_timepoint_per_cell[cell_index,:,:] = analysis_utils.calculate_cell_centroids_until_tstep(cell_index, timestep_to_draw_till, self.storefile_path)
+                centroid_coords_per_timepoint_per_cell[cell_index,:,:] = cu.calculate_cell_centroids_until_tstep(cell_index, timestep_to_draw_till, self.storefile_path)
             
             if self.show_velocities:
                 eta = self.cell_etas[cell_index]

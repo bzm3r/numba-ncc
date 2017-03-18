@@ -8,8 +8,8 @@ import geometry
 import chemistry
 import mechanics
 import dynamics
-import general.utilities as general_utils
-import analysis.utilities as analysis_utils
+import general.utilities as gu
+import core.utilities as cu
 import core.hardio as hardio
 
 """
@@ -64,8 +64,8 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
     num_unbiased_nodes = num_nodes - num_biased_nodes
     
     if bias_type == 'random':
-        biased_distrib_factors = bias_strength*general_utils.calculate_normalized_randomization_factors(num_biased_nodes)
-        unbiased_distrib_factors = (1 - bias_strength)*general_utils.calculate_normalized_randomization_factors(num_nodes - num_biased_nodes)
+        biased_distrib_factors = bias_strength*gu.calculate_normalized_randomization_factors(num_biased_nodes)
+        unbiased_distrib_factors = (1 - bias_strength)*gu.calculate_normalized_randomization_factors(num_nodes - num_biased_nodes)
     elif bias_type == 'uniform':
         biased_distrib_factors = bias_strength*(1.0/num_biased_nodes)*np.ones(num_biased_nodes, dtype=np.float64)
         unbiased_distrib_factors = (1 - bias_strength)*bias_strength*(1.0/num_unbiased_nodes)*np.ones(num_unbiased_nodes, dtype=np.float64)
@@ -450,7 +450,7 @@ class Cell():
         rac_membrane_active = self.system_history[access_index, :, parameterorg.rac_membrane_active_index]
         rho_membrane_active = self.system_history[access_index, :, parameterorg.rho_membrane_active_index]
         
-        polarization_score = analysis_utils.calculate_polarization_rating(rac_membrane_active, rho_membrane_active, self.num_nodes, significant_difference=.2)
+        polarization_score = cu.calculate_polarization_rating(rac_membrane_active, rho_membrane_active, self.num_nodes, significant_difference=.2)
         avg_strain = np.average(local_strains)
         
         return avg_strain > 0.03 or polarization_score > 0.6
@@ -475,12 +475,12 @@ class Cell():
                             frac_factor = init_rgtpase_membrane_active_frac
                         
                         if distrib_type == "unbiased random":
-                            rgtpase_distrib = frac_factor*general_utils.calculate_normalized_randomization_factors(self.num_nodes)
+                            rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
                         elif distrib_type == "biased random":
                             if rgtpase_label == "rac_":
                                 rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'random')
                             elif rgtpase_label == "rho_":
-                                rgtpase_distrib = frac_factor*general_utils.calculate_normalized_randomization_factors(self.num_nodes)
+                                rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
                                 #rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'random')
                         elif distrib_type == "unbiased uniform":
                             rgtpase_distrib = frac_factor*np.ones(self.num_nodes)/self.num_nodes
@@ -488,7 +488,7 @@ class Cell():
                             if rgtpase_label == "rac_":
                                 rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'uniform')
                             elif rgtpase_label == "rho_":
-                                rgtpase_distrib = frac_factor*general_utils.calculate_normalized_randomization_factors(self.num_nodes)
+                                rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
                                 #rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'uniform')
                         else:
                             raise StandardError("Invalid initial rGTPase distribution type provided! ({})".format(distrib_type))

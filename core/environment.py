@@ -5,7 +5,7 @@ import parameterorg
 import geometry
 import os
 import visualization.datavis as datavis
-import analysis.utilities as analysis_utils
+import utilities as cu
 import visualization.animator as animator
 import dill
 import cPickle
@@ -358,7 +358,7 @@ class Environment():
                 if not os.path.exists(save_dir_for_cell):
                     os.makedirs(save_dir_for_cell)
                 
-                averaged_score, scores_per_tstep = analysis_utils.calculate_rgtpase_polarity_score(cell_index, self.storefile_path, significant_difference=0.2, max_tstep=t)
+                averaged_score, scores_per_tstep = cu.calculate_rgtpase_polarity_score(cell_index, self.storefile_path, significant_difference=0.2, max_tstep=t)
         
                 datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)

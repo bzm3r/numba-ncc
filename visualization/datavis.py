@@ -7,7 +7,7 @@ Created on Sat Jun  6 12:21:52 2015
 
 import numpy as np
 import matplotlib.pyplot as plt
-import analysis.utilities as analysis_utils
+import core.utilities as cu
 import os
 import colors
 import scipy.spatial as space
@@ -26,7 +26,7 @@ def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, st
     # ------------------------
     
     for ci in xrange(num_cells):
-        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
+        cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
@@ -116,7 +116,7 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile
     # ------------------------
     
     for ci in xrange(num_cells):
-        cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
+        cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
@@ -189,7 +189,7 @@ def graph_cell_velocity_over_time(num_cells, T, cell_Ls, storefile_path, save_di
     for ci in xrange(num_cells):
         L = cell_Ls[ci]
 #        num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
-        timepoints, cell_speeds = analysis_utils.calculate_cell_speeds_until_tstep(ci, max_tstep, storefile_path, T, L)
+        timepoints, cell_speeds = cu.calculate_cell_speeds_until_tstep(ci, max_tstep, storefile_path, T, L)
         
 #        chunky_timepoints = general.chunkify_numpy_array(timepoints, num_timesteps_to_average_over)
 #        chunky_cell_speeds = general.chunkify_numpy_array(cell_speeds, num_timesteps_to_average_over)
@@ -341,7 +341,7 @@ def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdg
         plt.close("all")
         
 def graph_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2):
-    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = analysis_utils.calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, significant_difference=significant_difference)
+    tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = cu.calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, significant_difference=significant_difference)
     
     num_run_and_tumble_periods = len(tumble_periods)
     
@@ -503,26 +503,26 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
     delta_tsteps = np.ceil(timeperiod_in_seconds_over_which_to_calculate_kinematics/T)
     min_tsteps_needed_to_calculate_kinematics = 2*delta_tsteps
     
-    cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(cell_index, max_tstep, storefile_path)*L
+    cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(cell_index, max_tstep, storefile_path)*L
     
     data_max_tstep = cell_centroids_per_tstep.shape[0] - 1
     
-    ic_contact_data = analysis_utils.get_ic_contact_data(cell_index, storefile_path, max_tstep=max_tstep)
+    ic_contact_data = cu.get_ic_contact_data(cell_index, storefile_path, max_tstep=max_tstep)
     
-    contact_start_end_arrays = analysis_utils.determine_contact_start_ends(ic_contact_data)
+    contact_start_end_arrays = cu.determine_contact_start_ends(ic_contact_data)
     #print "contact_start_end_arrays: ", contact_start_end_arrays
     
-    smoothened_contact_start_end_arrays = analysis_utils.smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1)
+    smoothened_contact_start_end_arrays = cu.smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_between_arrays=1)
     #print "smoothened_contact_start_end_arrays: ", smoothened_contact_start_end_arrays
     
-    assessable_contact_start_end_arrays = analysis_utils.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
+    assessable_contact_start_end_arrays = cu.get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays, data_max_tstep, min_tsteps_needed_to_calculate_kinematics=min_tsteps_needed_to_calculate_kinematics)
     #print "assessable_contact_start_end_arrays: ", assessable_contact_start_end_arrays
     
-    pre_velocities, post_velocities, pre_accelerations, post_accelerations = analysis_utils.calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, T)
+    pre_velocities, post_velocities, pre_accelerations, post_accelerations = cu.calculate_contact_pre_post_kinematics(assessable_contact_start_end_arrays, cell_centroids_per_tstep, delta_tsteps, T)
     
-    aligned_pre_velocities, aligned_post_velocities = analysis_utils.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_velocities, post_velocities, np.array([1, 0]))
+    aligned_pre_velocities, aligned_post_velocities = cu.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_velocities, post_velocities, np.array([1, 0]))
     
-    aligned_pre_accelerations, aligned_post_accelerations = analysis_utils.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_accelerations, post_accelerations, np.array([1, 0]))
+    aligned_pre_accelerations, aligned_post_accelerations = cu.rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_angle_to_pre(pre_accelerations, post_accelerations, np.array([1, 0]))
     
     null_h_prob_velocities = 0
     null_h_prob_accelerations = 0
@@ -530,9 +530,9 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
     max_data_lim_ax1 = 1
         
     if assessable_contact_start_end_arrays.shape[0] != 0:
-        null_h_prob_velocities = np.round(analysis_utils.calculate_null_hypothesis_probability(aligned_post_velocities), decimals=3)
+        null_h_prob_velocities = np.round(cu.calculate_null_hypothesis_probability(aligned_post_velocities), decimals=3)
         
-        null_h_prob_accelerations = np.round(analysis_utils.calculate_null_hypothesis_probability(aligned_post_accelerations), decimals=3)
+        null_h_prob_accelerations = np.round(cu.calculate_null_hypothesis_probability(aligned_post_accelerations), decimals=3)
     
         max_data_lim_ax0 = np.max([np.max(np.abs(aligned_pre_velocities)), np.max(np.abs(aligned_post_velocities))])
         max_data_lim_ax1 = np.max([np.max(np.abs(aligned_pre_accelerations)), np.max(np.abs(aligned_post_accelerations))])
@@ -647,7 +647,7 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
 # ============================================================================
 
 def graph_protrusion_lifetimes(num_cells, T, storefile_path, bar_width=0.35, opacity=0.75, error_config = {'ecolor': '0.3'}, save_dir=None, max_tstep=None):
-    cell_results_time_collapsed = analysis_utils.calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path)
+    cell_results_time_collapsed = cu.calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path)
     
     bin_boundaries = [0.25, 0.5]
     num_bins = len(bin_boundaries)
@@ -714,7 +714,7 @@ def graph_protrusion_number_given_direction_per_timestep(num_cells, num_timepoin
         
     times = np.arange(max_tstep)*T/60.0
         
-    forward_cone, backward_cone = analysis_utils.calculate_cells_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, storefile_path, max_tstep=max_tstep)
+    forward_cone, backward_cone = cu.calculate_cells_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, storefile_path, max_tstep=max_tstep)
     
     fig, ax = plt.subplots()
     
