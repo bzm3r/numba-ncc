@@ -293,7 +293,7 @@ def create_task_value_arrays(parameter_exploration_program, num_processes):
     
     
 def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_exploration_program, sequential=False, result_storage_folder="A:\\numba-ncc\\output", overwrite=False):
-    num_processes = 6
+    num_processes = 4
     
     assert(type(parameter_exploration_name) == str)
     
@@ -395,13 +395,13 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
 if __name__ == '__main__':
 
 
-    #results = parameter_explorer_asymmetry_criteria("2017_MAR_18_PE",[('kgtp_rac_multiplier', 1, 20, 5), ('kgtp_rho_multiplier', 1, 20, 5), ('kdgtp_rac_multiplier', 1, 20, 5), ('kdgtp_rho_multiplier', 1, 20, 5), ('kgtp_rho_autoact_multiplier', 100, 500, 5), ('kgtp_rac_autoact_multiplier', 100, 500, 5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 100, 1000, 5), ('kdgtp_rho_mediated_rac_inhib_multiplier', 100, 1000, 5)])
+    results = parameter_explorer_asymmetry_criteria("2017_MAR_18_PE_3",[('kgtp_rac_multiplier', 1, 20, 5), ('kgtp_rho_multiplier', 1, 20, 5), ('kdgtp_rac_multiplier', 1, 20, 5), ('kdgtp_rho_multiplier', 1, 20, 5), ('kgtp_rho_autoact_multiplier', 100, 500, 3), ('kgtp_rac_autoact_multiplier', 100, 500, 3), ('kdgtp_rac_mediated_rho_inhib_multiplier', 100, 1000, 3), ('kdgtp_rho_mediated_rac_inhib_multiplier', 100, 1000, 3)])
     
-    #sorted_results = sorted(global_results, key = lambda x: x[0])
+    sorted_results = sorted(global_results, key = lambda x: x[0])
     
-    #print "Number of interesting results: ", len(sorted_results)
+    print "Number of interesting results: ", len(sorted_results)
 
-    moddable_parameters = ['kgtp_rac_multiplier', 'kgtp_rho_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_multiplier', 'threshold_rac_activity_multiplier', 'threshold_rho_activity_multiplier', 'kgtp_rac_autoact_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier']
-    best_pd = parameter_explorer_polarization_wanderer(moddable_parameters, 0.5, num_new_dicts_to_generate=len(moddable_parameters), initial_resolution=0.1, max_resolution=1.0)
-    #best_pd = parameter_explorer_polarization_slope_follower(moddable_parameters, 0.6, resolution=0.01)
+#    moddable_parameters = ['kgtp_rac_multiplier', 'kgtp_rho_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_multiplier', 'threshold_rac_activity_multiplier', 'threshold_rho_activity_multiplier', 'kgtp_rac_autoact_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier']
+#    #best_pd = parameter_explorer_polarization_wanderer(moddable_parameters, 0.5, num_new_dicts_to_generate=len(moddable_parameters), initial_resolution=0.1, max_resolution=1.0, num_experiment_repeats=2, num_processes=6)
+#    best_pd = parameter_explorer_polarization_slope_follower(moddable_parameters, 0.6, resolution=0.01)
     
