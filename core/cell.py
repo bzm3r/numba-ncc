@@ -142,6 +142,8 @@ class Cell():
         
         if max_timepoints_on_ram == None:
             self.max_timepoints_on_ram = self.num_timesteps
+        else:
+            self.max_timepoints_on_ram = max_timepoints_on_ram
         
         verify_parameter_completeness(parameters_dict)
         
@@ -382,6 +384,8 @@ class Cell():
         
         conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
         
+        self.system_history[access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
+        
         self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
         self.system_history[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
@@ -568,6 +572,8 @@ class Cell():
                 
             # store the Rac randomization factors for this timestep
             self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers] = self.randomization_rac_kgtp_multipliers
+        else:
+            self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
                 
         if self.verbose == True:
             print self.randomization_print_string.format(self.next_randomization_event_tpoint)
@@ -653,6 +659,8 @@ class Cell():
         conc_rac_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rac_membrane_actives, avg_edge_lengths)
         
         conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
+        
+        self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
         
         kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         

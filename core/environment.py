@@ -590,7 +590,9 @@ class Environment():
                     self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)
                 
             simulation_time = np.round(simulation_et - simulation_st, decimals=2)
-            print "Time taken to complete simulation: {}s".format(simulation_time)
+            
+            if self.verbose == True:
+                print "Time taken to complete simulation: {}s".format(simulation_time)
                     
             return simulation_time
         else:

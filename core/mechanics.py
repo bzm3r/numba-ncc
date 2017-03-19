@@ -12,11 +12,11 @@ import numba as nb
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def hill_function(exp, thresh, sig):
-    pow_sig = sig**exp
-    pow_thresh = thresh**exp
-    
-    return pow_sig/(pow_thresh + pow_sig)
+def capped_linear_function(max_x, x):
+    if x > max_x:
+        return 1.0
+    else:
+        return (x/max_x)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)         
@@ -146,9 +146,9 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
         rho_activity = rho_membrane_actives[ni]
         
         if rac_activity > rho_activity:
-            force_mag = max_force_rac*hill_function(3, threshold_force_rac_activity, rac_activity - rho_activity)
+            force_mag = max_force_rac*capped_linear_function(2*threshold_force_rac_activity, rac_activity - rho_activity)
         else:
-            force_mag = max_force_rho*hill_function(3, threshold_force_rho_activity, rho_activity - rac_activity)
+            force_mag = -1*max_force_rho*capped_linear_function(2*threshold_force_rho_activity, rho_activity - rac_activity)
         
         rgtpase_mediated_force_mags[ni] = -1*force_mag
             

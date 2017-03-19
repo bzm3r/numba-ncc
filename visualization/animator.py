@@ -301,7 +301,7 @@ def prepare_coa_data(coa_scale, cell_index, unique_undrawn_timesteps, polygon_co
     return coa_signal
     
 def prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, storefile_path):
-    rac_random_spike_info = hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "randomization_event_occurred", storefile_path)
+    rac_random_spike_info = hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "randomization_rac_kgtp_multipliers", storefile_path)
     
     return rac_random_spike_info
     

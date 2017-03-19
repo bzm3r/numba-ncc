@@ -10,6 +10,14 @@ import parameterorg
 import numpy as np
 
 # ============================================================================== 
+def create_parameter_exploration_dataset(storefile_path, length_results_axis1):
+    with h5py.File(storefile_path, "a") as f:
+        f.create_dataset("exploration_results", shape=(0, length_results_axis1), maxshape=(None, length_results_axis1), chunks=True, shuffle=True)
+        f.create_dataset("last_executed_chunk_index", shape=(1,), maxshape=(1,))
+        
+    return
+        
+# ============================================================================== 
 
 def create_exec_order_dataset(storefile_path, num_cells):
     with h5py.File(storefile_path, "a") as f:
@@ -46,7 +54,21 @@ def append_cell_data_to_dataset(cell_index, cell_data, storefile_path):
         
         dset.resize(dset.shape[0] + cell_data.shape[0], axis=0)
         dset[orig_index:,:,:] = cell_data  
+        
+# ==============================================================================
 
+def append_parameter_exploration_data_to_dataset(new_last_executed_chunk_index, parameter_exploration_results, storefile_path):
+    with h5py.File(storefile_path, "a") as f:
+        dset = f["exploration_results"]
+        
+        orig_index = dset.shape[0]
+        dset.resize(dset.shape[0] + parameter_exploration_results.shape[0], axis=0)
+        dset[orig_index:,:] = parameter_exploration_results
+        
+        dset = f["last_executed_chunk_index"]
+        
+        dset[0] = new_last_executed_chunk_index
+        
 # ============================================================================== 
 
 def get_storefile_tstep_range(num_cells, storefile_path):
@@ -182,5 +204,16 @@ def get_vector_data_until_timestep(cell_index, max_tstep, data_label, storefile_
             
 def get_data_for_all_timesteps(cell_index, data_label, storefile_path):
     return get_data_until_timestep(cell_index, None, data_label, storefile_path)
+
+# ==============================================================================
+
+def get_last_executed_parameter_exploration_chunk_index(storefile_path):
+    last_executed_chunk_index = -1
+    with h5py.File(storefile_path, "a") as f:
+        last_executed_chunk_index = int(f["last_executed_chunk_index"][0])
+    
+    return last_executed_chunk_index
+        
+    
 
 
