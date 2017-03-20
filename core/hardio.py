@@ -213,6 +213,17 @@ def get_last_executed_parameter_exploration_chunk_index(storefile_path):
         last_executed_chunk_index = int(f["last_executed_chunk_index"][0])
     
     return last_executed_chunk_index
+
+# ==============================================================================
+
+def get_parameter_exploration_results(storefile_path):
+    with h5py.File(storefile_path, "a") as f:
+        dset = f["exploration_results"]
+        
+        results = np.zeros(dset.shape, dtype=np.float64)
+        results[:,:] = dset
+        
+    return results
         
     
 

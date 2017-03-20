@@ -16,7 +16,7 @@ import shutil
 import dill
 
 # --------------------------------------------------------------------
-STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 20), ('kgtp_rac_autoact_multiplier', 1000), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 500), ('threshold_rac_activity_multiplier', 0.2), ('kgtp_rho_multiplier', 20.0), ('kgtp_rho_autoact_multiplier', 1000), ('kdgtp_rho_multiplier', 10.0), ('kdgtp_rac_mediated_rho_inhib_multiplier', 500), ('threshold_rho_activity_multiplier', 0.2), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.1), ('max_coa_signal', -1), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 10), ('closeness_dist_squared_criteria', 0.25e-12), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1), ('eta', 1e5), ('max_force_rac', 0.1*10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 1.), ('skip_dynamics', False)])
+STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('max_coa_signal', -1), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 10), ('closeness_dist_squared_criteria', 0.25e-12), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-6), ('eta', 1e5), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 1.), ('skip_dynamics', False)])
 
 global_weird_parameter_dicts = []
 global_results = []
@@ -276,7 +276,7 @@ def create_task_value_arrays(parameter_exploration_program, num_processes):
     
     for parameter_label, start_value, end_value, range_resolution in parameter_exploration_program:
         given_parameter_labels.append(parameter_label)
-        given_parameter_values.append(np.linspace(start_value, end_value, num=range_resolution))
+        given_parameter_values.append(np.floor(np.linspace(start_value, end_value, num=range_resolution)))
 
     all_parameter_labels = parameterorg.all_user_parameters_with_justifications.keys()
     for parameter_label in given_parameter_labels:
@@ -292,7 +292,7 @@ def create_task_value_arrays(parameter_exploration_program, num_processes):
     
     
     
-def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_exploration_program, sequential=False, result_storage_folder="A:\\numba-ncc\\output", overwrite=False):
+def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_exploration_program, sequential=False, result_storage_folder="A:\\numba-ncc\\output", overwrite=False, seed=36):
     num_processes = 4
     
     assert(type(parameter_exploration_name) == str)
@@ -361,7 +361,7 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
             parameter_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
             parameter_dict.update(update_dict)
             update_dicts.append(update_dict)
-            task_environment_defn = exptempls.setup_polarization_experiment(parameter_dict)
+            task_environment_defn = exptempls.setup_polarization_experiment(parameter_dict, seed=seed)
             task_chunk.append(task_environment_defn)
             
         loop_result_cells = []
@@ -386,20 +386,31 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
         print "best_pr: ", best_pr
         
         print "Storing results..."
-        hardio.append_parameter_exploration_data_to_dataset(chunk_index, results, storefile_path)
+        hardio.append_parameter_exploration_data_to_dataset(ci + ci_offset, results, storefile_path)
+        
+    print "Storing last batch of results..."
+    hardio.append_parameter_exploration_data_to_dataset(ci + ci_offset, results, storefile_path)
 
-    return True
+    return storefile_path
 
 # =====================================================================
 
+def get_result_as_dict_update(results, index, labels):
+    return zip(labels, results[index][1:])
+    
 if __name__ == '__main__':
-
-
-    results = parameter_explorer_asymmetry_criteria("2017_MAR_18_PE_3",[('kgtp_rac_multiplier', 1, 20, 5), ('kgtp_rho_multiplier', 1, 20, 5), ('kdgtp_rac_multiplier', 1, 20, 5), ('kdgtp_rho_multiplier', 1, 20, 5), ('kgtp_rho_autoact_multiplier', 100, 500, 3), ('kgtp_rac_autoact_multiplier', 100, 500, 3), ('kdgtp_rac_mediated_rho_inhib_multiplier', 100, 1000, 3), ('kdgtp_rho_mediated_rac_inhib_multiplier', 100, 1000, 3)])
+    pe_name = "2017_MAR_20_PE"
     
-    sorted_results = sorted(global_results, key = lambda x: x[0])
+    exploration_program = [('kgtp_rac_multiplier', 1, 20, 5), ('kgtp_rho_multiplier', 1, 20, 5), ('kdgtp_rac_multiplier', 1, 20, 5), ('kdgtp_rho_multiplier', 1, 20, 5), ('kgtp_rho_autoact_multiplier', 100, 500, 5), ('kgtp_rac_autoact_multiplier', 100, 500, 5)]
+    p_labels = [x[0] for x in exploration_program]
+    storefile_path = parameter_explorer_asymmetry_criteria(pe_name, exploration_program, seed=36)
     
-    print "Number of interesting results: ", len(sorted_results)
+    results = hardio.get_parameter_exploration_results(storefile_path)
+    sorted_results = results[results[:,0].argsort()]
+    
+    best_update = get_result_as_dict_update(sorted_results, -1, p_labels)
+    
+    
 
 #    moddable_parameters = ['kgtp_rac_multiplier', 'kgtp_rho_multiplier', 'kdgtp_rac_multiplier', 'kdgtp_rho_multiplier', 'threshold_rac_activity_multiplier', 'threshold_rho_activity_multiplier', 'kgtp_rac_autoact_multiplier', 'kgtp_rho_autoact_multiplier', 'kdgtp_rac_mediated_rho_inhib_multiplier', 'kdgtp_rho_mediated_rac_inhib_multiplier']
 #    #best_pd = parameter_explorer_polarization_wanderer(moddable_parameters, 0.5, num_new_dicts_to_generate=len(moddable_parameters), initial_resolution=0.1, max_resolution=1.0, num_experiment_repeats=2, num_processes=6)

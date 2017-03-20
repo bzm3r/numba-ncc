@@ -79,9 +79,16 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         
     avg_rac = sum_rac/num_nodes
     avg_rho = sum_rho/num_nodes
+    #highest_avg = max(avg_rac, avg_rho)
     
-    if avg_rac == 0.0 or avg_rho == 0.0:
+    if sum_rac > 0.4 or avg_rac < 1e-6:
         return 0.0
+    
+    if sum_rho > 0.4 or avg_rho < 1e-6:
+        return 0.0
+    
+#    if avg_rac == 0.0 or avg_rho == 0.0:
+#        return 0.0
     
     rac_higher_than_average = np.zeros(num_nodes, dtype=np.int64)
     for i in range(num_nodes):
@@ -90,32 +97,30 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
             
     rho_higher_than_average = np.zeros(num_nodes, dtype=np.int64)
     for i in range(num_nodes):
-        if (rho_membrane_active[i] - avg_rho)/avg_rho > significant_difference:
+        if (rho_membrane_active[i] - avg_rac)/avg_rac > significant_difference:
             rho_higher_than_average[i] = 1
-        
-    domination_rating_per_node = rac_higher_than_average - rho_higher_than_average
-    
-    polarity = 0.0
+         
+    num_rac_fronts = 0.0
     for ni in range(num_nodes):
         ni_plus1 = (ni + 1)%num_nodes
-        ni_minus1 = (ni - 1)%num_nodes
         
-        dom = domination_rating_per_node[ni]
-        dom_plus1 = domination_rating_per_node[ni_plus1]
-        dom_minus1 = domination_rating_per_node[ni_minus1]
-        
-        if dom != 0:
-            if dom_plus1 == 0:
-                polarity += 0.25
-            elif dom_plus1 == dom:
-                polarity += 0.5
-    
-            if dom_minus1 == 0:
-                polarity += 0.25
-            elif dom_minus1 == dom:
-                polarity += 0.5
+        if rac_higher_than_average[ni] != rac_higher_than_average[ni_plus1]:
+            num_rac_fronts += 0.5
             
-    return polarity/num_nodes
+    if num_rac_fronts == 0.0:
+        return 0.0
+    
+    average_front_width = np.sum(rac_higher_than_average)/num_rac_fronts
+    front_width_rating = average_front_width/(num_nodes/3.)
+    
+    if front_width_rating > 1.0:
+        front_width_rating = 0.5
+    elif front_width_rating < 1e-6:
+        return 0.0
+    
+    polarity = front_width_rating/num_rac_fronts
+            
+    return polarity
     
 # ==============================================================================
 

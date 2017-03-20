@@ -151,6 +151,8 @@ class Environment():
             else:
                 np.random.seed(seed)
                 self.write_random_state_file(random_state_fp)
+        else:
+            np.random.seed(seed)
                 
 # -----------------------------------------------------------------
 

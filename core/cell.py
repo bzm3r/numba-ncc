@@ -166,7 +166,7 @@ class Cell():
         
         max_velocity_with_dimensions = parameters_dict['max_protrusive_nodal_velocity']
         eta_with_dimensions = parameters_dict['eta']/self.num_nodes
-        self.L = 0.1*T*max_velocity_with_dimensions
+        self.L = 1e-6#0.1*T*max_velocity_with_dimensions
         self.T = T
         self.ML_T2 = max_velocity_with_dimensions*eta_with_dimensions
         
@@ -189,7 +189,8 @@ class Cell():
         self.curr_node_coords = parameters_dict['init_node_coords']/self.L
         self.radius_resting = parameters_dict['init_cell_radius']/self.L
         self.length_edge_resting = parameters_dict['length_edge_resting']/self.L
-        self.init_average_edge_lengths = np.average(geometry.calculate_average_edge_length_around_nodes(self.num_nodes, self.curr_node_coords))
+        edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.num_nodes, self.curr_node_coords)   
+        self.init_average_edge_lengths = np.average(geometry.calculate_average_edge_length_around_nodes(self.num_nodes, edgeplus_lengths))
         self.area_resting = parameters_dict['area_resting']/(self.L**2)
         
         self.diffusion_const_active = parameters_dict['diffusion_const_active']*(self.T/(self.L**2))
@@ -662,9 +663,6 @@ class Cell():
         conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
-        
-        if new_tpoint > 600:
-            pass
         
         kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
         
