@@ -130,7 +130,7 @@ def fill_experiment_name_format_string_with_randomization_info(experiment_name_f
     return experiment_name
 # ===========================================================================
 
-def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1):    
+def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
     parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)    
     total_time = total_time_in_hours*3600
     num_timesteps = int(total_time/timestep_length)
@@ -148,7 +148,7 @@ def setup_polarization_experiment(parameter_dict, randomization_scheme=None, ran
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon*1e-6
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon*1e-6
     
-    environment_wide_variable_defns = {'parameter_explorer_run': True, 'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': False, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
+    environment_wide_variable_defns = {'parameter_explorer_run': True, 'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': False, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc, 'parameter_explorer_init_rho_gtpase_conditions': init_rho_gtpase_conditions}
     
     cell_dependent_coa_signal_strengths_defn_dict = dict([(x, default_coa) for x in boxes])
     intercellular_contact_factor_magnitudes_defn_dict = dict([(x, default_cil) for x in boxes])

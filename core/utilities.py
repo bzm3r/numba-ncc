@@ -79,7 +79,6 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         
     avg_rac = sum_rac/num_nodes
     avg_rho = sum_rho/num_nodes
-    #highest_avg = max(avg_rac, avg_rho)
     
     if sum_rac > 0.4 or avg_rac < 1e-6:
         return 0.0
@@ -87,18 +86,10 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     if sum_rho > 0.4 or avg_rho < 1e-6:
         return 0.0
     
-#    if avg_rac == 0.0 or avg_rho == 0.0:
-#        return 0.0
-    
     rac_higher_than_average = np.zeros(num_nodes, dtype=np.int64)
     for i in range(num_nodes):
         if (rac_membrane_active[i] - avg_rac)/avg_rac > significant_difference:
             rac_higher_than_average[i] = 1
-            
-    rho_higher_than_average = np.zeros(num_nodes, dtype=np.int64)
-    for i in range(num_nodes):
-        if (rho_membrane_active[i] - avg_rac)/avg_rac > significant_difference:
-            rho_higher_than_average[i] = 1
          
     num_rac_fronts = 0.0
     for ni in range(num_nodes):
@@ -124,7 +115,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     
 # ==============================================================================
 
-def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
+def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=0.1, weigh_by_timepoint=False):
     num_nodes = rac_membrane_active_per_tstep.shape[1]
     
     scores_per_tstep = np.array([calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes, significant_difference=significant_difference) for rac_membrane_active, rho_membrane_active in zip(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)])
@@ -138,21 +129,21 @@ def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_t
         
     return averaged_score, scores_per_tstep
 
-def calculate_rgtpase_polarity_score_from_cell(a_cell, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
-    if max_tstep == None:
+def calculate_rgtpase_polarity_score_from_cell(a_cell, significant_difference=0.1, num_data_points_from_end=None, weigh_by_timepoint=False):
+    if num_data_points_from_end == None:
         rac_membrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rac_membrane_active_index]
         rho_membrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rho_membrane_active_index]
     else:
-        rac_membrane_active_per_tstep = a_cell.system_history[:max_tstep, :, parameterorg.rac_membrane_active_index]
-        rho_membrane_active_per_tstep = a_cell.system_history[:max_tstep, :, parameterorg.rho_membrane_active_index]
+        rac_membrane_active_per_tstep = a_cell.system_history[-num_data_points_from_end:, :, parameterorg.rac_membrane_active_index]
+        rho_membrane_active_per_tstep = a_cell.system_history[-num_data_points_from_end:, :, parameterorg.rho_membrane_active_index]
         
-    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, max_tstep=max_tstep, weigh_by_timepoint=weigh_by_timepoint) 
+    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, weigh_by_timepoint=weigh_by_timepoint) 
     
 def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
     rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
     
-    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, max_tstep=max_tstep, weigh_by_timepoint=weigh_by_timepoint)
+    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, weigh_by_timepoint=weigh_by_timepoint)
         
     
 # ==============================================================================

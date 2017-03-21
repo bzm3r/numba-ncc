@@ -67,13 +67,14 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
         self.last_timestep_when_graphs_made = None
         
-        self.parameter_explorer_run = parameter_explorer_run        
+        self.parameter_explorer_run = parameter_explorer_run
+        self.parameter_explorer_init_rho_gtpase_conditions = parameter_explorer_init_rho_gtpase_conditions
         if parameter_explorer_run == True:
             self.verbose = False
             self.environment_name = None
@@ -230,8 +231,11 @@ class Environment():
             undefined_labels = parameterorg.find_undefined_labels(cell_parameter_dict)
             if len(undefined_labels) > 0:
                 raise StandardError("The following labels are not yet defined: {}".format(undefined_labels))
-            
-            new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict)
+                
+            if self.parameter_explorer_run and self.parameter_explorer_init_rho_gtpase_conditions != None:
+                new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict, init_rho_gtpase_conditions=self.parameter_explorer_init_rho_gtpase_conditions)
+            else:
+                new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict)
             
             cells_in_group.append(new_cell)
             

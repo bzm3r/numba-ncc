@@ -122,7 +122,7 @@ class Cell():
 # -----------------------------------------------------------------
     def __init__(self, cell_label, cell_group_index, cell_index,  
                  integration_params, 
-                 num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict):
+                 num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict, init_rho_gtpase_conditions=None):
 
         self.verbose = verbose
         
@@ -326,7 +326,7 @@ class Cell():
         self.init_rgtpase_membrane_inactive_frac = parameters_dict['init_rgtpase_membrane_inactive_frac']
         self.init_rgtpase_membrane_active_frac = parameters_dict['init_rgtpase_membrane_active_frac']
         self.biased_rgtpase_distrib_defn_for_randomization = ['unbiased random', 0.0, 0.0]
-        self.initialize_cell(self.curr_node_coords, parameters_dict['biased_rgtpase_distrib_defn'], self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac)
+        self.initialize_cell(self.curr_node_coords, parameters_dict['biased_rgtpase_distrib_defn'], self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions)
         
         self.last_trim_timestep = -1
         
@@ -338,7 +338,7 @@ class Cell():
         self.system_history[access_index, 0, self.ode_cellwide_phase_var_indices] = ode_cellwide_phase_vars
         
 # -----------------------------------------------------------------
-    def initialize_cell(self, init_node_coords, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac):
+    def initialize_cell(self, init_node_coords, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions):
         
         init_tstep = 0
         access_index = self.get_system_history_access_index(init_tstep)
@@ -349,7 +349,11 @@ class Cell():
         
         node_coords = init_node_coords
                 
-        self.set_rgtpase_distribution(biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac)
+        self.set_rgtpase_distribution(biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions)
+        
+        # 'rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound'
+        #np.set_printoptions(threshold=np.nan)
+        #print {"rac_membrane_active": self.system_history[access_index, :, parameterorg.rac_membrane_active_index], "rho_membrane_active": self.system_history[access_index, :, parameterorg.rho_membrane_active_index], "rac_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rac_cytosolic_gdi_bound_index], "rho_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rho_cytosolic_gdi_bound_index], "rac_membrane_inactive": self.system_history[access_index, :, parameterorg.rac_membrane_inactive_index], "rho_membrane_inactive": self.system_history[access_index, :, parameterorg.rho_membrane_inactive_index]}
         
         rac_membrane_actives = self.system_history[access_index, :, parameterorg.rac_membrane_active_index]
         rho_membrane_actives = self.system_history[access_index, :, parameterorg.rho_membrane_active_index]
@@ -462,7 +466,7 @@ class Cell():
         return avg_strain > 0.03 or polarization_score > 0.6
         
 # -----------------------------------------------------------------
-    def set_rgtpase_distribution(self, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, tpoint=0):
+    def set_rgtpase_distribution(self, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions, tpoint=0):
         
         distrib_type, bias_direction_range, bias_strength = biased_rgtpase_distrib_defn
 
@@ -473,6 +477,10 @@ class Cell():
         
         for rgtpase_label in ['rac_', 'rho_']:
             for label in parameterorg.output_chem_labels[:7]:
+                if init_rho_gtpase_conditions != None:
+                    self.system_history[access_index, :, eval("parameterorg." + label + "_index")] = init_rho_gtpase_conditions[label]
+                    continue
+                
                 if rgtpase_label in label:
                     if '_membrane_' in label:
                         if '_inactive' in label:
