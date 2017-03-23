@@ -176,14 +176,14 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
             
             for ni in range(num_nodes):
                 if are_new_nodes_inside_other_cell[ni] != success_condition_stay_out:
-                    new_node_coords[ni] = calculate_volume_exclusion_effects(node_coords[ni], new_node_coords[ni], unit_inside_pointing_vectors[ni], all_cells_node_coords[other_ci], num_bisection_iterations, max_movement_mag, success_condition_stay_out)
+                    new_node_coords[ni] = determine_volume_exclusion_effects(node_coords[ni], new_node_coords[ni], unit_inside_pointing_vectors[ni], all_cells_node_coords[other_ci], num_bisection_iterations, max_movement_mag, success_condition_stay_out)
     
     if exists_space_physical_bdry_polygon == 1:
         are_new_nodes_inside_space_physical_bdry_polygon = geometry.are_points_inside_polygon(num_nodes, new_node_coords, space_physical_bdry_polygon.shape[0], space_physical_bdry_polygon)
             
         for ni in range(num_nodes):
             if are_new_nodes_inside_space_physical_bdry_polygon[ni] != success_condition_stay_in:
-                new_node_coords[ni] = calculate_volume_exclusion_effects(node_coords[ni], new_node_coords[ni], unit_inside_pointing_vectors[ni], space_physical_bdry_polygon, num_bisection_iterations, max_movement_mag, success_condition_stay_in)
+                new_node_coords[ni] = determine_volume_exclusion_effects(node_coords[ni], new_node_coords[ni], unit_inside_pointing_vectors[ni], space_physical_bdry_polygon, num_bisection_iterations, max_movement_mag, success_condition_stay_in)
             
     for ni in range(num_nodes):
         new_coord = new_node_coords[ni]
@@ -234,7 +234,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def calculate_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointing_vector, polygon, num_bisection_iterations, max_movement_mag, success_exclusion_condition):
+def determine_volume_exclusion_effects(old_coord, new_coord, unit_inside_pointing_vector, polygon, num_bisection_iterations, max_movement_mag, success_exclusion_condition):
     
 #    if success_exclusion_condition == 1:
 #        movement_mag = geometry.calculate_2D_vector_mag(old_coord - new_coord)

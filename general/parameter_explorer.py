@@ -84,7 +84,7 @@ def generate_random_update_based_on_current_state(num_new_updates, parameter_dic
             sign_choice = [-1, 0, 1]
             
         for n in range(num_new_updates):
-            new_value = old_value + np.random.choice(sign_choice)*np.random.choice([1, 1, 1, 1, 2, 2, 3])*delta
+            new_value = old_value + np.random.choice(sign_choice)*np.random.choice([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 6, 10, 100])*delta
             
             if new_value > maxj:
                 new_value = maxj
@@ -170,7 +170,8 @@ def parameter_explorer_polarization_wanderer(modification_program, required_pola
             print "improvement seen!"
             num_tries_with_no_improvement = 0
         else:
-            print "no improvement."
+            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            num_tries_with_no_improvement += 1
             if num_tries_with_no_improvement > 25:
                 print "no improvement seen for a while...retrying from new initial conditions!"
                 current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -184,6 +185,117 @@ def parameter_explorer_polarization_wanderer(modification_program, required_pola
         
         if num_tries_with_no_improvement >= 50:
             print "initial polarization score: ", current_polarization_score            
+            
+    return current_best_update
+
+def bounded(value, limits):
+    minv, maxv = limits
+    if value < minv:
+        return minv
+    elif value > maxv:
+        return maxv
+    else:
+        return value
+
+def parameter_explorer_polarization_slope_follower(modification_program, required_polarization_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, sequential=False, num_experiment_repeats=3):
+    
+    mod_deltas = [x[3] for x in modification_program]
+    mod_min_max = [x[1:3] for x in modification_program]
+    mod_labels = [x[0] for x in modification_program]
+    
+    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    
+    for ml in mod_labels:
+        if ml not in acceptable_labels:
+            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+        
+    global STANDARD_PARAMETER_DICT
+    current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
+    
+    current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict) #[(label, lims[0]) for label, lims in zip(mod_labels, mod_min_max)]
+    current_dict.update(current_best_update)
+    
+    current_polarization_score = cu.calculate_rgtpase_polarity_score_from_cell(executils.run_simple_experiment_and_return_cell_worker(exptempls.setup_polarization_experiment(current_dict)), significant_difference=0.2, weigh_by_timepoint=False)[0]
+    
+    worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
+    stop_criterion_met = False
+    
+    while not stop_criterion_met:
+        print "==========================="
+        print "current_polarization_score: ", current_polarization_score
+        
+        dprs = []
+        for label_index, loop_data in enumerate(zip(mod_labels, mod_min_max, mod_deltas)):
+            label, this_min_max, this_delta = loop_data
+            
+            at_boundary = True
+            minval, maxval = this_min_max
+            current_value = current_dict[label]
+            
+            dv = this_delta
+            
+            if current_value == minval or current_value - dv < minval:
+                signs = [0, 1]
+            elif current_value == maxval or current_value + dv > maxval:
+                signs = [-1, 0]
+            else:
+                signs = [-1, 1]
+                at_boundary = False
+                
+            x = copy.deepcopy(current_dict)
+            x.update([(label, current_value + dv*signs[0])])
+            y = copy.deepcopy(current_dict)
+            y.update([(label, current_value + dv*signs[1])])
+            
+            seeds = [int(np.round(np.random.rand(), decimals=4)*1000) for n in range(num_experiment_repeats)]
+            task_list = [exptempls.setup_polarization_experiment(x, seed=seeds[n]) for n in range(num_experiment_repeats)] + [exptempls.setup_polarization_experiment(y, seed=seeds[n]) for n in range(num_experiment_repeats)]
+            
+            result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
+            
+            x_cells = result_cells[:num_experiment_repeats]
+            y_cells = result_cells[num_experiment_repeats:]
+            
+            x_pr = np.array([cu.calculate_rgtpase_polarity_score_from_cell(rc, significant_difference=0.2, weigh_by_timepoint=False)[0] for rc in x_cells])
+            y_pr = np.array([cu.calculate_rgtpase_polarity_score_from_cell(rc, significant_difference=0.2, weigh_by_timepoint=False)[0] for rc in y_cells])
+            
+            this_dpr = 0.0
+            if at_boundary:
+                this_dpr = np.average(y_pr - x_pr)/this_delta
+            else:
+                this_dpr = np.average(y_pr - x_pr)/(2*this_delta)
+            
+            dprs.append(this_dpr)
+            
+        dprs = np.array([bounded(v, [-1., 1.]) for v in dprs])
+        
+        for l, dv in zip(mod_labels, dprs):
+            print "{}: {}".format(l, dv)
+            
+        old_update = copy.deepcopy(current_best_update)
+        old_values = np.array([cbu[1] for cbu in current_best_update])
+            
+        new_values = np.array([bounded(v + w*d, lims) for v, w, d, lims in zip(old_values, dprs, mod_deltas, mod_min_max)])
+        
+        if np.all(new_values/old_values == 1.0):
+            print "No improvement possible :("
+            stop_criterion_met = True
+            continue
+        
+        current_best_update = zip(mod_labels, new_values)
+        
+        for old_cbu, new_cbu in zip(old_update, current_best_update):
+            print "{}: {}, {}".format(old_cbu[0], np.round(new_cbu[1]/old_cbu[1], decimals=3), new_cbu[1])
+            
+        current_dict.update(current_best_update)
+        
+        task_list = [exptempls.setup_polarization_experiment(current_dict) for n in range(num_experiment_repeats)]
+        result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
+        current_polarization_score = np.average([cu.calculate_rgtpase_polarity_score_from_cell(rc, significant_difference=0.2, weigh_by_timepoint=False)[0] for rc in result_cells])
+            
+        if current_polarization_score >= required_polarization_score:
+            print "Success!"
+            stop_criterion_met = True
+            continue
             
     return current_best_update
     
@@ -349,7 +461,8 @@ if __name__ == '__main__':
     
     
 
-    moddable_parameters = [('kgtp_rac_multiplier', 1, 10, 1), ('kgtp_rho_multiplier', 1, 10, 1), ('kdgtp_rac_multiplier', 1, 10, 1), ('kdgtp_rho_multiplier', 1, 10, 1), ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.05), ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.05), ('kgtp_rac_autoact_multiplier', 50, 1000, 25), ('kgtp_rho_autoact_multiplier', 50, 1000, 25), ('kdgtp_rac_mediated_rho_inhib_multiplier', 50, 1000, 25), ('kdgtp_rho_mediated_rac_inhib_multiplier', 50, 1000, 25)]
-    best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.7, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=6, num_processes=6)
-#    best_pd = parameter_explorer_polarization_slope_follower(moddable_parameters, 0.6, resolution=0.01)
+    moddable_parameters = [('kgtp_rac_multiplier', 1., 20., 1.), ('kgtp_rho_multiplier', 1., 20., 1.), ('kdgtp_rac_multiplier', 1., 20., 1.), ('kdgtp_rho_multiplier', 1., 20., 1.), ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.01), ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.01), ('kgtp_rac_autoact_multiplier', 1., 1000., 1.), ('kgtp_rho_autoact_multiplier', 1., 1000., 1.), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1., 1000., 1.), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1., 1000., 1.), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.05, 0.005)]
+    #best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.7, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=3, num_processes=6)
+    best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.5, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=3, num_processes=6)
+    #best_pd = parameter_explorer_polarization_slope_follower(moddable_parameters, 0.6, resolution=0.01)
     

@@ -130,7 +130,7 @@ def fill_experiment_name_format_string_with_randomization_info(experiment_name_f
     return experiment_name
 # ===========================================================================
 
-def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
+def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=5, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
     parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)    
     total_time = total_time_in_hours*3600
     num_timesteps = int(total_time/timestep_length)
@@ -159,8 +159,8 @@ def setup_polarization_experiment(parameter_dict, randomization_scheme=None, ran
         
     return (environment_wide_variable_defns, user_cell_group_defn)
     
-def single_cell_polarization_test(date_str, experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):    
-    experiment_name_format_string = "single_cell_{}"
+def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):    
+    experiment_name_format_string = "single_cell_{}_".format(sub_experiment_number) +"{}"
     
     parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
     
@@ -238,8 +238,89 @@ def single_cell_polarization_test(date_str, experiment_number, parameter_dict, r
     
     
 # ============================================================================
+
+def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8):    
+    experiment_name_format_string = "cil_test_{}_CIL={}_COA={}".format(sub_experiment_number, default_cil, default_coa) + "_{}"
     
-def two_cells_cil_test(date_str, experiment_number, baseline_parameter_dict, parameter_overrides_dict, randomization=True, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, num_nodes=16, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, migr_bdry_height_factor=0.8, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=20, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):
+    parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
+    
+    experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
+    
+    experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+    
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
+    
+    num_boxes = 2
+    num_cells_in_boxes = [1, 1]
+    box_heights = [1*cell_diameter]*num_boxes
+    box_widths = [1*cell_diameter]*num_boxes
+
+    x_space_between_boxes = [2*cell_diameter]
+    plate_width, plate_height = 10*cell_diameter*1.2, 2.4*cell_diameter
+
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, plate_width, plate_height, "OVERRIDE", "ORIGIN", physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 2)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter])
+    
+    # [10*cell_diameter, migr_bdry_height_factor*cell_diameter]
+    #parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon*1e-6
+    #parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon*1e-6
+    
+    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
+    
+    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
+    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
+    
+    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}, {'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 1.0]}]]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
+    experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
+    external_gradient_fn_per_subexperiment = [lambda x: 0.0]
+    
+    user_cell_group_defns_per_subexperiment = []
+    user_cell_group_defns = []
+    
+    si = 0
+    
+    for bi in boxes:
+        this_box_x_offset = box_x_offsets[bi]
+        this_box_y_offset = box_y_offsets[bi]
+        this_box_width = box_widths[bi]
+        this_box_height = box_heights[bi]
+        
+        cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi], 'init_cell_radius': cell_diameter*0.5*1e-6, 'C_total': 3e6, 'H_total': 1.5e6, 'cell_group_bounding_box': np.array([this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset, this_box_height + this_box_y_offset])*1e-6, 'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi], 'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[si][bi], 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dicts[si][bi], 'parameter_dict': parameter_dict_per_sub_experiment[si][bi]} 
+        
+        user_cell_group_defns.append(cell_group_dict)
+        
+    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
+
+    global_scale = 1
+        
+    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', True), ('show_rac_random_spikes', True), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*timestep_length), ('short_video_duration', 5.0), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
+    
+    produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
+        
+    eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
+    
+    experiment_name_format_string = experiment_name + "_RPT={}"
+    extracted_results = []
+    for rpt_number in xrange(num_experiment_repeats):
+        environment_name = experiment_name_format_string.format(rpt_number)
+        environment_dir = os.path.join(experiment_dir, environment_name)
+        storefile_path = eu.get_storefile_path(environment_dir)
+        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+        
+        analysis_data = cu.analyze_single_cell_motion(relevant_environment, storefile_path, si, rpt_number)
+        
+        extracted_results.append(analysis_data)
+        # ================================================================
+        
+    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir)
+
+    print "Done."
+    
+    
+# ============================================================================
+    
+def two_cells_cil_test_old(date_str, experiment_number, baseline_parameter_dict, parameter_overrides_dict, randomization=True, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, num_nodes=16, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, migr_bdry_height_factor=0.8, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=20, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):
     
     experiment_name_format_string = "cil_test_CIL={}_COA={}".format(default_cil, default_coa) + "_{}"
 

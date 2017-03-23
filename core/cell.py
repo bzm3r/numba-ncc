@@ -292,13 +292,14 @@ class Cell():
         self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
         
         randomization_scheme = parameters_dict['randomization_scheme']
+        self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
         if randomization_scheme == None: 
             self.randomization_scheme = -1
         elif randomization_scheme == "wipeout":
             self.randomization_scheme = 0
         elif randomization_scheme == "kgtp_rac_multipliers":
             self.randomization_scheme = 1
-            self.renew_randomization_rac_kgtp_multipliers()
+            self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers()
         else:
             raise StandardError("Unknown randomization scheme given: {}.".format(randomization_scheme))
             
@@ -523,7 +524,7 @@ class Cell():
 #        rfs = np.random.random(self.num_nodes)
 #        rfs = rfs/np.sum(rfs)
 #        
-        self.randomization_rac_kgtp_multipliers = generate_random_multipliers(self.num_nodes, 0.25, np.random.rand(self.num_nodes), self.randomization_magnitude)
+        return generate_random_multipliers(self.num_nodes, 0.25, np.random.rand(self.num_nodes), self.randomization_magnitude)
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors):
@@ -578,10 +579,10 @@ class Cell():
                 self.next_randomization_event_tpoint = None
                 
                 # randomization event has occurred, so renew Rac kgtp rate multipliers
-                self.renew_randomization_rac_kgtp_multipliers()
+                self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers()
                 
             # store the Rac randomization factors for this timestep
-            self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers] = self.randomization_rac_kgtp_multipliers
+            self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers
         else:
             self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
                 
@@ -600,6 +601,7 @@ class Cell():
         if self.verbose == True:
             print "max_coa: ", np.max(coa_signals)
             print "min_coa: ", np.min(coa_signals)
+            print "rfs: ", np.max(self.randomization_rac_kgtp_multipliers)
 #           print "max_ext: ", np.max(external_gradient_on_nodes)
 #           print "min_ext: ", np.min(external_gradient_on_nodes)
         
@@ -765,6 +767,7 @@ class Cell():
             
             rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, external_gradient_on_nodes)
             
+            print "Integrating..."
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]
