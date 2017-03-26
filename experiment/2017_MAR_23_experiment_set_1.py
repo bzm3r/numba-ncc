@@ -21,16 +21,16 @@ max_timepoints_on_ram = 100
 seed = 36
 allowed_drift_before_geometry_recalc = 1.0
 
-parameter_dict.update([('kgtp_rac_multiplier', 7.0),
+parameter_dict.update([('kgtp_rac_multiplier', 6.0),
  ('kgtp_rho_multiplier', 20.0),
- ('kdgtp_rac_multiplier', 1.0),
- ('kdgtp_rho_multiplier', 18.0),
- ('threshold_rac_activity_multiplier', 0.80000000000000004),
- ('threshold_rho_activity_multiplier', 0.79000000000000004),
- ('kgtp_rac_autoact_multiplier', 104.0),
- ('kgtp_rho_autoact_multiplier', 276.0),
- ('kdgtp_rac_mediated_rho_inhib_multiplier', 688.0),
- ('kdgtp_rho_mediated_rac_inhib_multiplier', 973.0),
+ ('kdgtp_rac_multiplier', 2.0),
+ ('kdgtp_rho_multiplier', 20.0),
+ ('threshold_rac_activity_multiplier', 0.29999999999999999),
+ ('threshold_rho_activity_multiplier', 0.80000000000000004),
+ ('kgtp_rac_autoact_multiplier', 31.0),
+ ('kgtp_rho_autoact_multiplier', 33.0),
+ ('kdgtp_rac_mediated_rho_inhib_multiplier', 140.0),
+ ('kdgtp_rho_mediated_rac_inhib_multiplier', 665.0),
  ('tension_mediated_rac_inhibition_half_strain', 0.050000000000000003)])
 
 sub_experiment_number = 0

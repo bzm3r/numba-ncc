@@ -95,7 +95,7 @@ def generate_random_update_based_on_current_state(num_new_updates, parameter_dic
             
     return parameter_updates
 
-def parameter_explorer_polarization_wanderer(modification_program, required_polarization_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, sequential=False, num_experiment_repeats=3):
+def parameter_explorer_polarization_wanderer(modification_program, required_polarization_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, sequential=False, num_experiment_repeats=3, total_time_in_hours=2.):
     
     mod_deltas = [x[3] for x in modification_program]
     mod_min_max = [x[1:3] for x in modification_program]
@@ -113,7 +113,7 @@ def parameter_explorer_polarization_wanderer(modification_program, required_pola
     current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict)
     current_dict.update(current_best_update)
     
-    current_polarization_score = cu.calculate_rgtpase_polarity_score_from_cell(executils.run_simple_experiment_and_return_cell_worker(exptempls.setup_polarization_experiment(current_dict)), significant_difference=0.2, weigh_by_timepoint=False)[0]
+    current_polarization_score = cu.calculate_rgtpase_polarity_score_from_cell(executils.run_simple_experiment_and_return_cell_worker(exptempls.setup_polarization_experiment(current_dict, total_time_in_hours=total_time_in_hours)), significant_difference=0.2, weigh_by_timepoint=False)[0]
     
     worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
     stop_criterion_met = False
@@ -132,7 +132,7 @@ def parameter_explorer_polarization_wanderer(modification_program, required_pola
             for n in range(num_experiment_repeats):
                 trial_dict = copy.deepcopy(current_dict)
                 trial_dict.update(u)
-                task_list.append(exptempls.setup_polarization_experiment(trial_dict))
+                task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours))
 
         print "running tasks in parallel..."
         result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
@@ -197,7 +197,7 @@ def bounded(value, limits):
     else:
         return value
 
-def parameter_explorer_polarization_slope_follower(modification_program, required_polarization_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, sequential=False, num_experiment_repeats=3):
+def parameter_explorer_polarization_slope_follower(modification_program, required_polarization_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, sequential=False, num_experiment_repeats=3, total_time_in_hours=2.):
     
     mod_deltas = [x[3] for x in modification_program]
     mod_min_max = [x[1:3] for x in modification_program]
@@ -215,7 +215,7 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
     current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict) #[(label, lims[0]) for label, lims in zip(mod_labels, mod_min_max)]
     current_dict.update(current_best_update)
     
-    current_polarization_score = cu.calculate_rgtpase_polarity_score_from_cell(executils.run_simple_experiment_and_return_cell_worker(exptempls.setup_polarization_experiment(current_dict)), significant_difference=0.2, weigh_by_timepoint=False)[0]
+    current_polarization_score = cu.calculate_rgtpase_polarity_score_from_cell(executils.run_simple_experiment_and_return_cell_worker(exptempls.setup_polarization_experiment(current_dict, total_time_in_hours=total_time_in_hours)), significant_difference=0.2, weigh_by_timepoint=False)[0]
     
     worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
     stop_criterion_met = False
@@ -248,7 +248,7 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
             y.update([(label, current_value + dv*signs[1])])
             
             seeds = [int(np.round(np.random.rand(), decimals=4)*1000) for n in range(num_experiment_repeats)]
-            task_list = [exptempls.setup_polarization_experiment(x, seed=seeds[n]) for n in range(num_experiment_repeats)] + [exptempls.setup_polarization_experiment(y, seed=seeds[n]) for n in range(num_experiment_repeats)]
+            task_list = [exptempls.setup_polarization_experiment(x, seed=seeds[n], total_time_in_hours=total_time_in_hours) for n in range(num_experiment_repeats)] + [exptempls.setup_polarization_experiment(y, seed=seeds[n], total_time_in_hours=total_time_in_hours) for n in range(num_experiment_repeats)]
             
             result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
             
@@ -461,8 +461,8 @@ if __name__ == '__main__':
     
     
 
-    moddable_parameters = [('kgtp_rac_multiplier', 1., 20., 1.), ('kgtp_rho_multiplier', 1., 20., 1.), ('kdgtp_rac_multiplier', 1., 20., 1.), ('kdgtp_rho_multiplier', 1., 20., 1.), ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.01), ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.01), ('kgtp_rac_autoact_multiplier', 1., 1000., 1.), ('kgtp_rho_autoact_multiplier', 1., 1000., 1.), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1., 1000., 1.), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1., 1000., 1.), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.05, 0.005)]
+    moddable_parameters = [('kgtp_rac_multiplier', 1., 20., 1.), ('kgtp_rho_multiplier', 1., 20., 1.), ('kdgtp_rac_multiplier', 1., 20., 1.), ('kdgtp_rho_multiplier', 1., 20., 1.), ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.01), ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.01), ('kgtp_rac_autoact_multiplier', 1., 200., 1.), ('kgtp_rho_autoact_multiplier', 1., 300., 1.), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1., 1000., 1.), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1., 1000., 1.), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.05, 0.005)]
     #best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.7, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=3, num_processes=6)
-    best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.5, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=3, num_processes=6)
+    best_update = parameter_explorer_polarization_wanderer(moddable_parameters, 0.7, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=3, num_processes=6)
     #best_pd = parameter_explorer_polarization_slope_follower(moddable_parameters, 0.6, resolution=0.01)
     

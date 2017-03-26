@@ -119,7 +119,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     #print "(dynamics) randomization_rac_kgtp_multipliers:",  randomization_rac_kgtp_multipliers
     #input("Press Enter to continue...")
     
-    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, randomization_rac_kgtp_multipliers)
+    kgtps_rac = chemistry.calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, transduced_coa_signals, external_gradient_on_nodes, randomization_rac_kgtp_multipliers, intercellular_contact_factors)
     
     conc_rho_membrane_actives = chemistry.calculate_concentrations(num_nodes, rho_membrane_actives, avg_edge_lengths)
     

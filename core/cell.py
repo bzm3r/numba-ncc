@@ -393,7 +393,7 @@ class Cell():
         
         self.system_history[access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
         
-        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors)
         
         self.system_history[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -596,7 +596,8 @@ class Cell():
         
         random_order_cell_indices = np.arange(num_cells)
         np.random.shuffle(random_order_cell_indices)
-        coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix)
+        
+        coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix, self.closeness_dist_squared_criteria)
         
         if self.verbose == True:
             print "max_coa: ", np.max(coa_signals)
@@ -674,7 +675,7 @@ class Cell():
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
         
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers)
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors)
         
         kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -767,7 +768,7 @@ class Cell():
             
             rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, external_gradient_on_nodes)
             
-            print "Integrating..."
+            #print "Integrating..."
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]

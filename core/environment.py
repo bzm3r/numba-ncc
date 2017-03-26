@@ -67,7 +67,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=10): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
@@ -116,7 +116,8 @@ class Environment():
         
         self.num_cell_groups = len(self.cell_group_defns)
         self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns], dtype=np.int64)
-        self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc*self.num_cells
+        self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc
+        self.max_geometry_recalc_skips = max_geometry_recalc_skips
         self.cells_in_environment = self.make_cells()
         num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment], dtype=np.int64)
         self.num_nodes= num_nodes_per_cell[0]
@@ -369,7 +370,7 @@ class Environment():
                 datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
+                #datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 #datavis.graph_pre_post_contact_cell_kinematics(self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
             
             cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
@@ -541,6 +542,7 @@ class Environment():
                     self.last_timestep_when_environment_hard_saved = self.curr_tpoint
                 
                 prev_centroids = geometry.calculate_centroids(environment_cells_node_coords)
+                num_geometry_recalc_skips = 0
                 for t in self.timepoints[self.curr_tpoint:-1]:
                     if t - self.last_timestep_when_environment_hard_saved >= self.max_timepoints_on_ram:
                         self.last_timestep_when_environment_hard_saved = t
@@ -562,10 +564,12 @@ class Environment():
                             print "Making intermediate visuals..."
                             self.make_visuals(t, visuals_save_dir, animation_settings, animation_obj, True, True)                        
 
-                    if allowed_drift_before_geometry_recalc == 0 or centroid_drift > allowed_drift_before_geometry_recalc:
+                    if allowed_drift_before_geometry_recalc == 0 or centroid_drift > allowed_drift_before_geometry_recalc or num_geometry_recalc_skips > self.max_geometry_recalc_skips:
                         recalc_geometry = True
+                        num_geometry_recalc_skips = 0
                     else:
                         recalc_geometry = False
+                        num_geometry_recalc_skips += 1
                         
                     cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells, centroid_drift, recalc_geometry)
                     self.curr_tpoint += 1
@@ -574,7 +578,7 @@ class Environment():
                         if recalc_geometry:
                             centroid_drift = 0.0
                         else:
-                            delta_drift = np.sum(geometry.calculate_centroid_dift(prev_centroids, curr_centroids))/1e-6
+                            delta_drift = np.max(geometry.calculate_centroid_dift(prev_centroids, curr_centroids))/1e-6
                             centroid_drift += delta_drift
                         prev_centroids = curr_centroids
             else:

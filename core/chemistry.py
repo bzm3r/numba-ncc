@@ -122,7 +122,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors):
+def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors, intercellular_contact_factors):
     result = np.empty(num_nodes, dtype=np.float64)
     kgtp_rac_autoact = 0.0
     
@@ -132,7 +132,16 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         else:
             kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-        result[i] = (coa_signals[i] + 1.0)*(randomization_factors[i]*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1))
+#        i_plus1 = (i + 1)%num_nodes
+#        i_minus1 = (i - 1)%num_nodes
+        
+        #cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        
+        coa_signal = coa_signals[i]
+#        if cil_factor > 1.0:
+#            coa_signal = 0.0
+            
+        result[i] = (coa_signal + randomization_factors[i])*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1)
         
     return result
 
@@ -232,7 +241,7 @@ def calculate_diffusion(num_nodes, concentrations, diffusion_constant, edgeplus_
 def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists):
 
     intercellular_contact_factors = np.ones(num_nodes, dtype=np.float64)
-
+    
     for other_ci in range(num_cells):
         if other_ci != this_cell_index:
             for ni in range(num_nodes):
@@ -250,8 +259,9 @@ def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cell
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix):
+def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix, closeness_dist_squared_criteria):
     coa_signals = np.ones(num_nodes, dtype=np.float64)
+    too_close_dist_squared = 1e-6
     
     for ni in range(num_nodes):
         this_node_coa_signal = coa_signals[ni]
@@ -274,12 +284,12 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                         
                         coa_signal = 0.0
                         if max_coa_signal < 0:
-                            if dist_squared_between_nodes < 1e-6:
+                            if dist_squared_between_nodes < too_close_dist_squared:
                                 coa_signal = 1.0
                             else:
                                 coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
                         else:
-                            if dist_squared_between_nodes < 1e-6:
+                            if dist_squared_between_nodes < too_close_dist_squared:
                                 coa_signal = max_coa_signal*1.0
                             else:
                                 coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))

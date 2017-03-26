@@ -287,7 +287,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
-        for subexperiment_index, user_cell_group_defns in enumerate(user_cell_group_defns_per_subexperiment):
+        for subexperiment_index, user_cell_group_defns in enumerate(copy.deepcopy(user_cell_group_defns_per_subexperiment)):
             environment_name = template_experiment_name_format_string.format(repeat_number)
             environment_dir = os.path.join(experiment_directory, environment_name)
             

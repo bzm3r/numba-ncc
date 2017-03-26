@@ -109,7 +109,8 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     elif front_width_rating < 1e-6:
         return 0.0
     
-    polarity = (front_width_rating/num_rac_fronts)*(sum_rac/0.4)
+    
+    polarity = (front_width_rating/num_rac_fronts)*(1.0 - np.sqrt((sum_rac - 0.3)**2))*(1.0 - np.sqrt((sum_rho - 0.1)**2))
             
     return polarity
     
