@@ -877,14 +877,30 @@ def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coo
     return -1, np.zeros(2, dtype=np.float64), closest_point_node_indices, 1.0
     
 # -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def closeness_smoothening_linear_function(zero_until, one_at, x):
+    m = 1./(one_at - zero_until)
+    b = -zero_until*m
+    
+    if x > zero_until:
+        return 0.0
+    elif x < one_at:
+        return 1.0
+    else:
+        return m*x + b
+    
 @nb.jit(nopython=True)      
-def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria, all_cells_node_coords, are_nodes_inside_other_cells):
+def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria_0_until, closeness_dist_squared_criteria_1_at, all_cells_node_coords, are_nodes_inside_other_cells):
     close_points_exist = np.zeros((num_nodes, num_cells), dtype=np.int64)
     close_points = np.zeros((num_nodes, num_cells, 2), dtype=np.float64)
     close_points_node_indices = np.zeros((num_nodes, num_cells, 2), dtype=np.int64)
     close_points_node_projection_factors = np.ones((num_nodes, num_cells), dtype=np.float64)
+    close_point_smoothness_factors = np.zeros((num_nodes, num_cells), dtype=np.float64)
     
     closest_nodes_on_other_cells = find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array)
+    
+    closeness_dist_criteria_0_until = np.sqrt(closeness_dist_squared_criteria_0_until)
+    closeness_dist_criteria_1_at = np.sqrt(closeness_dist_squared_criteria_1_at)
     
     for ni in range(num_nodes):
         closest_nodes_to_this_node = closest_nodes_on_other_cells[ni]
@@ -898,27 +914,26 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
                 
                 other_cell_node_coords = all_cells_node_coords[ci]
                 
-                closest_point_dist, closest_point_coords, closest_node_indices, projection_factor = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
+                closest_point_dist_squared, closest_point_coords, closest_node_indices, projection_factor = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
                 
-                if closest_point_dist != -1 and closest_point_dist < closeness_dist_squared_criteria:
+                if closest_point_dist_squared != -1 and closest_point_dist_squared < closeness_dist_squared_criteria_0_until:
                     close_points_exist[ni][ci] = 1
                     close_points[ni][ci] = closest_point_coords
                     close_points_node_indices[ni][ci] = closest_node_indices
                     close_points_node_projection_factors[ni][ci] = projection_factor
-                    continue
-                
-                if closest_node_dist < closeness_dist_squared_criteria:
+                    close_point_smoothness_factors[ni][ci] = closeness_smoothening_linear_function(closeness_dist_criteria_0_until, closeness_dist_criteria_1_at, np.sqrt(closest_point_dist_squared))
+                elif closest_node_dist < closeness_dist_squared_criteria_0_until:
                     close_points_exist[ni][ci] = 1
                     close_points[ni][ci] = other_cell_node_coords[closest_ni]
                     closest_node_indices[1] = closest_ni
                     close_points_node_indices[ni][ci] = closest_node_indices
-                    continue
-                
-                if are_nodes_inside_other_cells[ni][ci] == 1:
+                    close_point_smoothness_factors[ni][ci] = closeness_smoothening_linear_function(closeness_dist_criteria_0_until, closeness_dist_criteria_1_at, np.sqrt(closest_node_dist))
+                elif are_nodes_inside_other_cells[ni][ci] == 1:
                     close_points_exist[ni][ci] = 2
+                    close_point_smoothness_factors[ni][ci] = 1.0
                     continue
         
-    return close_points_exist, close_points, close_points_node_indices, close_points_node_projection_factors
+    return close_points_exist, close_points, close_points_node_indices, close_points_node_projection_factors, close_point_smoothness_factors
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
@@ -975,10 +990,15 @@ def cross_product_2D(a, b):
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
 def is_given_vector_between_others(x, alpha, beta):
-    if cross_product_2D(alpha, x) > 0 and cross_product_2D(x, beta) > 0:
-        return True
+    cp1 = cross_product_2D(alpha, x)
+    cp2 = cross_product_2D(x, beta)
+    
+    if abs(cp1) < 1e-15 or abs(cp2) < 1e-15:
+        return 1
+    elif cp1 > 0 and cp2 > 0:
+        return 1
     else:
-        return False
+        return 0
         
 # -----------------------------------------------------------------
         
@@ -990,22 +1010,19 @@ def check_if_line_segment_from_node_self_intersects(start_coord, end_coord, poly
     
     si_plus1_coord = polygon_coords[si_plus1]
     si_minus1_coord = polygon_coords[si_minus1]
+    edge_vector_to_plus = si_plus1_coord - start_coord
     
-    #edge_vector_to_plus = calculate_vector_from_p1_to_p2_given_vectors(start_coord, si_plus1_coord)
-    #edge_vector_to_plus_normalized = normalize_2D_vector(edge_vector_to_plus)
+    edge_vector_from_minus = start_coord - si_minus1_coord
     
-    #edge_vector_from_minus = calculate_vector_from_p1_to_p2_given_vectors(si_minus1_coord, start_coord)
-    #edge_vector_from_minus_normalized = normalize_2D_vector(edge_vector_from_minus)
-    
-    #tangent_vector = edge_vector_to_plus_normalized + edge_vector_from_minus_normalized
-    rough_tangent_vector = si_plus1_coord - si_minus1_coord
-    inside_pointing_vector = rotate_2D_vector_CCW(rough_tangent_vector)
+    rough_tangent_vector = edge_vector_to_plus + edge_vector_from_minus
+
+    ipv = rotate_2D_vector_CCW(rough_tangent_vector)
     
     v = end_coord - start_coord
     
-    if is_given_vector_between_others(v, inside_pointing_vector, si_minus1_coord - start_coord):
+    if is_given_vector_between_others(v, ipv, -1*edge_vector_from_minus) == 1:
         return 1
-    elif is_given_vector_between_others(v, si_plus1_coord - start_coord, inside_pointing_vector):
+    if is_given_vector_between_others(v, edge_vector_to_plus, ipv) == 1:
         return 1
     else:
         return 0
@@ -1023,51 +1040,98 @@ def close_to_zero(x, tol):
     return False
 
 # -----------------------------------------------------------------
-
 @nb.jit(nopython=True)
-def check_if_line_segment_intersects_box(start, end, min_x, min_y, max_x, max_y):
-    
+def check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, x):
     sx, sy = start
     ex, ey = end
     
-    
-    if sx < min_x and ex < min_x:
-        return False
-    if sx > max_x and ex > max_x:
-        return False
-    if sy < min_y and ey < min_y:
-        return False
-    if sy > max_y and ey > max_y:
-        return False
+    if sx < x and ex < x:
+        return 0
+    if sx > x and ex > x:
+        return 0
+    else:
+        # y = m*x + b
+        # sy = m*sx + b
+        # ey = m*ex + b
+        # ey = m*ex + (sy - m*sx)
+        # ey - sy = m*(ex - sx)
+        # m = (ey - sy)/(ex - sx)
+        # b = sy - m*sx
         
-    dx = sx - ex
-    if close_to_zero(dx, 1e-16):
-        if min_y < sy < max_y and min_y < ey < max_y:
-            return False
-        else:
-            return True
+        denom = ex - sx
+        if abs(denom) < 1e-15:
+            average_x = (sx + ex)/2.
+            if (average_x - x) < 1e-8:
+                return 1
+            else:
+                return 0
+        
+        m = (ey - sy)/denom
+        b = sy - m*sx
+        y_intersect = m*x + b
+        
+        if y_intersect > max_y:
+            return 0
+        elif y_intersect < min_y:
+            return 0
+        else: 
+            return 1
+        
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def check_if_line_segment_intersects_horizontal_line(start, end, min_x, max_x, y):
+    sx, sy = start
+    ex, ey = end
     
-    dy = sy - ey
-    if close_to_zero(dy, 1e-16):
-        if min_x < sx < max_x and min_x < ex < max_x:
-            return False
-        else:
-            return True
+    if sy < y and ey < y:
+        return 0
+    if sy > y and ey > y:
+        return 0
+    else:
+        # y = m*x + b
+        # sx = m*sy + b
+        # ex = m*ey + b
+        # ex = m*ey + (sx - m*sy)
+        # ex - sx = m*(ey - sy)
+        # m = (ex - sx)/(ey - sy)
+        # b = sy - m*sx
+        
+        denom = ey - sy
+        if abs(denom) < 1e-15:
+            average_y = (sy + ey)/2.
+            if (average_y - y) < 1e-8:
+                return 1
+            else:
+                return 0
             
-    m = dy/dx
-    b = sy - m*sx
-
-    if min_y < m*min_x + b < max_y:
-        return True
-    elif min_y < m*max_x + b < max_y:
-        return True
-    elif min_x < (min_y - b)/m < max_x:
-        return True
-    elif min_x < (max_y - b)/m < max_x:
-        return True
+        m = (ex - sx)/denom
+            
+        b = sx - m*sy
+        x_intersect = m*y + b
         
-    return False
+        if x_intersect > max_x:
+            return 0
+        elif x_intersect < min_x:
+            return 0
+        else: 
+            return 1
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y):
     
+    if check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, min_x):
+        return 1
+    if check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, max_x):
+        return 1
+    if check_if_line_segment_intersects_horizontal_line(start, end, min_x, max_x, min_y):
+        return 1
+    if check_if_line_segment_intersects_horizontal_line(start, end, min_x, max_x, max_y):
+        return 1
+        
+    return 0
+
+# -----------------------------------------------------------------
 @nb.jit(nopython=True)      
 def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords):
     coords_a = all_polygon_coords[pi_a, vi_a]
@@ -1075,14 +1139,10 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
     
     normal_to_line_segment = rotate_2D_vector_CCW(coords_b - coords_a)
     
-    if check_if_line_segment_from_node_self_intersects(coords_a, coords_b, all_polygon_coords[pi_a], vi_a):
+    if check_if_line_segment_from_node_self_intersects(coords_a, coords_b, all_polygon_coords[pi_a], vi_a) == 1:
         return 1
-    if check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b):
+    if check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b) == 1:
         return 1
-#    if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi_a], vi_a):
-#        return 1
-#    elif check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi_b], vi_b):
-#        return 1
     else:
         num_polygons = all_polygon_coords.shape[0]
         for pi in range(num_polygons):
@@ -1090,17 +1150,10 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
                 continue
             else:
                 min_x, max_x, min_y, max_y = all_polygons_bounding_box_coords[pi]
-                if check_if_line_segment_intersects_box(coords_a, coords_b, min_x, max_x, min_y, max_y):
-                    #check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, this_poly_bounding_box, -1):
-                    if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi], -1):
-                        return 1
-                    else:
-                        return 0
-                else:
-                    return 0
-        
-        return 0
-    
+                if check_if_line_segment_intersects_box(coords_a, coords_b, min_x, max_x, min_y, max_y) == 1:
+                    if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi], -1) == 1:
+                        return 1 
+                    
     return 0
 
 # -----------------------------------------------------------------

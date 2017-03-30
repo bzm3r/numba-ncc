@@ -67,7 +67,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=10): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000): 
         
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None

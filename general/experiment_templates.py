@@ -411,7 +411,7 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
 
 def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
-    experiment_name_format_string = "coa_test_{}_{}_NC={}_COA={}".format(sub_experiment_number, "{}", num_cells_width*num_cells_height, default_coa)
+    experiment_name_format_string = "coa_test_{}_{}_NC={}_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells_width*num_cells_height, default_coa, default_cil)
     
     parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
     
@@ -494,7 +494,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
 def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
-    experiment_name_format_string = "corridor_migration_{}_NC=({}, {})_COA={}_CIL={}".format("{}", num_cells_width, num_cells_height, default_coa, default_cil)
+    experiment_name_format_string = "corridor_migration_{}_{}_NC=({}, {})_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells_width, num_cells_height, default_coa, default_cil)
     
     parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
     
@@ -573,82 +573,8 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     print "Done."
 
     
-def corridor_migration_experiment_old(date_str, experiment_number, baseline_parameter_dict, parameter_overrides_dict, randomization=True, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6, timestep_length=2, num_nodes=16, num_cells_width=2, num_cells_height=1, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=1.2, default_cil=20, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, animation_time_resolution='normal'):    
-    total_num_cells = num_cells_width*num_cells_height
-    
-    experiment_name_format_string = "corridor_migration_{}_NC=({}, {})_COA={}".format("{}", num_cells_width, num_cells_height, default_coa)
-    
-    parameter_overrides_dict = update_pd_with_randomization_info(parameter_overrides_dict, randomization, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
-    
-    experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization, randomization_scheme, parameter_overrides_dict)
-            
-    experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
-    
-    total_time = total_time_in_hours*3600
-    num_timesteps = int(total_time/timestep_length)
-    
-    num_boxes = 1
-    num_cells_in_boxes = [total_num_cells]
-    box_heights = [num_cells_height*cell_diameter]*num_boxes
-    box_widths = [num_cells_width*cell_diameter]*num_boxes
+#==============================================================================
 
-    x_space_between_boxes = [2*cell_diameter]
-    plate_width, plate_height = min(2000, box_widths[0]*10*1.5), (box_heights[0] + 40 + 100)
-
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, plate_width, plate_height, "ORIGIN", "ORIGIN", origin_y_offset=30, migratory_corridor_size=[box_widths[0]*100, box_heights[0]], physical_bdry_polygon_extra=20)
-    
-    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'num_nodes': num_nodes, 'verbose': verbose, 'closeness_dist_squared_criteria': closeness_dist_squared_criteria, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
-    
-    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
-    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil}}]
-    
-    biased_rgtpase_distrib_defn_dicts = [[{'default': ['unbiased random', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}, {'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 1.0]}]]
-    parameter_override_dicts_per_sub_experiment = [[parameter_overrides_dict]*num_boxes]
-    experiment_descriptions_per_subexperiment = ["from experiment template: two cells, cil test"]
-    external_gradient_fn_per_subexperiment = [lambda x: 0.0]
-    
-    user_cell_group_defns_per_subexperiment = []
-    user_cell_group_defns = []
-    
-    si = 0
-    
-    for bi in boxes:
-        this_box_x_offset = box_x_offsets[bi]
-        this_box_y_offset = box_y_offsets[bi]
-        this_box_width = box_widths[bi]
-        this_box_height = box_heights[bi]
-        
-        cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi], 'init_cell_radius': cell_diameter*0.5*1e-6, 'C_total': 3e6, 'H_total': 1.5e6, 'cell_group_bounding_box': np.array([this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset, this_box_height + this_box_y_offset])*1e-6, 'intercellular_contact_factor_magnitudes_defn': intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi], 'cell_dependent_coa_signal_strengths_defn': cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[si][bi], 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dicts[si][bi], 'parameter_override_dict': parameter_override_dicts_per_sub_experiment[si][bi]} 
-        
-        user_cell_group_defns.append(cell_group_dict)
-        
-    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
-
-    global_scale = 1
-    
-    if animation_time_resolution not in ['normal', 'high', 'adaptive']:
-        raise StandardError("Unknown animation_time_resolution specified: {}".format(animation_time_resolution))
-    elif animation_time_resolution == 'normal':
-        short_video_length_definition = 1000.0*timestep_length
-        short_video_duration = 2.0
-    elif 'high':
-        short_video_length_definition = 100.0*timestep_length
-        short_video_duration = 4.0
-    elif 'adaptive':
-        short_video_length_definition = int(0.1*num_timesteps)*timestep_length
-        short_video_duration = 2.0
-        
-        
-    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', True), ('show_rac_random_spikes', True), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', short_video_length_definition), ('short_video_duration', short_video_duration), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
-    
-    produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
-                
-    eu.run_template_experiments(experiment_dir, experiment_name, baseline_parameter_dict, parameter_overrides_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
-
-    print "Done."
-
-# ============================================================================
-    
 def corridor_migration_multigroup_experiment(date_str, experiment_number, baseline_parameter_dict, parameter_overrides_dict, randomization=True, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6, timestep_length=2, num_nodes=16, num_cells_width=2, num_cells_height=1, cell_diameter=40, num_groups=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=1.2, default_intra_group_cil=20, default_inter_group_cil=40, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, animation_time_resolution='normal'):    
     num_cells_in_group = num_cells_width*num_cells_height
     

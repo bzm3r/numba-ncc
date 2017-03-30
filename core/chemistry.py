@@ -122,7 +122,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors, intercellular_contact_factors):
+def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, external_gradient_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     result = np.empty(num_nodes, dtype=np.float64)
     kgtp_rac_autoact = 0.0
     
@@ -136,8 +136,8 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
 #        i_minus1 = (i - 1)%num_nodes
         
         #cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
-        
-        coa_signal = coa_signals[i]
+        smooth_factor = np.max(close_point_smoothness_factors[i])
+        coa_signal = coa_signals[i]*(1.0 - smooth_factor)
 #        if cil_factor > 1.0:
 #            coa_signal = 0.0
             
@@ -238,7 +238,7 @@ def calculate_diffusion(num_nodes, concentrations, diffusion_constant, edgeplus_
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)   
-def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists):
+def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_smoothness_factors):
 
     intercellular_contact_factors = np.ones(num_nodes, dtype=np.float64)
     
@@ -247,13 +247,19 @@ def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cell
             for ni in range(num_nodes):
                 current_ic_mag = intercellular_contact_factors[ni]
                 
-                if are_nodes_inside_other_cells[ni][other_ci] == 1 or close_point_on_other_cells_to_each_node_exists[ni][other_ci] == 1:
-                    
-                    new_ic_mag = intercellular_contact_factor_magnitudes[other_ci]
-                    
-                    if new_ic_mag > current_ic_mag:
-                        intercellular_contact_factors[ni] = new_ic_mag
-                        current_ic_mag = new_ic_mag
+                new_ic_mag = intercellular_contact_factor_magnitudes[other_ci]*close_point_smoothness_factors[ni][other_ci]
+                
+                if new_ic_mag > current_ic_mag:
+                    intercellular_contact_factors[ni] = new_ic_mag
+                    current_ic_mag = new_ic_mag
+                
+#                if are_nodes_inside_other_cells[ni][other_ci] == 1 or close_point_on_other_cells_to_each_node_exists[ni][other_ci] == 1:
+#                    
+#                    new_ic_mag = intercellular_contact_factor_magnitudes[other_ci]*close_point_smoothness_factors[ni][other_ci]
+#                    
+#                    if new_ic_mag > current_ic_mag:
+#                        intercellular_contact_factors[ni] = new_ic_mag
+#                        current_ic_mag = new_ic_mag
         
     return intercellular_contact_factors
 
@@ -290,7 +296,7 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                                 coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
                         else:
                             if dist_squared_between_nodes < too_close_dist_squared:
-                                coa_signal = max_coa_signal*1.0
+                                coa_signal = 1.0
                             else:
                                 coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
                     
