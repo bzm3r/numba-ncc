@@ -184,9 +184,9 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, t
                         projection_factor = close_point_on_other_cells_to_each_node_projection_factors[ni][ci]
                         close_point_force = (1 - projection_factor)*close_ni_a_force + projection_factor*close_ni_b_force
                         
-                    M_d = (1.0 - (dist/closeness_dist_criteria))
+                    M_d = (1.0 - (dist/(closeness_dist_criteria*3)))
                     if M_d > 1.0 or M_d < 0.0:
-                        M_d = 0
+                        M_d = 0.0
 
                     relative_force = close_point_force - this_node_force
                     #proj_this_force_on_uiv = geometry.calculate_projection_of_a_on_b(this_node_force, this_node_uiv)
