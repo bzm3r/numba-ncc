@@ -157,9 +157,19 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
     
     return result 
 
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+
 @nb.jit(nopython=True)
-def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, this_cell_forces, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors):
+def capped_linear_function_adhesion(x, normalizer):
+    result = x/normalizer
+    
+    if result < 0.0 or result > 1.0:
+        return 0.0
+    else:
+        return result
+    
+@nb.jit(nopython=True)
+def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, this_cell_forces, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors, max_force_adh):
     F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
     close_point_force = np.zeros(2, dtype=np.float64)
     
@@ -184,18 +194,19 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, t
                         projection_factor = close_point_on_other_cells_to_each_node_projection_factors[ni][ci]
                         close_point_force = (1 - projection_factor)*close_ni_a_force + projection_factor*close_ni_b_force
                         
-                    M_d = (1.0 - (dist/(closeness_dist_criteria*3)))
-                    if M_d > 1.0 or M_d < 0.0:
-                        M_d = 0.0
-
                     relative_force = close_point_force - this_node_force
                     #proj_this_force_on_uiv = geometry.calculate_projection_of_a_on_b(this_node_force, this_node_uiv)
                     #prof_other_force_on_uiv = geometry.calculate_projection_of_a_on_b(close_point_force, this_node_uiv)
                     
-                    if geometry.calculate_projection_of_a_on_b(relative_force, this_node_uiv) > 0:
+                    if abs(geometry.calculate_projection_of_a_on_b(relative_force, this_node_uiv)) < 1e-1:
                         continue
                     else:
-                        this_node_F_adh += force_adh_constant*relative_force*M_d
+                        force_adh = force_adh_constant*relative_force*capped_linear_function_adhesion(dist, 3*closeness_dist_criteria)
+                        
+                        if geometry.calculate_2D_vector_mag(force_adh) > max_force_adh:
+                            force_adh = 0.0*force_adh
+                            
+                        this_node_F_adh += force_adh
                     
         F_adh[ni] = this_node_F_adh
         
@@ -216,7 +227,7 @@ def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membra
     F_non_adh = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
     
     if force_adh_constant > 1e-6:
-        F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, F_non_adh, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
+        F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, F_non_adh, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors, 1.25*max_force_rho)
     else:
         F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
     
