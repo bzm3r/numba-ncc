@@ -131,8 +131,7 @@ def fill_experiment_name_format_string_with_randomization_info(experiment_name_f
     return experiment_name
 # ===========================================================================
 
-def setup_polarization_experiment(parameter_dict, randomization_scheme=None, randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=5, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
-    parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)    
+def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
     total_time = total_time_in_hours*3600
     num_timesteps = int(total_time/timestep_length)
     
@@ -160,12 +159,13 @@ def setup_polarization_experiment(parameter_dict, randomization_scheme=None, ran
         
     return (environment_wide_variable_defns, user_cell_group_defn)
     
-def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, randomization_scheme='m', randomization_time_mean_m=20.0, randomization_time_variance_factor_m=0.01, randomization_magnitude_m=0.75*25, randomization_time_mean_w=40.0, randomization_time_variance_factor_w=0.25, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True):
+def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, base_output_dir="A:\\numba-ncc\\output\\", no_randomization=False, total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, justify_parameters=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     experiment_name_format_string = "single_cell_{}_".format(sub_experiment_number) +"{}"
     
-    parameter_dict = update_pd_with_randomization_info(parameter_dict, randomization_scheme, randomization_time_mean_m, randomization_time_variance_factor_m, randomization_magnitude_m, randomization_time_mean_w, randomization_time_variance_factor_w)
-    
+    if no_randomization:
+        parameter_dict.update(['randomization_scheme', None])
+    randomization_scheme = parameter_dict['randomization_scheme']
     experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
     
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
@@ -219,7 +219,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
-    eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
+    eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, justify_parameters=justify_parameters)
     
     experiment_name_format_string = experiment_name + "_RPT={}"
     extracted_results = []
@@ -234,7 +234,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
         extracted_results.append(analysis_data)
         # ================================================================
         
-    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir)
+    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir, total_time_in_hours)
 
     print "Done."
     
@@ -301,21 +301,6 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
     eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
-    
-    experiment_name_format_string = experiment_name + "_RPT={}"
-    extracted_results = []
-    for rpt_number in xrange(num_experiment_repeats):
-        environment_name = experiment_name_format_string.format(rpt_number)
-        environment_dir = os.path.join(experiment_dir, environment_name)
-        storefile_path = eu.get_storefile_path(environment_dir)
-        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
-        
-        analysis_data = cu.analyze_single_cell_motion(relevant_environment, storefile_path, si, rpt_number)
-        
-        extracted_results.append(analysis_data)
-        # ================================================================
-        
-    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir)
 
     print "Done."
     
@@ -471,21 +456,6 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
     eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
-    
-    experiment_name_format_string = experiment_name + "_RPT={}"
-    extracted_results = []
-    for rpt_number in xrange(num_experiment_repeats):
-        environment_name = experiment_name_format_string.format(rpt_number)
-        environment_dir = os.path.join(experiment_dir, environment_name)
-        storefile_path = eu.get_storefile_path(environment_dir)
-        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
-        
-        analysis_data = cu.analyze_single_cell_motion(relevant_environment, storefile_path, si, rpt_number)
-        
-        extracted_results.append(analysis_data)
-        # ================================================================
-        
-    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir)
 
     print "Done."
 
@@ -511,7 +481,13 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     box_widths = [num_cells_width*cell_diameter]
 
     x_space_between_boxes = [2*cell_diameter]
-    plate_width, plate_height = min(2000, box_widths[0]*10*1.5), (box_heights[0] + 40 + 100)
+    width_factor = 1.5
+    if np.sum(num_cells_in_boxes) == 2:
+        width_factor = 3
+    else:
+        width_factor = 1.5
+        
+    plate_width, plate_height = min(2000, box_widths[0]*10*width_factor), (box_heights[0] + 40 + 100)
 
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, plate_width, plate_height, "ORIGIN", "ORIGIN", origin_y_offset=30, migratory_corridor_size=[box_widths[0]*100, box_heights[0]], physical_bdry_polygon_extra=20)
     
@@ -554,21 +530,6 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
     eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
-    
-    experiment_name_format_string = experiment_name + "_RPT={}"
-    extracted_results = []
-    for rpt_number in xrange(num_experiment_repeats):
-        environment_name = experiment_name_format_string.format(rpt_number)
-        environment_dir = os.path.join(experiment_dir, environment_name)
-        storefile_path = eu.get_storefile_path(environment_dir)
-        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
-        
-        analysis_data = cu.analyze_single_cell_motion(relevant_environment, storefile_path, si, rpt_number)
-        
-        extracted_results.append(analysis_data)
-        # ================================================================
-        
-    datavis.present_collated_single_cell_motion_data(extracted_results, experiment_dir)
 
     print "Done."
 

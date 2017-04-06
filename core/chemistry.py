@@ -283,23 +283,21 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                 this_node_other_cell_relevant_dist_squared_slice = this_node_relevant_dist_squared_slice[other_ci]
                 for other_ni in range(num_nodes):
                     line_segment_between_node_intersects_polygon = this_node_other_cell_relevant_line_seg_intersection_slice[other_ni]
-                    if line_segment_between_node_intersects_polygon == 1:
-                        continue
-                    else:
-                        dist_squared_between_nodes = this_node_other_cell_relevant_dist_squared_slice[other_ni]
-                        
-                        coa_signal = 0.0
-                        if max_coa_signal < 0:
-                            if dist_squared_between_nodes < too_close_dist_squared:
-                                coa_signal = 1.0
-                            else:
-                                coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
-                        else:
-                            if dist_squared_between_nodes < too_close_dist_squared:
-                                coa_signal = 1.0
-                            else:
-                                coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))
+                    intersection_factor = (1./(line_segment_between_node_intersects_polygon + 1.)**2)
                     
+                    dist_squared_between_nodes = this_node_other_cell_relevant_dist_squared_slice[other_ni]
+                    
+                    coa_signal = 0.0
+                    if max_coa_signal < 0:
+                        if dist_squared_between_nodes < too_close_dist_squared:
+                            coa_signal = 1.0
+                        else:
+                            coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))*intersection_factor
+                    else:
+                        if dist_squared_between_nodes < too_close_dist_squared:
+                            coa_signal = 1.0
+                        else:
+                            coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))*intersection_factor
                     
                     if max_coa_signal < 0.0:
                         this_node_coa_signal += coa_signal*signal_strength

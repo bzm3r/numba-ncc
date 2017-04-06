@@ -607,7 +607,7 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
         
 # ==========================================================================================
         
-def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
+def present_collated_single_cell_motion_data(extracted_results, experiment_dir, time_in_hours):
     fig, ax = plt.subplots()
     
     max_data_lim = np.max([np.max(np.abs(x[2])) for x in extracted_results])
@@ -620,9 +620,10 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
         si, rpt_number, ccs, persistence = extracted_result
         ccs = ccs - ccs[0]
         
-        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300], label='({}, {}), ps.={}'.format(si, rpt_number, np.round(persistences[i], decimals=3)))
+        #label='({}, {}), ps.={}'.format(si, rpt_number, np.round(persistences[i], decimals=3))
+        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300])
 
-    ax.set_title("Persistence (mean: {}, std: {})".format(mean_persistence, std_persistence))
+    ax.set_title("Persistence over {} hours (mean: {}, std: {})".format(time_in_hours, mean_persistence, std_persistence))
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
@@ -634,7 +635,7 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
     
     fig.set_size_inches(12, 8)

@@ -59,7 +59,7 @@ user_interaction_parameters = {'interaction_factors_intercellular_contact_per_ce
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
-user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.1*10e3, 2*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.25*1e5, 9*1e5]}
+user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.1*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.25*1e5, 9*1e5]}
 
 user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None}
     
@@ -180,10 +180,12 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['space_physical_bdry_polygon'] = user_parameter_dict['space_physical_bdry_polygon']
     cell_parameter_dict['space_migratory_bdry_polygon'] = user_parameter_dict['space_migratory_bdry_polygon']
     #--------------
-    cell_parameter_dict['randomization_scheme'] = user_parameter_dict['randomization_scheme']
+    randomization_scheme = user_parameter_dict['randomization_scheme']
+    cell_parameter_dict['randomization_scheme'] = randomization_scheme
+    
     cell_parameter_dict['randomization_time_mean'] = user_parameter_dict['randomization_time_mean']
     cell_parameter_dict['randomization_time_variance_factor'] = user_parameter_dict['randomization_time_variance_factor']
-    cell_parameter_dict['randomization_magnitude'] = user_parameter_dict['randomization_magnitude']
+    cell_parameter_dict['randomization_magnitude'] = user_parameter_dict['randomization_magnitude']        
     
     return cell_parameter_dict
 
@@ -244,7 +246,7 @@ def find_undefined_labels(cell_group_parameter_dict):
     
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None):
+def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True):
     
     num_cell_groups = len(user_cell_group_defns)
         
@@ -253,7 +255,7 @@ def make_environment_given_user_cell_group_defns(environment_name='', num_timest
         
         user_cell_group_parameter_dict['interaction_factors_intercellular_contact_per_celltype'] = expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell_groups, user_cell_group_defns, user_cell_group_defn)
         user_cell_group_parameter_dict['interaction_factors_coa_per_celltype'] = expand_interaction_factors_coa_per_celltype_array(num_cell_groups, user_cell_group_defns, user_cell_group_defn)
-        cell_group_parameter_dict = make_cell_group_parameter_dict(True, user_cell_group_parameter_dict)
+        cell_group_parameter_dict = make_cell_group_parameter_dict(justify_parameters, user_cell_group_parameter_dict)
             
         user_cell_group_defn.update([('parameter_dict', cell_group_parameter_dict)])
         

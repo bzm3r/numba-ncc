@@ -283,7 +283,7 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
     
 # =======================================================================
 
-def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
+def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True):
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
@@ -345,7 +345,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                     
                 print "Creating environment..."
                 
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], justify_parameters=justify_parameters, **environment_wide_variable_defns)
                 
             an_environment.full_print = full_print
             

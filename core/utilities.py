@@ -110,7 +110,9 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         return 0.0
     
     
-    polarity = (front_width_rating/num_rac_fronts)*(1.0 - np.sqrt((sum_rac - 0.3)**2))*(1.0 - np.sqrt((sum_rho - 0.1)**2))
+    sum_rho_dist = np.abs(sum_rho - 0.1)
+    sum_rac_dist = np.abs(sum_rac - 0.3)
+    polarity = (front_width_rating/num_rac_fronts)*(1.0 - score_function(0.0, 0.5, sum_rac_dist))*(1.0 - score_function(0.0, 0.5, sum_rho_dist))
             
     return polarity
     
@@ -130,15 +132,65 @@ def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_t
         
     return averaged_score, scores_per_tstep
 
-def calculate_rgtpase_polarity_score_from_cell(a_cell, significant_difference=0.1, num_data_points_from_end=None, weigh_by_timepoint=False):
+@nb.jit(nopython=True)
+def score_function(min_cutoff, max_cutoff, x):
+    if x > max_cutoff:
+        return 1.0
+    elif x < min_cutoff:
+        return 0.0
+    else:
+        # 0.0 = m*min + b
+        # 1.0 = m*max + b
+        # 1.0 = m*max - m*min
+        # 1.0/(max - min) = m
+        # b = -m*min
+        return (x - min_cutoff)/(max_cutoff - min_cutoff)
+    
+def calculate_parameter_exploration_score_from_cell(a_cell, significant_difference=0.1, num_data_points_from_end=None, weigh_by_timepoint=False):
     if num_data_points_from_end == None:
         rac_membrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rac_membrane_active_index]
         rho_membrane_active_per_tstep = a_cell.system_history[:, :, parameterorg.rho_membrane_active_index]
     else:
         rac_membrane_active_per_tstep = a_cell.system_history[-num_data_points_from_end:, :, parameterorg.rac_membrane_active_index]
         rho_membrane_active_per_tstep = a_cell.system_history[-num_data_points_from_end:, :, parameterorg.rho_membrane_active_index]
+    
+    polarity_score = score_function(0.0, 0.7, calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, weigh_by_timepoint=weigh_by_timepoint)[0])
+    
+    persistence_score = 0.0
+    velocity_score = 0.0
+
+    node_coords_per_tstep = a_cell.system_history[:, :, [parameterorg.x_index, parameterorg.y_index]]
+    centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
+    
+    cell_centroids = centroids_per_tstep*a_cell.L/1e-6
+    num_tsteps = cell_centroids.shape[0]
+    
+    rougher_cell_centroids = cell_centroids[::30]
+    
+    movement_steps = rougher_cell_centroids[1:] - rougher_cell_centroids[:-1]
+    movement_step_mags = np.linalg.norm(movement_steps, axis=1)
+    
+    total_distance_travelled = np.sum(movement_step_mags)
         
-    return calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=significant_difference, weigh_by_timepoint=weigh_by_timepoint) 
+    if total_distance_travelled < 10.0:
+        velocity_score = 0.0
+        persistence_score = 0.0
+    else:
+        net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]
+        net_displacement_mag = np.linalg.norm(net_displacement)
+    
+        distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
+        net_distance = np.sum(distance_per_tstep)
+        
+        persistence = net_displacement_mag/net_distance
+        
+        velocities = distance_per_tstep*(60.0/a_cell.T)
+        average_velocity = np.average(velocities)
+        
+        persistence_score = 1.0 - score_function(0.4, 0.8, persistence)
+        velocity_score = score_function(1.0, 2.0, average_velocity)
+    
+    return polarity_score, persistence_score, velocity_score
     
 def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)

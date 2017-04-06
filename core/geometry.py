@@ -1140,21 +1140,22 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
     normal_to_line_segment = rotate_2D_vector_CCW(coords_b - coords_a)
     
     if check_if_line_segment_from_node_self_intersects(coords_a, coords_b, all_polygon_coords[pi_a], vi_a) == 1:
-        return 1
-    if check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b) == 1:
-        return 1
-    else:
-        num_polygons = all_polygon_coords.shape[0]
-        for pi in range(num_polygons):
-            if pi == pi_a or pi == pi_b:
-                continue
-            else:
-                min_x, max_x, min_y, max_y = all_polygons_bounding_box_coords[pi]
-                if check_if_line_segment_intersects_box(coords_a, coords_b, min_x, max_x, min_y, max_y) == 1:
-                    if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi], -1) == 1:
-                        return 1 
+        return 100000
+    elif check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b) == 1:
+        return 100000
+    
+    num_intersections = 0    
+    num_polygons = all_polygon_coords.shape[0]
+    for pi in range(num_polygons):
+        if pi == pi_a or pi == pi_b:
+            continue
+        else:
+            min_x, max_x, min_y, max_y = all_polygons_bounding_box_coords[pi]
+            if check_if_line_segment_intersects_box(coords_a, coords_b, min_x, max_x, min_y, max_y) == 1:
+                if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, all_polygon_coords[pi], -1) == 1:
+                    num_intersections += 1
                     
-    return 0
+    return num_intersections
 
 # -----------------------------------------------------------------
   
