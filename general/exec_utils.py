@@ -267,8 +267,11 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
 # =======================================================================
 
 def run_simple_experiment_and_return_cell_worker(task_defn):
-    environment_wide_variable_defns, user_cell_group_defn = task_defn
-    return run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_cell_group_defn)
+    if task_defn != None:
+        environment_wide_variable_defns, user_cell_group_defn = task_defn
+        return run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_cell_group_defn)
+    else:
+        return None
 
 # =======================================================================
 

@@ -89,15 +89,18 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
 
 # =============================================
     
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def generate_random_multipliers(num_nodes, threshold, randoms, magnitude):
     rfs = np.ones(num_nodes, dtype=np.float64)
+    num_nodes_to_randomize = int(threshold*num_nodes)
+    randomized_nodes = np.random.choice(np.arange(num_nodes), size=num_nodes_to_randomize, replace=False)
     
-    for i in range(num_nodes):
-        if randoms[i] < threshold:
-            rfs[i] = magnitude
-        else:
-            continue
+    rfs[randomized_nodes] = np.ones(num_nodes_to_randomize, dtype=np.float64)*magnitude 
+#    for i in range(num_nodes):
+#        if randoms[i] < threshold:
+#            rfs[i] = magnitude
+#        else:
+#            continue
             
     return rfs
 # ---------------------------------------------
@@ -527,7 +530,7 @@ class Cell():
 #        rfs = np.random.random(self.num_nodes)
 #        rfs = rfs/np.sum(rfs)
 #        
-        return generate_random_multipliers(self.num_nodes, 0.5, np.random.rand(self.num_nodes), self.randomization_magnitude)
+        return generate_random_multipliers(self.num_nodes, 0.25, np.random.rand(self.num_nodes), self.randomization_magnitude)
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):

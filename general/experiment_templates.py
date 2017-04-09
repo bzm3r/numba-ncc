@@ -131,7 +131,7 @@ def fill_experiment_name_format_string_with_randomization_info(experiment_name_f
     return experiment_name
 # ===========================================================================
 
-def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
+def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timestep_length=2, cell_diameter=40, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=None, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, init_rho_gtpase_conditions=None):    
     total_time = total_time_in_hours*3600
     num_timesteps = int(total_time/timestep_length)
     
@@ -164,7 +164,8 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     experiment_name_format_string = "single_cell_{}_".format(sub_experiment_number) +"{}"
     
     if no_randomization:
-        parameter_dict.update(['randomization_scheme', None])
+        parameter_dict.update([('randomization_scheme', None)])
+        
     randomization_scheme = parameter_dict['randomization_scheme']
     experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
     
