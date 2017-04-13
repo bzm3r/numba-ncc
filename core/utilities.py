@@ -66,142 +66,9 @@ def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, 
     return timepoints, speeds
 
 # ==============================================================================
-
-@nb.jit(nopython=True)   
-def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, num_nodes):
-
-    preferred_rho_level = 0.2
-    preferred_rac_level = 0.3
-    
-    max_rac = 0.0
-    sum_rac = 0.0
-    for i in range(num_nodes):
-        this_node_rac_active = rac_membrane_active[i]
-        sum_rac = sum_rac + this_node_rac_active
-        if this_node_rac_active > max_rac:
-            max_rac = this_node_rac_active
-        
-        
-    sum_rho = 0.0
-    for i in range(num_nodes):
-        sum_rho = sum_rho + rho_membrane_active[i]
-        
-    avg_rac = sum_rac/num_nodes
-    avg_rho = sum_rho/num_nodes
-    
-    if sum_rac > 0.4 or avg_rac < 1e-6:
-        return 0.0
-    
-    if sum_rho > 0.4 or avg_rho < 1e-6:
-        return 0.0
-    
-    significant_rac = np.zeros(num_nodes, dtype=np.int64)
-    normalized_rac = rac_membrane_active/max_rac
-    for i in range(num_nodes):
-        if normalized_rac[i] > 0.25:
-            significant_rac[i] = 1
-
-    num_rac_fronts = 0
-    front_starts = np.zeros(num_nodes, dtype=np.int64)
-    for ni in range(num_nodes):
-        ni_plus1 = (ni + 1)%num_nodes
-        if significant_rac[ni] == 0 and significant_rac[ni_plus1] == 1:
-            front_starts[num_rac_fronts] = ni_plus1
-            num_rac_fronts += 1
-    
-    if num_rac_fronts == 0:
-        return 0.0
-      
-    front_strengths = np.zeros(num_rac_fronts, dtype=np.float64)
-    front_widths = np.zeros(num_rac_fronts, dtype=np.float64)
-    for fi in range(num_rac_fronts):
-        front_strength = 0.0
-        front_width = 0.0
-        i = front_starts[fi]
-        
-        while significant_rac[i] != 0:
-            front_strength += normalized_rac[i]
-            front_width += 1.0
-            i = (i + 1)%num_nodes
-            
-        front_strengths[fi] = front_strength/front_width
-        front_widths[fi] = front_width
-            
-    max_front_strength = np.max(front_strengths)
-    normalized_front_strengths = front_strengths/max_front_strength
-    
-    significant_fronts = np.zeros(num_rac_fronts, dtype=np.int64)
-    for fi in range(num_rac_fronts):
-        if normalized_front_strengths[fi] > 0.25:
-            significant_fronts[fi] = 1
-            
-    num_significant_fronts = np.sum(significant_fronts)
-    relevant_front_strengths = np.zeros(num_significant_fronts, dtype=np.float64)
-    relevant_front_starts = np.zeros(num_significant_fronts, dtype=np.int64)
-    relevant_front_widths = np.zeros(num_significant_fronts, dtype=np.int64)
-    
-    rfi = 0
-    for fi in range(num_rac_fronts):
-        if significant_fronts[fi] == 1:
-            relevant_front_strengths[rfi] = normalized_front_strengths[fi]
-            relevant_front_starts[rfi] = front_starts[fi]
-            relevant_front_widths[rfi] = front_widths[fi]
-            rfi += 1
-            
-    front_strengths = np.zeros(num_rac_fronts)
-    
-    sum_rho_dist = np.abs(sum_rho - preferred_rho_level)
-    sum_rac_dist = np.abs(sum_rac - preferred_rac_level)
-    
-    if num_significant_fronts == 1:
-        front_width_rating = relevant_front_widths[0]/(num_nodes/2.)
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
-
-        return (front_width_rating)*(1.0 - score_function(0.0, 0.5, sum_rac_dist))*(1.0 - score_function(0.0, 0.5, sum_rho_dist))
-    
-    elif num_significant_fronts > 1:
-        worst_distance_between_fronts = (num_nodes -np.sum(relevant_front_widths))/float(num_significant_fronts)
-        distance_between_fronts_score = np.zeros(num_significant_fronts, dtype=np.float64)
-        
-        for fi in range(num_significant_fronts):
-            this_si = relevant_front_starts[fi]
-            this_width = relevant_front_widths[fi]
-            fi_plus1 = (fi + 1)%(num_significant_fronts)
-            next_si = relevant_front_starts[fi_plus1]
-            if next_si < this_si:
-                next_si = num_nodes + next_si
-            dist_bw_fronts = next_si - (this_si + this_width)
-            score = dist_bw_fronts/worst_distance_between_fronts
-            if score > 1.0:
-                distance_between_fronts_score[fi] = 1.0
-            else:
-                distance_between_fronts_score[fi] = score
-        
-        combined_dist_bw_fronts_score = 1.0
-        if num_significant_fronts == 2:
-            combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
-        else:
-            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_significant_fronts
-        average_front_width = (np.sum(relevant_front_widths) + 0.0)/num_significant_fronts
-        front_width_rating = average_front_width/(num_nodes/2.)
-        
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
-            
-        return combined_dist_bw_fronts_score*front_width_rating**(1.0 - score_function(0.0, 0.5, sum_rac_dist))*(1.0 - score_function(0.0, 0.5, sum_rho_dist))
-        
-    return 0.0
         
 @nb.jit(nopython=True)   
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes):
-
-    preferred_rho_level = 0.2
-    preferred_rac_level = 0.3
     
     max_rac = 0.0
     sum_rac = 0.0
@@ -260,17 +127,21 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     max_front_strength = np.max(front_strengths)
     normalized_front_strengths = front_strengths/max_front_strength
     
-    sum_rho_dist = np.abs(sum_rho - preferred_rho_level)
-    sum_rac_dist = np.abs(sum_rac - preferred_rac_level)
+    rac_amount_score = 1.0
+    if sum_rac > 0.4:
+        rac_amount_score = np.exp((sum_rac - 0.4)*np.log(0.1)/0.1)
+        
+    rho_amount_score = 1.0
+    if sum_rho > 0.5:
+        rho_amount_score = np.exp((sum_rho - 0.4)*np.log(0.1)/0.1)
     
     if num_rac_fronts == 1:
         front_width_rating = front_widths[0]/(num_nodes/3.)
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
-
-        return (front_width_rating)*(1.0 - score_function(0.0, 0.5, sum_rac_dist))*(1.0 - score_function(0.0, 0.5, sum_rho_dist))
+        
+        if front_width_rating > 1.0:
+            front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
+            
+        return (front_width_rating)*rac_amount_score*rho_amount_score
     
     elif num_rac_fronts > 1:
         worst_distance_between_fronts = (num_nodes -np.sum(front_widths))/float(num_rac_fronts)
@@ -304,15 +175,14 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
             combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
         else:
             combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_rac_fronts
+            
         total_front_width = (np.sum(front_widths) + 0.0)
         front_width_rating = total_front_width/(num_nodes/3.)
         
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
+        if front_width_rating > 1.0:
+            front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
             
-        return combined_dist_bw_fronts_score*front_width_rating**(1.0 - score_function(0.0, 0.5, sum_rac_dist))*(1.0 - score_function(0.0, 0.5, sum_rho_dist))
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
         
     return 0.0
 # ==============================================================================
@@ -390,7 +260,7 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
         if velocity_score > 3.5:
             velocity_score = 1.0 - score_function(3.5, 5.0, velocity_score)
         else:
-            velocity_score = score_function(0.0, 3.5, average_velocity)
+            velocity_score = score_function(0.0, 2.5, average_velocity)
     
     return polarity_score, persistence_score, velocity_score
     

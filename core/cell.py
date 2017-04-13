@@ -233,7 +233,7 @@ class Cell():
         self.exponent_rho_mediated_rac_inhib = parameters_dict['hill_exponent']
         
         self.tension_mediated_rac_inhibition_half_strain = parameters_dict['tension_mediated_rac_inhibition_half_strain']
-        self.tension_mediated_rac_inhibition_exponent = np.log(0.5)/(-1*self.tension_mediated_rac_inhibition_half_strain)
+        self.tension_mediated_rac_inhibition_exponent = self.tension_mediated_rac_inhibition_half_strain#np.log(0.5)/(-1*self.tension_mediated_rac_inhibition_half_strain)
         
         self.kgdi_rac = parameters_dict['kgdi_rac']*self.T
         self.kdgdi_rac = parameters_dict['kdgdi_rac']*self.T*(1.0/self.num_nodes)

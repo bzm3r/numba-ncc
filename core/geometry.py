@@ -8,6 +8,7 @@ from __future__ import division
 import numpy as np
 import math
 import numba as nb
+import threading
 
 # ----------------------------------------------------------------
 
@@ -746,7 +747,7 @@ def create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, init_a
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
-def update_distance_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
+def update_distance_squared_matrix_old(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
     
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
@@ -768,7 +769,30 @@ def update_distance_squared_matrix(last_updated_cell_index, num_cells, num_nodes
                         distance_squared_matrix[other_ci][other_ni][last_updated_cell_index][ni] = squared_dist
                             
     return distance_squared_matrix
+
+# -----------------------------------------------------------------
+#@nb.jit(nopython=True)      
+def update_distance_squared_matrix(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
     
+    num_tasks = given_tasks.shape[0]
+    if num_tasks != 0:
+        chunklen = (num_tasks + num_threads - 1) // num_threads
+        # Create argument tuples for each input chunk
+        chunks = []
+        for i in range(num_threads):
+            relevant_tasks = given_tasks[i*chunklen:(i+1)*chunklen]
+            chunks.append((distance_squared_matrix, all_cells_node_coords, relevant_tasks))
+            
+        # Spawn one thread per chunk
+        threads = [threading.Thread(target=dist_squared_calculation_worker, args=c) for c in chunks]
+        
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        
+    return distance_squared_matrix
+
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
 def calculate_vector_from_p1_to_p2_given_vectors(p1, p2):
@@ -1209,7 +1233,7 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
 # -----------------------------------------------------------------
     
 @nb.jit(nopython=True)      
-def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
+def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
     distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
     line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
     
@@ -1238,6 +1262,93 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells
                             distance_squared_matrix[other_ci][other_ni][ci][ni] = squared_dist
                             
     return distance_squared_matrix, line_segment_intersection_matrix
+
+# -----------------------------------------------------------------
+
+@nb.jit('void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
+def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, task_addresses):
+    """
+    Function under test.
+    """
+    
+    for n in range(task_addresses.shape[0]):
+        a_ci, a_ni, b_ci, b_ni = task_addresses[n][0], task_addresses[n][1], task_addresses[n][2], task_addresses[n][3]
+        dist_squared = calculate_squared_dist(polygons[a_ci][a_ni], polygons[b_ci][b_ni])
+        num_intersects = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(a_ci, a_ni, b_ci, b_ni, polygons, polygon_bounding_boxes)
+        
+        dist_squared_matrix[a_ci][a_ni][b_ci][b_ni] = dist_squared
+        dist_squared_matrix[b_ci][b_ni][a_ci][a_ni] = dist_squared
+        line_segment_intersect_matrix[a_ci][a_ni][b_ci][b_ni] = num_intersects
+        line_segment_intersect_matrix[b_ci][b_ni][a_ci][a_ni] = num_intersects
+        
+@nb.jit('void(float64[:,:,:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
+def dist_squared_calculation_worker(dist_squared_matrix, polygons, task_addresses):
+    """
+    Function under test.
+    """
+    
+    for n in range(task_addresses.shape[0]):
+        a_ci, a_ni, b_ci, b_ni = task_addresses[n][0], task_addresses[n][1], task_addresses[n][2], task_addresses[n][3]
+        dist_squared = calculate_squared_dist(polygons[a_ci][a_ni], polygons[b_ci][b_ni])
+        
+        dist_squared_matrix[a_ci][a_ni][b_ci][b_ni] = dist_squared
+        dist_squared_matrix[b_ci][b_ni][a_ci][a_ni] = dist_squared
+
+
+@nb.jit(nopython=True)
+def create_dist_and_line_segment_interesection_test_args_relative_to_specific_cell(specific_cell_index, num_cells, num_nodes_per_cell):
+    tasks = []
+    
+    for ni in range(num_nodes_per_cell):
+        for other_ci in range(num_cells):
+            if other_ci != specific_cell_index:
+                for other_ni in range(num_nodes_per_cell):
+                    tasks.append((specific_cell_index, ni, other_ci, other_ni))
+                    
+    return tasks
+
+@nb.jit(nopython=True, nogil=True)
+def create_dist_and_line_segment_interesection_test_args(num_cells, num_nodes_per_cell):
+    info_update_tracker = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
+    tasks = []
+    
+    for ci in range(num_cells):
+        for ni in range(num_nodes_per_cell):
+            for other_ci in range(num_cells):
+                if ci != other_ci:
+                    relevant_info_update_tracker_slice = info_update_tracker[ci][ni][other_ci]
+                    for other_ni in range(num_nodes_per_cell):
+                        if relevant_info_update_tracker_slice[other_ni] != 1:
+                            info_update_tracker[ci][ni][other_ci][other_ni] = 1
+                            info_update_tracker[other_ci][other_ni][ci][ni] = 1
+                            tasks.append((ci, ni, other_ci, other_ni))
+                            
+    return tasks
+
+def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threads, tasks, num_cells, num_nodes, polygon_bounding_boxes, polygons):
+    num_tasks = tasks.shape[0]
+    
+    dist_squared_matrix = -1*np.ones((num_cells, num_nodes, num_cells, num_nodes), dtype=np.float64)
+    line_segment_intersect_matrix = -1*np.ones((num_cells, num_nodes, num_cells, num_nodes), dtype=np.int64)
+    
+    if num_tasks != 0:
+        chunklen = (num_tasks + num_threads - 1) // num_threads
+        # Create argument tuples for each input chunk
+        chunks = []
+        for i in range(num_threads):
+            relevant_tasks = tasks[i*chunklen:(i+1)*chunklen]
+            chunks.append((dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, relevant_tasks))
+            
+        # Spawn one thread per chunk
+        threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
+        
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        
+    return dist_squared_matrix, line_segment_intersect_matrix
+
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
 def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
@@ -1264,7 +1375,7 @@ def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per
 
 # ---------------------------------------------------------------------------------
 @nb.jit(nopython=True)
-def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
+def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
     
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(line_segment_intersection_matrix, dtype=np.int64)
@@ -1290,6 +1401,28 @@ def update_line_segment_intersection_and_dist_squared_matrices(last_updated_cell
                         distance_squared_matrix[last_updated_cell_index][ni][other_ci][other_ni] = squared_dist
                         distance_squared_matrix[other_ci][other_ni][last_updated_cell_index][ni] = squared_dist
                             
+    return distance_squared_matrix, line_segment_intersection_matrix
+
+def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
+
+    num_tasks = given_tasks.shape[0]
+    
+    if num_tasks != 0:
+        chunklen = (num_tasks + num_threads - 1) // num_threads
+        # Create argument tuples for each input chunk
+        chunks = []
+        for i in range(num_threads):
+            relevant_tasks = given_tasks[i*chunklen:(i+1)*chunklen]
+            chunks.append((distance_squared_matrix, line_segment_intersection_matrix, cells_bounding_box_array, all_cells_node_coords, relevant_tasks))
+            
+        # Spawn one thread per chunk
+        threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
+        
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        
     return distance_squared_matrix, line_segment_intersection_matrix
     
 # -------------------------------------------------------------------

@@ -23,9 +23,9 @@ def score_function(min_cutoff, max_cutoff, x):
         # b = -m*min
         return (x - min_cutoff)/(max_cutoff - min_cutoff)
 
-@nb.jit(nopython=True)   
+#@nb.jit(nopython=True)   
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes):
-
+    
     max_rac = 0.0
     sum_rac = 0.0
     for i in range(num_nodes):
@@ -83,74 +83,62 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     max_front_strength = np.max(front_strengths)
     normalized_front_strengths = front_strengths/max_front_strength
     
-    significant_fronts = np.zeros(num_rac_fronts, dtype=np.int64)
-    for fi in range(num_rac_fronts):
-        if normalized_front_strengths[fi] > 0.25:
-            significant_fronts[fi] = 1
-            
-    num_significant_fronts = np.sum(significant_fronts)
-    relevant_front_strengths = np.zeros(num_significant_fronts, dtype=np.float64)
-    relevant_front_starts = np.zeros(num_significant_fronts, dtype=np.int64)
-    relevant_front_widths = np.zeros(num_significant_fronts, dtype=np.int64)
-    
-    rfi = 0
-    for fi in range(num_rac_fronts):
-        if significant_fronts[fi] == 1:
-            relevant_front_strengths[rfi] = normalized_front_strengths[fi]
-            relevant_front_starts[rfi] = front_starts[fi]
-            relevant_front_widths[rfi] = front_widths[fi]
-            rfi += 1
-            
-    front_strengths = np.zeros(num_rac_fronts)
-    
-    rho_amount_penalizer = 1.0
-    if sum_rho > 0.4:
-        rho_amount_penalizer = np.exp((sum_rho - 0.4)*np.log(0.1)/0.1)
-    rac_amount_penalizer = 1.0
-    if sum_rac > 0.5:
-        rac_amount_penalizer = np.exp((sum_rac - 0.4)*np.log(0.1)/0.1)
-    
-    if num_significant_fronts == 1:
-        front_width_rating = relevant_front_widths[0]/(num_nodes/3.)
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
-
-        return (front_width_rating)*rho_amount_penalizer*rac_amount_penalizer
-    
-    elif num_significant_fronts > 1:
-        worst_distance_between_fronts = (num_nodes -np.sum(relevant_front_widths))/float(num_significant_fronts)
-        distance_between_fronts_score = np.zeros(num_significant_fronts, dtype=np.float64)
+    rac_amount_score = 1.0
+    if sum_rac > 0.4:
+        rac_amount_score = np.exp((sum_rac - 0.4)*np.log(0.1)/0.1)
         
-        for fi in range(num_significant_fronts):
-            this_si = relevant_front_starts[fi]
-            this_width = relevant_front_widths[fi]
-            fi_plus1 = (fi + 1)%(num_significant_fronts)
-            next_si = relevant_front_starts[fi_plus1]
+    rho_amount_score = 1.0
+    if sum_rho > 0.5:
+        rho_amount_score = np.exp((sum_rho - 0.4)*np.log(0.1)/0.1)
+    
+    if num_rac_fronts == 1:
+        front_width_rating = front_widths[0]/(num_nodes/3.)
+        
+        if front_width_rating > 1.0:
+            front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
+            
+        return (front_width_rating)*rac_amount_score*rho_amount_score
+    
+    elif num_rac_fronts > 1:
+        worst_distance_between_fronts = (num_nodes -np.sum(front_widths))/float(num_rac_fronts)
+        distance_between_fronts_score = np.zeros(num_rac_fronts, dtype=np.float64)
+        
+        for fi in range(num_rac_fronts):
+            this_si = front_starts[fi]
+            this_width = front_widths[fi]
+            fi_plus1 = (fi + 1)%(num_rac_fronts)
+            next_si = front_starts[fi_plus1]
             if next_si < this_si:
                 next_si = num_nodes + next_si
             dist_bw_fronts = next_si - (this_si + this_width)
-            score = dist_bw_fronts/worst_distance_between_fronts
+            
+            this_fs = normalized_front_strengths[fi]
+            next_fs = normalized_front_strengths[fi_plus1]
+            relevant_fs = 1.0
+            if this_fs < next_fs:
+                relevant_fs = this_fs
+            else:
+                relevant_fs = next_fs
+                
+            score = dist_bw_fronts*relevant_fs/worst_distance_between_fronts
             if score > 1.0:
                 distance_between_fronts_score[fi] = 1.0
             else:
                 distance_between_fronts_score[fi] = score
         
         combined_dist_bw_fronts_score = 1.0
-        if num_significant_fronts == 2:
+        if num_rac_fronts == 2:
             combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
         else:
-            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_significant_fronts
-        average_front_width = (np.sum(relevant_front_widths) + 0.0)/num_significant_fronts
-        front_width_rating = average_front_width/(num_nodes/3.)
-        
-        if front_width_rating > 2.0:
-            front_width_rating = 0.0
-        elif front_width_rating > 1.0:
-            front_width_rating = front_width_rating - 1.0
+            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_rac_fronts
             
-        return combined_dist_bw_fronts_score*front_width_rating*rho_amount_penalizer*rac_amount_penalizer
+        total_front_width = (np.sum(front_widths) + 0.0)
+        front_width_rating = total_front_width/(num_nodes/3.)
+        
+        if front_width_rating > 1.0:
+            front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
+            
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
         
     return 0.0
 
@@ -247,24 +235,30 @@ def generate_rgtpase(num_nodes, num_fronts=2):
         
     return rgtpase_a, rgtpase_b 
 
-rac_membrane_actives = np.array([0.05625, 0.05625, 0.05625, 0.05625, 0.05625, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+#rac_membrane_actives = np.array([0.05625, 0.05625, 0.05625, 0.05625, 0.05625, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+#rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+#
+#print "very good: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
+#
+#rac_membrane_actives = np.array([0.06*0.5, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.0, 0.0, 0.0, 0.0, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.0, 0.0, 0.0, 0.0])
+#rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+#
+#print "very bad: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
+#
+#rac_membrane_actives = np.array([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.0, 0.0])
+#rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+#
+#print "very bad again: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
+#
+#rac_membrane_actives = np.array([0.05, 0.05, 0.05, 0.0, 0.0, 0.05, 0.05, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+#rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+#
+#print "in between: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
 
-print "very good: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
+rac_membrane_active = np.array([0.00193653,  0.00559409,  0.01057761,  0.0476358 ,  0.06057408, 0.06315123,  0.06141962,  0.05278716,  0.02875906,  0.00876167, 0.00228345,  0.00124068,  0.00114999,  0.00156101,  0.00360576, 0.00172141], dtype=np.float64)
 
-rac_membrane_actives = np.array([0.06*0.5, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.0, 0.0, 0.0, 0.0, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.06*0.5, 0.0, 0.0, 0.0, 0.0])
-rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
+rho_membrane_active = np.array([0.0053378204, 0.0044661765, 0.002562339, 0.00021460297, 0.00017809241, 0.00017586575, 0.00017790902, 0.0001925137, 0.00040857607, 0.0032622439, 0.0052054818, 0.0054660486, 0.0054796417, 0.0054074698, 0.0051517044, 0.005409976], dtype=np.float64)
 
-print "very bad: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
-
-rac_membrane_actives = np.array([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.0, 0.0])
-rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
-
-print "very bad again: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
-
-rac_membrane_actives = np.array([0.05, 0.05, 0.05, 0.0, 0.0, 0.05, 0.05, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-rho_membrane_actives = np.ones(16, dtype=np.float64)*(0.1/16.)
-
-print "in between: ", calculate_polarization_rating(rac_membrane_actives, rho_membrane_actives, 16)
+print calculate_polarization_rating(rac_membrane_active, rho_membrane_active, 16)
 
 

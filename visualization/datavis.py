@@ -14,7 +14,7 @@ import scipy.spatial as space
 import core.geometry as geometry
 import core.hardio as hardio
 
-# ==============================================================================
+# ====================================================================
 
 def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, save_name=None, max_tstep=None):
     # assuming that num_timepoints, T is same for all cells
@@ -73,12 +73,12 @@ def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, st
         plt.close(fig)
         plt.close("alll")
         
-# ==============================================================================
+# ====================================================================
 
 def graph_avg_neighbour_distance_over_time():
     return 
 
-# ==============================================================================
+# ====================================================================
 
 def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, save_name):
     timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
@@ -104,7 +104,7 @@ def graph_group_centroid_drift(T, relative_group_centroid_per_tstep, save_dir, s
         plt.close(fig)
         plt.close("all")
     
-# ==============================================================================
+# ====================================================================
 
 def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True):    
     # assuming that num_timepoints, T is same for all cells
@@ -148,23 +148,26 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, cell_Ls, storefile
     group_net_distance = np.sum(np.linalg.norm(relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1], axis=-1))
     group_persistence = np.round(group_net_displacement_mag/group_net_distance, 3)
     
-    ax.plot(relative_group_centroid_per_tstep[:,0], relative_group_centroid_per_tstep[:,1], '.', label="group, pers.={}".format(group_persistence), color='k', markersize=0.5)
+    ax.plot(relative_group_centroid_per_tstep[:,0], relative_group_centroid_per_tstep[:,1], '.', label="group centroid")
     
+    cell_persistences = []
     for ci in xrange(num_cells):
         ccs = relative_all_cell_centroids_per_tstep[:,ci,:]
         net_displacement = ccs[-1] - ccs[0]
         net_displacement_mag = np.linalg.norm(net_displacement)
         net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:-1], axis=-1))
-        persistence = np.round(net_displacement_mag/net_distance, 3)
+        persistence = np.round(net_displacement_mag/net_distance)
+        cell_persistences.append(persistence)
         
-        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
+        ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20])
+        #ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
+    average_cell_persistence = np.round(np.average(cell_persistences), decimals=3)
+    std_cell_persistence = np.round(np.std(cell_persistences), decimals=3)
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
     
-    # Put a legend to the right of the current axis
-    ax.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
-           ncol=2, mode="expand", borderaxespad=0.)
+    ax.set_title("cell and group centroid paths - group persistence = {}, avg. cell persistence = {} (std = {})".format(group_persistence, average_cell_persistence, std_cell_persistence))
     #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
 

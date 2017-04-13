@@ -133,8 +133,12 @@ class Environment():
         for cell_index in xrange(self.num_cells):
             if self.environment_dir != None:
                 hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
-            
+        
+        self.all_geometry_tasks = np.array(geometry.create_dist_and_line_segment_interesection_test_args(self.num_cells, self.num_nodes), dtype=np.int64)
+        self.geometry_tasks_per_cell = np.array([geometry.create_dist_and_line_segment_interesection_test_args_relative_to_specific_cell(ci, self.num_cells, self.num_nodes) for ci in range(self.num_cells)], dtype=np.int64)
+        
         self.mode = MODE_EXECUTE
+        
 
 # -----------------------------------------------------------------
     def write_random_state_file(self, random_state_fp):
@@ -339,9 +343,11 @@ class Environment():
                 
                 cells_bounding_box_array[cell_index] = geometry.calculate_polygon_bounding_box(this_cell_coords)
                 if recalc_geometry[cell_index]:
-                    cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                    #cells_node_distance_matrix, cells_line_segment_intersection_matrix =  geometry.update_line_segment_intersection_and_dist_squared_matrices_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                    geometry.update_line_segment_intersection_and_dist_squared_matrices(4, self.geometry_tasks_per_cell[cell_index], self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
                 else:
-                    cells_node_distance_matrix = geometry.update_distance_squared_matrix(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
+                    geometry.update_distance_squared_matrix(4, self.geometry_tasks_per_cell[cell_index], self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
+                    #cells_node_distance_matrix = geometry.update_distance_squared_matrix_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
                 
             
             if self.verbose == True:
@@ -520,7 +526,7 @@ class Environment():
             curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
             
             cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
-            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
+            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(4, self.all_geometry_tasks, num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
                 
             #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
         
@@ -552,7 +558,7 @@ class Environment():
                         if self.environment_dir != None:
                             self.dump_to_store(t)
                         
-                    if produce_intermediate_visuals != False:
+                    if type(produce_intermediate_visuals) == np.ndarray:
                         if t != 0 and t in produce_intermediate_visuals:
                             self.last_timestep_when_environment_hard_saved = t
                             
@@ -571,8 +577,16 @@ class Environment():
                     prev_centroids = copy.deepcopy(curr_centroids)
                     curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
                     delta_drifts = geometry.calculate_centroid_dift(prev_centroids, curr_centroids)/1e-6
-                    centroid_drifts = np.where(recalc_geometry, 0.0, centroid_drifts + delta_drifts)
-                    recalc_geometry = centroid_drifts > allowed_drift_before_geometry_recalc
+                    if np.all(recalc_geometry):
+                        centroid_drifts = np.zeros_like(centroid_drifts)
+                        recalc_geometry = np.zeros_like(recalc_geometry)
+                    else:
+                        centroid_drifts = centroid_drifts + delta_drifts
+                        
+                    if np.max(centroid_drifts) > allowed_drift_before_geometry_recalc:
+                        recalc_geometry = np.ones_like(recalc_geometry)
+#                    centroid_drifts = np.where(recalc_geometry, 0.0, centroid_drifts + delta_drifts)
+#                    recalc_geometry = centroid_drifts > allowed_drift_before_geometry_recalc
                     
                     self.curr_tpoint += 1
             else:

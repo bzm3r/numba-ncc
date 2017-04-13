@@ -153,14 +153,14 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
     for i in range(num_nodes):
         kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active[i])
         
-        i_plus1 = (i + 1)%num_nodes
-        i_minus1 = (i - 1)%num_nodes
+        #i_plus1 = (i + 1)%num_nodes
+        #i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        result[i] = (migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
+        result[i] = ((migr_bdry_factor)*(cil_factor)*kgtp_rho_autoact + kgtp_rho_baseline)#(migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
         
     return result
 
@@ -170,17 +170,21 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
-    strain_inhibition = np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
+    strain_inhibition = hill_function(3, tension_mediated_rac_inhibition_exponent, global_tension)#np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
     
     for i in range(num_nodes):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])
         
-        i_plus1 = (i + 1)%num_nodes
-        i_minus1 = (i - 1)%num_nodes
+#        i_plus1 = (i + 1)%num_nodes
+#        i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+#        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+#        
+#        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        
+        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
         result[i] = (cil_factor)*(migr_bdry_factor)*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
         
