@@ -10,6 +10,11 @@ import colors
 import sys
 import core.hardio as hardio
 import core.utilities as cu
+import threading
+
+def copy_worker(tasks):
+    for task in tasks:
+        shutil.copy(*task)
 
 #@nb.jit(nopython=True)
 def create_transformation_matrix_entries(scale_x, scale_y, rotation_theta, translation_x, translation_y, plate_width, plate_height):
@@ -323,58 +328,60 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
 
 # -------------------------------------
    
-def draw_animation_frame_for_given_timestep(timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str):
+def draw_animation_frame_for_given_timestep(tasks):
     
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
-    context = cairo.Context(surface)
-        
-    context.set_source_rgb(*colors.RGB_WHITE)
-    context.paint()
-
-    # timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context
-    draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, image_width_in_pixels, image_height_in_pixels, context)
-    
-    context.transform(transform_matrix)
-    
-    for cell_index, anicell in enumerate(animation_cells):
-        
-        if rgtpase_line_coords_per_label_per_timepoint_per_cell == None:
-            rgtpase_data = None
-        else:
-            rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
+    for task in tasks:
+        timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str = task
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
+        context = cairo.Context(surface)
             
-        if rac_random_spikes_info_per_timepoint_per_cell == None:
-            rac_random_spikes_info = None
-        else:
-            rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
-            
-        if velocity_line_coords_per_label_per_timepoint_per_cell == None:
-            velocity_data = None
-        else:
-            velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
-        
-        if centroid_coords_per_timepoint_per_cell == None:
-            centroid_data = None
-        else:
-            centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][unique_timesteps[:timestep_index+1]]
-        
-        if coa_line_coords_per_timepoint_per_cell == None:
-            coa_data = None
-        else:
-            coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
-        
-        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
-        
-    if space_physical_bdry_polygon.shape[0] != 0:
-        context.new_path()
-        draw_polygon_jit(space_physical_bdry_polygon/1e-6, colors.RGB_BLACK, 2, context)
-        
-    if space_migratory_bdry_polygon.shape[0] != 0:
-        context.new_path()
-        draw_polygon_jit(space_migratory_bdry_polygon/1e-6, colors.RGB_BRIGHT_RED, 2, context)
+        context.set_source_rgb(*colors.RGB_WHITE)
+        context.paint()
     
-    image_fp = os.path.join(global_image_dir, global_image_name_format_str.format(timestep))
-    surface.write_to_png(image_fp)
+        # timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context
+        draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, image_width_in_pixels, image_height_in_pixels, context)
+        
+        context.transform(transform_matrix)
+        
+        for cell_index, anicell in enumerate(animation_cells):
+            
+            if rgtpase_line_coords_per_label_per_timepoint_per_cell == None:
+                rgtpase_data = None
+            else:
+                rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
+                
+            if rac_random_spikes_info_per_timepoint_per_cell == None:
+                rac_random_spikes_info = None
+            else:
+                rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
+                
+            if velocity_line_coords_per_label_per_timepoint_per_cell == None:
+                velocity_data = None
+            else:
+                velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
+            
+            if centroid_coords_per_timepoint_per_cell == None:
+                centroid_data = None
+            else:
+                centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][unique_timesteps[:timestep_index+1]]
+            
+            if coa_line_coords_per_timepoint_per_cell == None:
+                coa_data = None
+            else:
+                coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
+            
+            anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
+            
+        if space_physical_bdry_polygon.shape[0] != 0:
+            context.new_path()
+            draw_polygon_jit(space_physical_bdry_polygon/1e-6, colors.RGB_BLACK, 2, context)
+            
+        if space_migratory_bdry_polygon.shape[0] != 0:
+            context.new_path()
+            draw_polygon_jit(space_migratory_bdry_polygon/1e-6, colors.RGB_BRIGHT_RED, 2, context)
+        
+        image_fp = os.path.join(global_image_dir, global_image_name_format_str.format(timestep))
+        surface.write_to_png(image_fp)
 
 # ------------------------------------- 
   
@@ -607,7 +614,7 @@ class EnvironmentAnimation():
             
     # ---------------------------------------------------------------------
         
-    def create_animation_from_data(self, animation_save_folder_path, timestep_to_draw_till=None, duration=None):
+    def create_animation_from_data(self, animation_save_folder_path, timestep_to_draw_till=None, duration=None, num_threads=8):
         
         if timestep_to_draw_till == None:
             timestep_to_draw_till = self.environment.num_timepoints
@@ -656,32 +663,61 @@ class EnvironmentAnimation():
         space_physical_bdry_polygon = self.space_physical_bdry_polygon
         space_migratory_bdry_polygon = self.space_migratory_bdry_polygon
         
-        image_prep_st = time.time()        
+        image_prep_st = time.time()       
+        st = time.time()
         print "Drawing undrawn images...."
+        drawing_tasks = []
         for i, t in enumerate(unique_undrawn_timesteps):
-            progress_str = make_progress_str(float(i)/num_unique_timesteps)
-            sys.stdout.write("\r")
-            sys.stdout.write(progress_str)
-            sys.stdout.flush()
-            assert(self.image_drawn_array[t] == 0)
             self.image_drawn_array[t] = 1
-            draw_animation_frame_for_given_timestep(i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str)
-            print ""
-
+            drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str))
+        
+        num_tasks = len(drawing_tasks)
+        chunklen = (num_tasks + num_threads - 1) // num_threads
+        # Create argument tuples for each input chunk
+        chunks = []
+        for i in range(num_threads):
+            chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
+            
+        threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+            
+        et = time.time()
+#            progress_str = make_progress_str(float(i)/num_unique_timesteps)
+#            sys.stdout.write("\r")
+#            sys.stdout.write(progress_str)
+#            sys.stdout.flush()
+#            self.image_drawn_array[t] = 1
+#            draw_animation_frame_for_given_timestep(i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str)
+        print "Time taken to draw images: {} s".format(np.round(et - st, decimals=3))
+        
+        st = time.time()
+        copying_tasks = [] 
         print "Copying pre-drawn images..."                
         for i, t in enumerate(unique_timesteps):
-            progress_str = make_progress_str(float(i)/num_unique_timesteps)
-            sys.stdout.write("\r")
-            sys.stdout.write(progress_str)
-            sys.stdout.flush()
             assert(self.image_drawn_array[t] == 1)
-            print (i, t)
-            shutil.copy(os.path.join(global_image_dir, global_image_name_format_str.format(t)), os.path.join(local_image_dir, local_image_name_format_str.format(i)))
-            print ""
+            copying_tasks.append((os.path.join(global_image_dir, global_image_name_format_str.format(t)), os.path.join(local_image_dir, local_image_name_format_str.format(i))))
+            
+        num_tasks = len(copying_tasks)
+        chunklen = (num_tasks + num_threads - 1) // num_threads
+        # Create argument tuples for each input chunk
+        chunks = []
+        for i in range(num_threads):
+            chunks.append(copying_tasks[i*chunklen:(i+1)*chunklen])
+            
+        threads = [threading.Thread(target=copy_worker, args=(c,)) for c in chunks]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        et = time.time() 
+        print "Time taken to copy images: {} s".format(np.round(et - st, decimals=3))
         
         image_prep_et = time.time()
         
-        print "Done preparing images. Time taken: {}s".format(np.round(image_prep_et - image_prep_st, decimals=1))
+        print "Done preparing images. Total time taken: {}s".format(np.round(image_prep_et - image_prep_st, decimals=3))
         
         animation_output_path = os.path.join(animation_save_folder_path, self.animation_name)
         

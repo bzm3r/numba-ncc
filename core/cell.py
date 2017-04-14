@@ -295,6 +295,7 @@ class Cell():
         self.next_randomization_event_tpoint = None
         self.randomization_magnitude = parameters_dict['randomization_magnitude']
         self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
+        self.randomization_node_percentage = parameters_dict["randomization_node_percentage"]
         
         randomization_scheme = parameters_dict['randomization_scheme']
         self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
@@ -530,7 +531,7 @@ class Cell():
 #        rfs = np.random.random(self.num_nodes)
 #        rfs = rfs/np.sum(rfs)
 #        
-        return generate_random_multipliers(self.num_nodes, 0.25, np.random.rand(self.num_nodes), self.randomization_magnitude)
+        return generate_random_multipliers(self.num_nodes, self.randomization_node_percentage, np.random.rand(self.num_nodes), self.randomization_magnitude)
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):

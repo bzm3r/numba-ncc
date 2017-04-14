@@ -312,7 +312,7 @@ def multithread_func(inner_func, num_threads, num_cells, num_nodes, polygon_boun
         relevant_tasks = tasks[i*chunklen:(i+1)*chunklen]
         chunks.append((dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, relevant_tasks))
     # Spawn one thread per chunk
-    threads = [threading.Thread(target=inner_func, args=c)
+    threads = [threading.Thread(target=inner_func, args=(c,))
                for c in chunks]
     for thread in threads:
         thread.start()

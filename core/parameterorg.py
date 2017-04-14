@@ -41,7 +41,7 @@ space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_p
 
 interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria',]
 
-randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
 
 model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius']
 
@@ -61,7 +61,7 @@ user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_b
 
 user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.1*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.25*1e5, 9*1e5]}
 
-user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None}
+user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None, 'randomization_node_percentage': [0.01, 0.5]}
     
 user_model_run_parameters = {'skip_dynamics': None, 'biased_rgtpase_distrib_defn': None, 'num_nodes': [3, 100]}
 
@@ -186,6 +186,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['randomization_time_mean'] = user_parameter_dict['randomization_time_mean']
     cell_parameter_dict['randomization_time_variance_factor'] = user_parameter_dict['randomization_time_variance_factor']
     cell_parameter_dict['randomization_magnitude'] = user_parameter_dict['randomization_magnitude']        
+    cell_parameter_dict['randomization_node_percentage'] = user_parameter_dict['randomization_node_percentage']
     
     return cell_parameter_dict
 
