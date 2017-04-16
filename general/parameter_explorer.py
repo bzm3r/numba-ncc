@@ -232,6 +232,63 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_a
 
 #======================================================================
 
+def run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict, trial_updates, scores_and_updates_without_randomization=None, num_experiment_repeats=3, seeds=None, total_time_in_hours=3., should_be_polarized_by_in_hours=0.5):
+    randomization = False
+    print "Preparing tasks (randomization={})...".format(randomization)
+    task_list = []
+    
+    for i, u in enumerate(trial_updates):
+        for n in range(num_experiment_repeats):
+            if scores_and_updates_without_randomization != None:
+                if scores_and_updates_without_randomization[i][0][0] > 0.0 and scores_and_updates_without_randomization[i][0][2] > 0.0:
+                    trial_dict = copy.deepcopy(current_dict)
+                    trial_dict.update(u)
+                    if not randomization:
+                        trial_dict.update([('randomization_scheme', None)])
+                    task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours, seed=seeds[n]))
+                else:
+                    task_list.append(None)
+            else:
+                trial_dict = copy.deepcopy(current_dict)
+                trial_dict.update(u)
+                if not randomization:
+                    trial_dict.update([('randomization_scheme', None)])
+                task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours, seed=seeds[n]))
+                
+            
+
+    if worker_pool != None:
+        print "running tasks in parallel..."
+        result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
+    else:
+        print "running tasks in sequence..."
+        result_cells = [executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list]
+    
+    print "analyzing results..."
+    i = 0
+    result_cells_per_pd = []
+    while i < len(task_list):
+        result_cells_per_pd.append(result_cells[i:i+num_experiment_repeats])
+        i += num_experiment_repeats
+        
+    assert(len(result_cells_per_pd) == len(trial_updates))
+
+    scores_and_updates = []        
+    for result_cells_chunk, u in zip(result_cells_per_pd, trial_updates):
+        scores = []
+        for rc in result_cells_chunk:
+            if rc != None:
+                scores.append(cu.calculate_parameter_exploration_score_from_cell_no_randomization_variant(rc, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours))
+            else:
+                scores.append([0.001, 0.001, 0.001])
+        
+        scores = np.average(scores, axis=0)
+        scores_and_updates.append((scores, u))
+        
+    return scores_and_updates
+
+#======================================================================
+
 def rate_results_and_find_best_update(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, best_updates, scores_and_updates_with_randomization=None):
     new_best_score = current_best_score
     new_best_update = current_best_update
@@ -266,6 +323,37 @@ def rate_results_and_find_best_update(current_best_score, current_dict, current_
             best_updates += [(combined_score, new_best_update)]
             
     return new_best_score, new_best_update, current_dict, improvement, best_updates
+
+
+#======================================================================
+
+def rate_results_and_find_best_update_no_randomization_variant(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, best_updates):
+    new_best_score = current_best_score
+    new_best_update = current_best_update
+    improvement = False
+    
+    for n in range(len(scores_and_updates_no_randomization)):
+        u = scores_and_updates_no_randomization[n][1]
+        
+        polarization_score_global, polarization_score_at_SBPBT, velocity_score = scores_and_updates_no_randomization[n][0]
+ 
+        difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
+        
+        difference_factor = 1. - score_function(0.0, 1.0, np.abs(difference_between_pg_and_pat))
+        combined_score_no_randomization = difference_factor*polarization_score_global*velocity_score
+        
+        print "pgs, pas, d, vs. c: {}, {}, {}, {}, {}".format(polarization_score_global, polarization_score_at_SBPBT, difference_factor, velocity_score, combined_score_no_randomization)
+        
+        if combined_score_no_randomization > new_best_score:
+            print "possible new score: {}".format(combined_score_no_randomization)
+            new_best_score = combined_score_no_randomization
+            new_best_update = u
+            current_dict.update(u)
+            improvement = True
+            best_updates += [(combined_score_no_randomization, new_best_update)]
+            
+    return new_best_score, new_best_update, current_dict, improvement, best_updates
+
 
 #=====================================================================
     
@@ -326,6 +414,74 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
             
         
         current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES, scores_and_updates_with_randomization=scores_and_updates_with_randomization)
+        
+        if current_best_score > required_score:
+            print "Success! Stop criterion met!"
+            stop_criterion_met = True
+            
+        if improvement:
+            print "improvement seen!"
+            num_tries_with_no_improvement = 0
+        else:
+            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            num_tries_with_no_improvement += 1
+            if num_tries_with_no_improvement > max_loops:
+                print "no improvement seen for a while...retrying from new initial conditions!"
+                print "Too many tries with no improvement. Stopping."
+                stop_criterion_met = True
+            
+    return BEST_UPDATES
+
+
+#=====================================================================
+    
+
+def parameter_explorer_polarization_wanderer_no_randomization_variant(modification_program, required_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours=2., seed=None, sequential=False, max_loops=50, should_be_polarized_by_in_hours=0.5):
+    
+    global BEST_UPDATES
+    
+    mod_deltas = [x[3] for x in modification_program]
+    mod_min_max = [x[1:3] for x in modification_program]
+    mod_labels = [x[0] for x in modification_program]
+    
+    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    
+    for ml in mod_labels:
+        if ml not in acceptable_labels:
+            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+        
+    global STANDARD_PARAMETER_DICT
+    current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
+    current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict)
+    current_dict.update(current_best_update)
+    
+    current_best_score = 0.0
+
+    worker_pool = None
+    if not sequential:
+        worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
+        
+    stop_criterion_met = False
+    num_tries_with_no_improvement = 0
+    
+    if type(seed) == int:
+        num_experiment_repeats = 1
+        seeds = [seed]*num_experiment_repeats
+    elif seed == "auto-generate":
+        seeds = np.random.random_integers(0, 10000, size=num_experiment_repeats)
+    elif seed == None:
+        seeds = [None]*num_experiment_repeats
+    
+    while not stop_criterion_met:
+        improvement = False
+        print "current best score: ", current_best_score
+        
+        print "preparing modded dicts..."
+        trial_updates = generate_random_updates_based_on_current_state(num_new_dicts_to_generate, current_dict, mod_labels, mod_deltas, mod_min_max)
+        
+        scores_and_updates_no_randomization = run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict, trial_updates, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours)
+        
+        current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update_no_randomization_variant(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES)
         
         if current_best_score > required_score:
             print "Success! Stop criterion met!"
@@ -611,17 +767,29 @@ if __name__ == '__main__':
  ('kgtp_rho_autoact_multiplier', 1.0, 300.0, 5.0),
  ('kdgtp_rac_mediated_rho_inhib_multiplier', 100., 2000., 100.),
  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.), 
- ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005),
-  ('randomization_time_mean', 1.0, 40.0, 2.0),
-  ('randomization_time_variance_factor', 0.01, 0.5, 0.02),
-  ('randomization_magnitude', 2.0, 20.0, 1.0), ('stiffness_edge', 1000.0, 8000.0, 500.0), ('randomization_node_percentage', 0.25, 0.5, 0.05)]
+ ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
+    
+#    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
+# ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
+# ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
+# ('kdgtp_rho_multiplier', 1.0, 40.0, 1.0),
+# ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.05),
+# ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.05),
+# ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),
+# ('kgtp_rho_autoact_multiplier', 1.0, 300.0, 5.0),
+# ('kdgtp_rac_mediated_rho_inhib_multiplier', 100., 2000., 100.),
+# ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.), 
+# ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005),
+#  ('randomization_time_mean', 1.0, 40.0, 2.0),
+#  ('randomization_time_variance_factor', 0.01, 0.5, 0.02),
+#  ('randomization_magnitude', 2.0, 20.0, 1.0), ('stiffness_edge', 1000.0, 8000.0, 500.0), ('randomization_node_percentage', 0.25, 0.5, 0.05)]
     
     
     
-    BEST_UPDATES = parameter_explorer_polarization_evolution(moddable_parameters, 0.8, max_population_size=len(moddable_parameters), task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, sequential=False, mutation_probability=0.1, init_population=None)
+    #BEST_UPDATES = parameter_explorer_polarization_evolution(moddable_parameters, 0.8, max_population_size=len(moddable_parameters), task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, sequential=False, mutation_probability=0.1, init_population=None)
     
     #BEST_UPDATES = parameter_explorer_polarization_multiwanderer(moddable_parameters, 0.8, max_population_size=3, task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, init_population=None)
     
-    #BEST_UPDATES = parameter_explorer_polarization_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)*0.5), num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, num_processes=4, total_time_in_hours=3., seed=2836, sequential=False)
+    BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=5, num_processes=4, total_time_in_hours=2., seed=None, sequential=False, should_be_polarized_by_in_hours=0.5)
     
     #BEST_UPDATES = parameter_explorer_polarization_conservative_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, num_processes=4, total_time_in_hours=3., seed=2836, sequential=False)

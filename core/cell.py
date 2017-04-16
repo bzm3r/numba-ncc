@@ -92,10 +92,11 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
 #@nb.jit(nopython=True)
 def generate_random_multipliers(num_nodes, threshold, randoms, magnitude):
     rfs = np.ones(num_nodes, dtype=np.float64)
-    num_nodes_to_randomize = int(threshold*num_nodes)
-    randomized_nodes = np.random.choice(np.arange(num_nodes), size=num_nodes_to_randomize, replace=False)
     
-    rfs[randomized_nodes] = np.ones(num_nodes_to_randomize, dtype=np.float64)*magnitude 
+    num_random_nodes = int(num_nodes*threshold)
+    random_node_indices = np.random.choice(np.arange(num_nodes), size=num_random_nodes, replace=False)
+    
+    rfs[random_node_indices] = magnitude*np.ones(num_random_nodes, dtype=np.float64)
 #    for i in range(num_nodes):
 #        if randoms[i] < threshold:
 #            rfs[i] = magnitude
