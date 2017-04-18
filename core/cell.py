@@ -90,18 +90,28 @@ def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_
 # =============================================
     
 #@nb.jit(nopython=True)
-def generate_random_multipliers(num_nodes, threshold, randoms, magnitude):
+def generate_random_multipliers_fixed_number(num_nodes, threshold, randoms, magnitude):
     rfs = np.ones(num_nodes, dtype=np.float64)
     
     num_random_nodes = int(num_nodes*threshold)
     random_node_indices = np.random.choice(np.arange(num_nodes), size=num_random_nodes, replace=False)
     
     rfs[random_node_indices] = magnitude*np.ones(num_random_nodes, dtype=np.float64)
-#    for i in range(num_nodes):
-#        if randoms[i] < threshold:
-#            rfs[i] = magnitude
-#        else:
-#            continue
+            
+    return rfs
+
+
+# =============================================
+    
+@nb.jit(nopython=True)
+def generate_random_multipliers_random_number(num_nodes, threshold, randoms, magnitude):
+    rfs = np.ones(num_nodes, dtype=np.float64)
+
+    for i in range(num_nodes):
+        if randoms[i] < threshold:
+            rfs[i] = magnitude
+        else:
+            continue
             
     return rfs
 # ---------------------------------------------
@@ -276,6 +286,7 @@ class Cell():
         self.coa_sensing_dist_at_value = parameters_dict['coa_sensing_dist_at_value']/self.L
         
         self.coa_distribution_exponent = np.log(parameters_dict['coa_sensing_value_at_dist'])/self.coa_sensing_dist_at_value
+        self.coa_intersection_exponent = parameters_dict['coa_intersection_exponent']
         
         self.max_coa_signal = parameters_dict['max_coa_signal']
         
@@ -306,7 +317,8 @@ class Cell():
             self.randomization_scheme = 0
         elif randomization_scheme == "m":
             self.randomization_scheme = 1
-            self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers()
+            self.randomization_type = parameters_dict["randomization_type"]
+            self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(self.randomization_type)
         else:
             raise StandardError("Unknown randomization scheme given: {}.".format(randomization_scheme))
             
@@ -372,6 +384,7 @@ class Cell():
         self.system_history[access_index, :, parameterorg.external_gradient_on_nodes_index] = np.zeros(self.num_nodes, dtype=np.float64)
         
         intercellular_contact_factors = np.ones(self.num_nodes)
+        self.system_history[access_index, :, parameterorg.cil_signal_index] = intercellular_contact_factors
         migr_bdry_contact_factors = np.ones(self.num_nodes)
             
         close_point_on_other_cells_to_each_node_exists = np.zeros((self.num_nodes, self.num_cells_in_environment), dtype=np.int64)
@@ -528,11 +541,12 @@ class Cell():
 
 # -----------------------------------------------------------------           
 
-    def renew_randomization_rac_kgtp_multipliers(self):
-#        rfs = np.random.random(self.num_nodes)
-#        rfs = rfs/np.sum(rfs)
-#        
-        return generate_random_multipliers(self.num_nodes, self.randomization_node_percentage, np.random.rand(self.num_nodes), self.randomization_magnitude)
+    def renew_randomization_rac_kgtp_multipliers(self, randomization_type):
+        if randomization_type == "f":
+            rfs = generate_random_multipliers_fixed_number(self.num_nodes, self.randomization_node_percentage, np.random.rand(self.num_nodes), self.randomization_magnitude)
+        elif randomization_type == "r":
+            rfs = generate_random_multipliers_fixed_number(self.num_nodes, self.randomization_node_percentage, np.random.rand(self.num_nodes), self.randomization_magnitude)
+        return rfs
         
 # -----------------------------------------------------------------
     def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, external_gradient_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):
@@ -587,7 +601,7 @@ class Cell():
                 self.next_randomization_event_tpoint = None
                 
                 # randomization event has occurred, so renew Rac kgtp rate multipliers
-                self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers()
+                self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(self.randomization_type)
                 
             # store the Rac randomization factors for this timestep
             self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers
@@ -605,16 +619,19 @@ class Cell():
         random_order_cell_indices = np.arange(num_cells)
         np.random.shuffle(random_order_cell_indices)
         
-        coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix, self.closeness_dist_squared_criteria)
+        coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix, self.closeness_dist_squared_criteria, self.coa_intersection_exponent)
         
         if self.verbose == True:
             print "max_coa: ", np.max(coa_signals)
             print "min_coa: ", np.min(coa_signals)
+            print "min_cil: ", np.min(intercellular_contact_factors)
+            print "max_cil: ", np.max(intercellular_contact_factors)
             print "rfs: ", np.max(self.randomization_rac_kgtp_multipliers)
 #           print "max_ext: ", np.max(external_gradient_on_nodes)
 #           print "min_ext: ", np.min(external_gradient_on_nodes)
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.coa_signal_index] = coa_signals
+        self.system_history[next_tstep_system_history_access_index, :, parameterorg.cil_signal_index] = intercellular_contact_factors
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.external_gradient_on_nodes_index] = external_gradient_on_nodes
                            
         rac_cytosolic_gdi_bound = 1 - np.sum(rac_membrane_actives) - np.sum(self.system_history[next_tstep_system_history_access_index, :, parameterorg.rac_membrane_inactive_index])

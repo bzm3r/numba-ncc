@@ -647,10 +647,67 @@ def present_collated_single_cell_motion_data(extracted_results, experiment_dir, 
     fig.savefig(save_path, forward=True)
     plt.close(fig)
     plt.close("all")
+    
+# ==========================================================================================
         
+def present_collated_cell_motion_data(extracted_results, experiment_dir, time_in_hours):
+    fig, ax = plt.subplots()
+    
+    max_x_data_lim = 0.0
+    min_x_data_lim = 0.0
+    max_y_data_lim = 0.0
+    min_y_data_lim = 0.0
+    
+    persistences = [x[1] for x in extracted_results]
+    mean_persistence = np.round(np.mean(persistences), 3)
+    std_persistence = np.round(np.std(persistences), 3)
+    
+    for i, extracted_result in enumerate(extracted_results):
+        ccs, persistence = extracted_result
+        normalized_ccs = ccs - ccs[0]
+        this_max_x_data_lim = np.max(normalized_ccs[:,0])
+        this_min_x_data_lim = np.min(normalized_ccs[:,0])
+        this_max_y_data_lim = np.max(normalized_ccs[:,1])
+        this_min_y_data_lim = np.min(normalized_ccs[:,1])
+        
+        if this_max_x_data_lim > max_x_data_lim:
+            max_x_data_lim = this_max_x_data_lim
+        if this_max_y_data_lim > max_y_data_lim:
+            max_y_data_lim = this_max_y_data_lim
+        if this_min_x_data_lim < min_x_data_lim:
+            min_x_data_lim = this_min_x_data_lim
+        if this_min_y_data_lim < min_y_data_lim:
+            min_y_data_lim = this_min_y_data_lim
+            
+        ax.plot(normalized_ccs[:,0], normalized_ccs[:,1], marker=None, color=colors.color_list300[i%300])
+
+    ax.set_title("Persistence over {} hours (mean: {}, std: {})".format(time_in_hours, mean_persistence, std_persistence))
+    
+    ax.set_ylabel("micrometers")
+    ax.set_xlabel("micrometers")
+
+    y_lim = np.min([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
+    
+    ax.set_xlim(min_x_data_lim, 1.1*max_x_data_lim)
+    ax.set_ylim(-1.1*y_lim, 1.1*y_lim)
+    ax.set_aspect(u'equal')
+    
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    
+    #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.grid(which=u'both')
+    
+    fig.set_size_inches(12, 8)
+    save_path = os.path.join(experiment_dir, "collated_cell_data" + ".png")
+    print "save_path: ", save_path
+    fig.savefig(save_path, forward=True)
+    plt.close(fig)
+    plt.close("all")
+            
 # ============================================================================
 
-def graph_protrusion_lifetimes(num_cells, T, storefile_path, bar_width=0.35, opacity=0.75, error_config = {'ecolor': '0.3'}, save_dir=None, max_tstep=None):
+def graph_protrusion_lifetime_and_number_radially(num_cells, T, storefile_path, bar_width=0.35, opacity=0.75, error_config = {'ecolor': '0.3'}, save_dir=None, max_tstep=None):
     cell_results_time_collapsed = cu.calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path)
     
     bin_boundaries = [0.25, 0.5]
@@ -741,38 +798,7 @@ def graph_protrusion_number_given_direction_per_timestep(num_cells, num_timepoin
         plt.close(fig)
         plt.close("all")
     
-#    fig, ax = plt.subplots()
-#    
-#    reduced_times = times[::1000]
-#    reduced_forward_cone = forward_cone[::1000]
-#    reduced_backward_cone = backward_cone[::1000]
-#    reduced_other_cone = other_cone[::1000]
-#    
-#    delta_forward_cone = np.zeros_like(reduced_forward_cone)
-#    delta_backward_cone = np.zeros_like(reduced_backward_cone)
-#    delta_other_cone = np.zeros_like(reduced_other_cone)
-#    
-#    delta_forward_cone[1:] = reduced_forward_cone[1:] - reduced_forward_cone[:-1]
-#    delta_backward_cone[1:] = reduced_backward_cone[1:] - reduced_backward_cone[:-1]
-#    delta_other_cone[1:] = reduced_other_cone[1:] - reduced_other_cone[:-1]
-#    
-#    ax.plot(reduced_times, delta_forward_cone, label='$\Delta$ forward')
-#    ax.plot(reduced_times, delta_backward_cone, label='$\Delta$ backward')
-#    ax.plot(reduced_times, delta_other_cone, label='$\Delta$ other')
-#    
-#    ax.set_ylabel("change in number of protrusions")
-#    ax.set_xlabel("time (min.)")
-#    ax.legend(loc='best')
-#    
-#    if save_dir == None:
-#        plt.show()
-#    else:
-#        fig.set_size_inches(12, 8)
-#        save_path = os.path.join(save_dir, "change_in_protrusion_number_given_direction" + ".png")
-#        print "save_path: ", save_path
-#        fig.savefig(save_path, forward=True)
-#        plt.close(fig)
-#        plt.close("all")
+
     
     
         

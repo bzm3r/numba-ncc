@@ -15,7 +15,7 @@ import copy
 
 output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'interaction_factors_intercellular_contact_per_celltype', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
-output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'external_gradient_on_nodes']
+output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'external_gradient_on_nodes']
 
 output_info_labels = output_mech_labels + output_chem_labels
 
@@ -39,9 +39,9 @@ mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge'
 
 space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
 
-interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria',]
+interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria', 'coa_intersection_exponent']
 
-randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'randomization_type', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
 
 model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius']
 
@@ -55,13 +55,13 @@ polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None}
 user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.01, 1]}
 
 
-user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2]}
+user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0]}
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
 user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.1*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.25*1e5, 9*1e5]}
 
-user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None, 'randomization_node_percentage': [0.01, 0.5]}
+user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None, 'randomization_node_percentage': [0.01, 0.5], 'randomization_type': None}
     
 user_model_run_parameters = {'skip_dynamics': None, 'biased_rgtpase_distrib_defn': None, 'num_nodes': [3, 100]}
 
@@ -149,6 +149,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['max_coa_signal'] = user_parameter_dict['max_coa_signal']
     cell_parameter_dict['coa_sensing_dist_at_value'] = user_parameter_dict['coa_sensing_dist_at_value']
     cell_parameter_dict['coa_sensing_value_at_dist'] = user_parameter_dict['coa_sensing_value_at_dist']
+    cell_parameter_dict['coa_intersection_exponent'] = user_parameter_dict['coa_intersection_exponent']
     
     num_nodes, init_cell_radius = user_parameter_dict['num_nodes'], user_parameter_dict['init_cell_radius']
     cell_parameter_dict['num_nodes'], cell_parameter_dict['init_cell_radius'] = num_nodes, init_cell_radius
@@ -187,6 +188,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['randomization_time_variance_factor'] = user_parameter_dict['randomization_time_variance_factor']
     cell_parameter_dict['randomization_magnitude'] = user_parameter_dict['randomization_magnitude']        
     cell_parameter_dict['randomization_node_percentage'] = user_parameter_dict['randomization_node_percentage']
+    cell_parameter_dict['randomization_type'] = user_parameter_dict['randomization_type']
     
     return cell_parameter_dict
 

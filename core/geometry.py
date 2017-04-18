@@ -83,7 +83,7 @@ def determine_rotation_matrix_to_rotate_vector1_to_lie_along_vector2(vector1, ve
 
 # ----------------------------------------------------------------
 @nb.jit(nopython=True)   
-def rotate_vector(theta, vector):
+def rotate_2D_vector_CCW_by_theta(theta, vector):
     sin_theta = math.sin(theta)
     cos_theta = math.cos(theta)
     
@@ -152,7 +152,7 @@ def calculate_2D_vector_direction(vector):
     
     if abs_x < 1e-10:
         if abs_y < 1e-10:
-            return 0.0
+            return -1.0
         else:
             phi = np.pi/2
     else:
@@ -168,6 +168,20 @@ def calculate_2D_vector_direction(vector):
             return np.pi - phi
         else:
             return np.pi + phi
+        
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)    
+def calculate_angle_between_2D_vectors(v1, v2):
+    theta1 = calculate_2D_vector_direction(v1)
+    theta2 = calculate_2D_vector_direction(v2)
+    
+    if theta1 < 0.0 or theta2 < 0.0:
+        return -1.0
+    else:
+        if theta1 > theta2:
+            return theta2 - theta1
+        else:
+            return theta1 - theta2
             
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     

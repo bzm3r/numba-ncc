@@ -266,7 +266,7 @@ def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cell
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix, closeness_dist_squared_criteria):
+def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix, closeness_dist_squared_criteria, intersection_exponent):
     coa_signals = np.ones(num_nodes, dtype=np.float64)
     too_close_dist_squared = 1e-6
     
@@ -284,7 +284,7 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                 this_node_other_cell_relevant_dist_squared_slice = this_node_relevant_dist_squared_slice[other_ci]
                 for other_ni in range(num_nodes):
                     line_segment_between_node_intersects_polygon = this_node_other_cell_relevant_line_seg_intersection_slice[other_ni]
-                    intersection_factor = (1./(line_segment_between_node_intersects_polygon + 1.)**2)
+                    intersection_factor = (1./(line_segment_between_node_intersects_polygon + 1.)**intersection_exponent)
                     
                     dist_squared_between_nodes = this_node_other_cell_relevant_dist_squared_slice[other_ni]
                     

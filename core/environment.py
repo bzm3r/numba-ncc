@@ -138,6 +138,7 @@ class Environment():
         self.geometry_tasks_per_cell = np.array([geometry.create_dist_and_line_segment_interesection_test_args_relative_to_specific_cell(ci, self.num_cells, self.num_nodes) for ci in range(self.num_cells)], dtype=np.int64)
         
         self.mode = MODE_EXECUTE
+        self.animation_settings = None
         
 
 # -----------------------------------------------------------------
@@ -509,6 +510,7 @@ class Environment():
 # ----------------------------------------------------------------- 
         
     def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
+        self.animation_settings = animation_settings
         if self.mode == MODE_EXECUTE:
             allowed_drift_before_geometry_recalc = self.allowed_drift_before_geometry_recalc
             

@@ -539,6 +539,21 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
     eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
+    
+    experiment_name_format_string = experiment_name + "_RPT={}"
+    extracted_results = []
+    for rpt_number in xrange(num_experiment_repeats):
+        environment_name = experiment_name_format_string.format(rpt_number)
+        environment_dir = os.path.join(experiment_dir, environment_name)
+        storefile_path = eu.get_storefile_path(environment_dir)
+        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+        
+        analysis_data = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
+        
+        extracted_results += analysis_data
+        # ================================================================
+        
+    datavis.present_collated_cell_motion_data(extracted_results, experiment_dir, total_time_in_hours)
 
     print "Done."
 
