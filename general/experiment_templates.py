@@ -399,9 +399,16 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
 
 # =============================================================================
 
-def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4):
+def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, auto_calculate_num_cells=True, num_cells=None):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
-    experiment_name_format_string = "coa_test_{}_{}_NC={}_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells_width*num_cells_height, default_coa, default_cil)
+    
+    if auto_calculate_num_cells:
+        num_cells = num_cells_height*num_cells_width
+    else:
+        if num_cells == None:
+            raise StandardError("Auto-calculation of cell number turned off, but num_cells not given!")
+            
+    experiment_name_format_string = "coa_test_{}_{}_NC={}_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells, default_coa, default_cil)
     
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -413,9 +420,8 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     
     total_time = total_time_in_hours*3600
     num_timesteps = int(total_time/timestep_length)
-    
     num_boxes = 1
-    num_cells_in_boxes = [num_cells_width*num_cells_height]
+    num_cells_in_boxes = [num_cells]
     box_heights = [num_cells_height*cell_diameter]
     box_widths = [num_cells_width*cell_diameter]
 
@@ -463,15 +469,70 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
     eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps)
+    
+    print "Done."
+    
+    return experiment_name
+# =============================================================================
 
+def coa_factor_variation_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, num_cells_to_test=[], skip_low_coa=False, max_normalized_group_area=3.0):
+    
+    test_coas = sorted(test_coas)
+    test_coas.reverse()
+    
+    average_cell_group_area_data = max_normalized_group_area*np.ones((len(num_cells_to_test), len(test_coas)), dtype=np.float64)
+    experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
+    
+    for xi, num_cells in enumerate(num_cells_to_test):
+        square_size = int(np.ceil(np.sqrt(num_cells)))
+        skip_remaining_coas = False
+        
+        for yi, test_coa in enumerate(test_coas):
+            if skip_low_coa == True:
+                if skip_remaining_coas == True:
+                    continue
+                
+            experiment_name = many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=test_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, num_cells_width=square_size, num_cells_height=square_size, auto_calculate_num_cells=False, num_cells=num_cells)
+                
+            experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+            experiment_name_format_string = experiment_name + "_RPT={}"
+            
+            group_areas_averaged_over_time = []
+            for rpt_number in range(num_experiment_repeats):
+                environment_name = experiment_name_format_string.format(rpt_number)
+                environment_dir = os.path.join(experiment_dir, environment_name)
+                storefile_path = eu.get_storefile_path(environment_dir)
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                
+                group_area_over_time = cu.calculate_normalized_group_area_over_time(relevant_environment.num_cells, relevant_environment.curr_tpoint + 1, storefile_path)
+                
+                group_areas_averaged_over_time.append(np.average(group_area_over_time))
+            avg_grp_a = np.average(group_areas_averaged_over_time)
+            
+            if avg_grp_a > max_normalized_group_area:
+                skip_remaining_coas = True
+            else:
+                average_cell_group_area_data[xi, yi] = avg_grp_a
+
+    if skip_low_coa == False:
+        max_normalized_group_area = np.inf
+        
+    datavis.graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=experiment_set_directory, max_normalized_group_area=max_normalized_group_area)
+        
     print "Done."
 
 # ============================================================================
 
-def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4):
+def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, auto_calculate_num_cells=True, num_cells=None):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
-    experiment_name_format_string = "corridor_migration_{}_{}_NC=({}, {})_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells_width, num_cells_height, default_coa, default_cil)
+    if auto_calculate_num_cells:
+        num_cells = num_cells_height*num_cells_width
+    else:
+        if num_cells == None:
+            raise StandardError("Auto-calculation of cell number turned off, but num_cells not given!")
+            
+    experiment_name_format_string = "corridor_migration_{}_{}_NC=({}, {}, {})_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells, num_cells_width, num_cells_height, default_coa, default_cil)
     
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -485,7 +546,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     num_timesteps = int(total_time/timestep_length)
     
     num_boxes = 1
-    num_cells_in_boxes = [num_cells_width*num_cells_height]
+    num_cells_in_boxes = [num_cells]
     box_heights = [num_cells_height*cell_diameter]
     box_widths = [num_cells_width*cell_diameter]
 
@@ -556,7 +617,46 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     datavis.present_collated_cell_motion_data(extracted_results, experiment_dir, total_time_in_hours)
 
     print "Done."
+    
+    return experiment_name
 
+# =============================================================================
+
+def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], test_cils=[], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, auto_calculate_num_cells=True, num_cells=None):
+    
+    test_coas = sorted(test_coas)
+    test_cils = sorted(test_cils)
+    
+    average_cell_persistence = np.zeros((len(test_cils), len(test_coas)), dtype=np.float64)
+    experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
+    
+    for xi, test_cil in enumerate(test_cils):
+        for yi, test_coa in enumerate(test_coas):
+            experiment_name = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=test_coa, default_cil=test_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, num_cells_width=num_cells_width, num_cells_height=num_cells_height, auto_calculate_num_cells=auto_calculate_num_cells, num_cells=num_cells)
+                
+            experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+            experiment_name_format_string = experiment_name + "_RPT={}"
+            
+            all_cell_persistences = []
+            for rpt_number in range(num_experiment_repeats):
+                environment_name = experiment_name_format_string.format(rpt_number)
+                environment_dir = os.path.join(experiment_dir, environment_name)
+                storefile_path = eu.get_storefile_path(environment_dir)
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                
+                centroids_and_persistences = cu.analyze_cell_motion(relevant_environment, storefile_path, 0, rpt_number)
+                
+                all_cell_persistences += [x[1] for x in centroids_and_persistences]
+                
+            avg_p = np.average(all_cell_persistences)
+            average_cell_persistence[xi, yi] = avg_p
+
+    if num_cells == None:
+        num_cells = num_cells_height*num_cells_width
+        
+    datavis.graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_coas, average_cell_persistence, num_cells, num_cells_width, num_cells_height, save_dir=experiment_set_directory)
+        
+    print "Done."
     
 #==============================================================================
 

@@ -10,54 +10,19 @@ import matplotlib.pyplot as plt
 import core.utilities as cu
 import os
 import colors
-import scipy.spatial as space
 import core.geometry as geometry
 import core.hardio as hardio
+from matplotlib import cm
 
 # ====================================================================
 
-def graph_delaunay_triangulation_area_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, save_name=None, max_tstep=None):
-    # assuming that num_timepoints, T is same for all cells
-    if max_tstep == None:
-        max_tstep = num_timepoints
-        
-    all_cell_centroids_per_tstep = np.zeros((max_tstep, num_cells, 2), dtype=np.float64)
-    
-    # ------------------------
-    
-    for ci in xrange(num_cells):
-        cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
-        
-        all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
-        
-    # ------------------------
-                
-    delaunay_triangulations_per_tstep = []
-    for cell_centroids in all_cell_centroids_per_tstep:
-        try:
-            delaunay_triangulations_per_tstep.append(space.Delaunay(cell_centroids))
-        except:
-            delaunay_triangulations_per_tstep.append(None)
-    
-    convex_hull_areas_per_tstep = []
-    
-    for dt, all_cell_centroids in zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep):
-        if dt != None:
-            simplices = all_cell_centroids[dt.simplices]
-            simplex_areas = np.array([geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
-            convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
-        else:
-            convex_hull_areas_per_tstep.append(np.nan)
-        
-    convex_hull_areas_per_tstep = np.array(convex_hull_areas_per_tstep)
-    init_area = convex_hull_areas_per_tstep[0]
-    
-    normalized_convex_hull_areas_per_tstep = convex_hull_areas_per_tstep/init_area
-    timepoints = np.arange(normalized_convex_hull_areas_per_tstep.shape[0])*T
+def graph_group_area_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, save_name=None):
+    normalized_areas = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
+    timepoints = np.arange(normalized_areas.shape[0])*T
     
     fig, ax = plt.subplots()
     
-    ax.plot(timepoints, normalized_convex_hull_areas_per_tstep, label="normalized convex hull area")
+    ax.plot(timepoints, normalized_areas, label="normalized convex hull area")
     ax.set_ylabel("normalized convex hull area (dimensionless)")
     ax.set_xlabel("time (min.)")
     
@@ -707,96 +672,306 @@ def present_collated_cell_motion_data(extracted_results, experiment_dir, time_in
             
 # ============================================================================
 
-def graph_protrusion_lifetime_and_number_radially(num_cells, T, storefile_path, bar_width=0.35, opacity=0.75, error_config = {'ecolor': '0.3'}, save_dir=None, max_tstep=None):
-    cell_results_time_collapsed = cu.calculate_cells_protrusion_direction_lifetime(num_cells, T, storefile_path)
-    
-    bin_boundaries = [0.25, 0.5]
-    num_bins = len(bin_boundaries)
-    #bin_boundaries = 0.5*np.linspace(0, 1.0, num=num_bins, endpoint=False) + (0.5/num_bins)
-    binned_direction_data = [list() for x in range(num_bins)]    
-    for cell_result in cell_results_time_collapsed:
-        num_protrusions_per_node, protrusion_directions_per_node, protrusion_lifetimes_per_node = cell_result
-        
-        num_nodes = num_protrusions_per_node.shape[0]
-    
-        for ni in range(num_nodes):
-            num_protrusions = num_protrusions_per_node[ni]
-            protrusion_directions = protrusion_directions_per_node[ni]
-            protrusion_lifetimes = protrusion_lifetimes_per_node[ni]
+def generate_theta_bins(num_bins):
+    delta = 2*np.pi/num_bins
+    return np.array([[((2*n + 1)*delta)%(2*np.pi), (2*n + 3)*delta%(2*np.pi)] for n in range(num_bins)]), np.array([((2*n + 1)*delta)%(2*np.pi) for n in range(num_bins)]), delta
+
+def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, mins_or_secs="mins"):
+    bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
+
+    binned_direction_data = [list() for x in range(num_polar_graph_bins)]    
+    for cell_result in protrusion_lifetime_and_direction_data:
+        for protrusion_result in cell_result:
+            lifetime, direction = protrusion_result
             
-            for pi in range(num_protrusions):
-                direction_data = protrusion_directions[pi][2]
-                plifetime = protrusion_lifetimes[pi]
+            if mins_or_secs == "mins":
+                lifetime = lifetime/60.0
+            
+            binned = False
+            for n in range(num_polar_graph_bins - 1):
+                a, b = bins[n]
+                if a <= direction < b:
+                    binned = True
+                    binned_direction_data[n].append(lifetime)
+                    break
                 
-                if direction_data < bin_boundaries[0]:
-                    binned_direction_data[0].append(plifetime)
-                else:
-                    binned_direction_data[1].append(plifetime)
+            if binned == False:
+                binned_direction_data[-1].append(lifetime)
+        
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
     
-    binned_direction_data = [np.array(x) for x in binned_direction_data]
+    average_lifetimes = [np.average(x) for x in binned_direction_data]
+    ax.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
     
-    averaged_binned_direction_data = [np.average(x) if len(x) > 0 else -1 for x in binned_direction_data]
-    non_negative_binned_data = [x for x in averaged_binned_direction_data if x != -1]
-    if len(non_negative_binned_data) != 0:
-        min_data = np.min(non_negative_binned_data)
-        averaged_binned_direction_data_relative_to_min = [x/min_data for x in averaged_binned_direction_data]
-        std_binned_direction_data = [np.std(x) for x in averaged_binned_direction_data_relative_to_min]
+    ax.set_title('Average protrusion lifetime given direction')
         
-        index = np.arange(num_bins)
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(8, 8)
+        save_path = os.path.join(save_dir, "protrusion_lifetime_versus_direction" + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
         
-        fig, ax = plt.subplots()
+def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=None):
+    bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
+
+    start_cause_labels = ["coa", "randomization", "coa+rand"]
+    end_cause_labels = ["cil", "other"]
+    
+    binned_start_cause_data = [np.zeros(3, dtype=np.int64) for x in range(num_polar_graph_bins)]
+    binned_end_cause_data = [np.zeros(2, dtype=np.int64) for x in range(num_polar_graph_bins)] 
+    for cell_protrusion_data in zip(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data):
+        for protrusion_lifetime_direction_result, protrusion_start_end_cause in zip(cell_protrusion_data[0], cell_protrusion_data[1]):
+            _, direction = protrusion_lifetime_direction_result
+            start_causes, end_causes = protrusion_start_end_cause
+            
+            bin_index = -1
+            for n in range(num_polar_graph_bins - 1):
+                a, b = bins[n]
+                if a <= direction < b:
+                    bin_index = n
+                    break
+                
+            if bin_index == -1:
+                bin_index = num_polar_graph_bins - 1
+            
+            if "coa" in start_causes and "cil" in start_causes:
+                binned_start_cause_data[bin_index][2] += 1
+            elif "coa" in start_causes:
+                binned_start_cause_data[bin_index][0] += 1
+            elif "rand" in start_causes:
+                binned_start_cause_data[bin_index][1] += 1
+            
+                
+            if "cil" in end_causes:
+                binned_end_cause_data[bin_index][0] += 1
+            else:
+                binned_end_cause_data[bin_index][1] += 1
         
-        protrusion_lifetime_rects = ax.bar(index, averaged_binned_direction_data_relative_to_min, bar_width, alpha=opacity, color='b', error_kw=error_config, label='')
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+    
+    #ax.set_title('start causes given direction')
+    for n, l in enumerate(start_cause_labels):
+        #ax.bar(bin_midpoints, [x[n] for x in binned_start_cause_data], width=delta, bottom=0.0, color=colors.color_list20[n%20], label=l, alpha=0.5)
+        #ax.plot(bin_midpoints, , label=l, ls='', marker=styles[n%3], markerfacecolor=colors.color_list20[n%20], color=colors.color_list20[n%20], markersize=30)
+        thetas = np.zeros(0, dtype=np.float64)
+        rs = np.zeros(0, dtype=np.float64)
+        for bi in range(num_polar_graph_bins):
+            a, b = bins[bi][0], bins[bi][1]
+            if a > b:
+                b = b + 2*np.pi
+                if a > b:
+                    raise StandardError("a is still greater than b!")
+            thetas = np.append(thetas, np.linspace(a, b))
+            rs = np.append(rs, 50*[binned_start_cause_data[bi][n]])
+            
+        thetas = np.append(thetas, [thetas[-1] + 1e-6])
+        rs = np.append(rs, [rs[0]])
+            
+        ax.plot(thetas, rs, label=l, color=colors.color_list20[n%20], ls='', marker='.')
         
-        ax.set_xticks(index + 0.5*bar_width)
+    ax.legend(loc='best')
         
-        ax.set_xticklabels(["[0, $\pi$/2) ({})".format(len(binned_direction_data[0])), "[$\pi$/2, $\pi$] ({})".format(len(binned_direction_data[1]))])
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(8, 8)
+        save_path = os.path.join(save_dir, "start_causes_given_direction" + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
         
-        ax.set_xlabel('Deviation of protrusion from $x$-axis (as multiples of $\pi$)')
-        ax.set_ylabel('Avg. protrusion lifetime as multiple of minimum lifetime')
-        ax.set_title('Protrusion lifetime versus direction')
-        ax.set_ylim(0.8, 1.2*np.max(averaged_binned_direction_data_relative_to_min))
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+    
+    #ax.set_title('end causes given direction')
+    for n, l in enumerate(end_cause_labels):
+        thetas = np.zeros(0, dtype=np.float64)
+        rs = np.zeros(0, dtype=np.float64)
+        for bi in range(num_polar_graph_bins):
+            a, b = bins[bi][0], bins[bi][1]
+            if a > b:
+                b = b + 2*np.pi
+                if a > b:
+                    raise StandardError("a is still greater than b!")
+            thetas = np.append(thetas, np.linspace(a, b))
+            rs = np.append(rs, 50*[binned_end_cause_data[bi][n]])
+            
+        thetas = np.append(thetas, [thetas[-1] + 1e-6])
+        rs = np.append(rs, [rs[0]])    
         
-        if save_dir == None:
-            plt.show()
-        else:
-            fig.set_size_inches(12, 8)
-            save_path = os.path.join(save_dir, "protrusion_lifetime_versus_direction" + ".png")
-            print "save_path: ", save_path
-            fig.savefig(save_path, forward=True)
-            plt.close(fig)
-            plt.close("all")
+        ax.plot(thetas, rs, label=l, color=colors.color_list20[n%20], ls='', marker='.')
+        
+        
+    ax.legend(loc='best')
+        
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(8, 8)
+        save_path = os.path.join(save_dir, "end_causes_given_direction" + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
         
 # ============================================================================
-    
-def graph_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, T, storefile_path, save_dir=None, max_tstep=None):
-    if max_tstep == None:
-        max_tstep = num_timepoints
-        
+
+def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, T, forward_cones, backward_cones, save_dir=None):
     times = np.arange(max_tstep)*T/60.0
-        
-    forward_cone, backward_cone = cu.calculate_cells_protrusion_number_given_direction_per_timestep(num_cells, num_timepoints, num_nodes, storefile_path, max_tstep=max_tstep)
+    num_forward_protrusions = np.zeros(max_tstep, dtype=np.int64)
+    num_backward_protrusions = np.zeros(max_tstep, dtype=np.int64)
     
+    for cell_protrusion_data in zip(protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data):
+        for protrusion_start_end_info, protrusion_lifetime_direction_info in zip(cell_protrusion_data[0], cell_protrusion_data[1]):
+            ni, ti_start, ti_end = protrusion_start_end_info
+            _, direction = protrusion_lifetime_direction_info
+            
+            direction_bin = None
+            for lims in forward_cones:
+                if lims[0] <= direction < lims[1]:
+                    direction_bin = "f"
+                    break
+            if direction_bin != "f":
+                for lims in backward_cones:
+                    if lims[0] <= direction < lims[1]:
+                        direction_bin = "b"
+                        break
+                        
+            if direction_bin == "f":
+                num_forward_protrusions[ti_start:ti_end] += 1
+            elif direction_bin == "b":
+                num_backward_protrusions[ti_start:ti_end] += 1
+                
     fig, ax = plt.subplots()
     
-    ax.plot(times, forward_cone, label='forward')
-    ax.plot(times, backward_cone, label='backward')
+    ax.plot(times, num_forward_protrusions, label='forward')
+    ax.plot(times, num_backward_protrusions, label='backward')
     #ax.plot(times, other_cone, label='other')
     
     ax.legend(loc='best')
     
-    ax.set_ylabel("number of protrusions")
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "num_forward_backward_protrusions_over_time" + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+    
+# ============================================================================
+
+def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_directions, T, forward_cones, backward_cones, save_dir=None):
+    times = np.arange(max_tstep)*T/60.0
+    num_forward_cells = np.zeros(max_tstep, dtype=np.int64)
+    num_backward_cells = np.zeros(max_tstep, dtype=np.int64)
+    
+    for cell_speed_direction_data in all_cell_speeds_and_directions:
+        speeds, directions = cell_speed_direction_data
+        for ti in range(max_tstep):
+            if speeds[ti] > 0.5: #speed has to be greater than 0.5 micrometers per minute
+                direction = directions[ti]
+                direction_bin = None
+                for lims in forward_cones:
+                    if lims[0] <= direction < lims[1]:
+                        direction_bin = "f"
+                        break
+                if direction_bin != "f":
+                    for lims in backward_cones:
+                        if lims[0] <= direction < lims[1]:
+                            direction_bin = "b"
+                            break
+                                
+                if direction_bin == "f":
+                    num_forward_cells[ti] += 1
+                elif direction_bin == "b":
+                    num_backward_cells[ti] += 1
+                
+    fig, ax = plt.subplots()
+    
+    ax.plot(times, num_forward_cells, label='forward')
+    ax.plot(times, num_backward_cells, label='backward')
+    #ax.plot(times, other_cone, label='other')
+    
+    ax.legend(loc='best')
+    
+    ax.set_ylabel("number of cells")
     ax.set_xlabel("time (min.)")
     
     if save_dir == None:
         plt.show()
     else:
         fig.set_size_inches(12, 8)
-        save_path = os.path.join(save_dir, "protrusion_number_given_direction" + ".png")
+        save_path = os.path.join(save_dir, "num_forward_backward_cells_over_time" + ".png")
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
         plt.close("all")
+            
+        
+# =============================================================================
+
+def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, max_normalized_group_area=3.0):
+    
+    fig, ax = plt.subplots()
+    
+    cax = ax.imshow(average_cell_group_area_data, interpolation='none', cmap=plt.get_cmap('gist_heat_r'))
+    ax.set_yticks(np.arange(len(num_cells_to_test)))
+    ax.set_xticks(np.arange(len(test_coas)))
+    ax.set_yticklabels(num_cells_to_test)
+    ax.set_xticklabels(test_coas)
+    # Add colorbar, make sure to specify tick locations to match desired ticklabels
+    upper_lim = np.min([np.max(average_cell_group_area_data), max_normalized_group_area])
+    cbar = fig.colorbar(cax, boundaries=np.linspace(1.0, upper_lim, num=100), ticks=np.linspace(1.0, upper_lim, num=5))
+
+    
+    # Add colorbar, make sure to specify tick locations to match desired ticklabels
+    
+
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "coa_variation_results_{}".format(sub_experiment_number) + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+        
+        
+def graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_coas, average_cell_persistence, num_cells, num_cells_width, num_cells_height, save_dir=None):
+    
+    fig, ax = plt.subplots()
+    
+    cax = ax.imshow(average_cell_persistence, interpolation='none', cmap=plt.get_cmap('gist_heat'))
+    ax.set_yticks(np.arange(len(test_cils)))
+    ax.set_xticks(np.arange(len(test_coas)))
+    ax.set_yticklabels(test_cils)
+    ax.set_xticklabels(test_coas)
+    # Add colorbar, make sure to specify tick locations to match desired ticklabels
+    upper_lim = 1.0
+    cbar = fig.colorbar(cax, boundaries=np.linspace(0, upper_lim, num=100), ticks=np.linspace(0, upper_lim, num=5))
+
+    
+    # Add colorbar, make sure to specify tick locations to match desired ticklabels
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "corridor_migration_vary_coa_cil_({}, {}, {})_{}".format(num_cells, num_cells_width, num_cells_height, sub_experiment_number) + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+    
     
 
     

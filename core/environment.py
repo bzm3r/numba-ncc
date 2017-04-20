@@ -360,7 +360,7 @@ class Environment():
             
 # -----------------------------------------------------------------
             
-    def make_visuals(self, t, visuals_save_dir, animation_settings, animation_obj, produce_animations, produce_graphs):
+    def make_visuals(self, t, visuals_save_dir, animation_settings, animation_obj, produce_animations, produce_graphs, num_polar_graph_bins=20):
         if produce_graphs:
             for cell_index in xrange(self.num_cells):
                 this_cell = self.cells_in_environment[cell_index]
@@ -377,20 +377,27 @@ class Environment():
                 datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                #datavis.graph_run_and_tumble_statistics(self.num_nodes, self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_r_and_t_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
-                #datavis.graph_pre_post_contact_cell_kinematics(self.T/60.0, this_cell.L, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_pre_post_collision_kinematics_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
             
             cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
             
             datavis.graph_cell_velocity_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
-            datavis.graph_protrusion_lifetimes(self.num_cells, self.T, self.storefile_path, save_dir=visuals_save_dir, max_tstep=t)
-            datavis.graph_protrusion_number_given_direction_per_timestep(self.num_cells, self.num_timepoints, self.num_nodes, self.T, self.storefile_path, save_dir=visuals_save_dir, max_tstep=t)
+            protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
+            protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
+            protrusion_start_end_cause_data = [x[2] for x in protrusion_data_per_cell]
+            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=visuals_save_dir, mins_or_secs="mins")
+            datavis.graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=visuals_save_dir)
             
-            if self.num_cells > 2:
-                datavis.graph_delaunay_triangulation_area_over_time(self.num_cells, self.num_timepoints, self.T/60.0, self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
+            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
+            protrusion_node_index_and_tpoint_start_ends = [x[0] for x in protrusion_data_per_cell]
+            datavis.graph_forward_backward_protrusions_per_timestep(t, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, self.T, forward_cones, backward_cones, save_dir=visuals_save_dir)
+            all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
+            datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=visuals_save_dir)
             
-            datavis.graph_centroid_related_data(self.num_cells, self.curr_tpoint, self.T/60.0, cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_group_area_over_time(self.num_cells, t, self.T/60.0, self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir)
+            
+            datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
         
         if produce_animations:
             animation_obj.create_animation_from_data(visuals_save_dir, timestep_to_draw_till=t)
