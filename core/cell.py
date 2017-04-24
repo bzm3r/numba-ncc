@@ -582,14 +582,13 @@ class Cell():
         # RANDOMIZATION
         if self.randomization_scheme == 0:
             if self.next_randomization_event_tpoint == None:
-                if self.check_if_randomization_criteria_met(self.curr_tpoint):
-                    self.next_randomization_event_tpoint = self.calculate_when_randomization_event_occurs()
+                self.next_randomization_event_tpoint = self.calculate_when_randomization_event_occurs()
                         
             if new_tpoint == self.next_randomization_event_tpoint:
                 self.next_randomization_event_tpoint = None
                 
                 # run and tumble: cell loses polarity approximately after T seconds
-                self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, tpoint=new_tpoint)
+                self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, None, tpoint=new_tpoint)
                 
                 self.system_history[next_tstep_system_history_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
                     

@@ -12,7 +12,7 @@ import copy
 # --------------------------------------------------------------------
 BEST_UPDATES = []
 closeness_dist_squared_criteria = (0.5e-6)**2
-STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 20.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e5), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 9.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0)])
+STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 20.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e100), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 9.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0)])
 
 
 def score_function(min_cutoff, max_cutoff, x):
@@ -337,12 +337,10 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
         
         polarization_score_global, polarization_score_at_SBPBT, speed_score = scores_and_updates_no_randomization[n][0]
  
-        difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
+        #difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
         
-        difference_factor = 1. - score_function(0.0, 1.0, np.abs(difference_between_pg_and_pat))
-        combined_score_no_randomization = difference_factor*polarization_score_global*speed_score
-        
-        print "pgs, pas, d, vs. c: {}, {}, {}, {}, {}".format(polarization_score_global, polarization_score_at_SBPBT, difference_factor, speed_score, combined_score_no_randomization)
+        #difference_factor = 1. - score_function(0.0, 1.0, np.abs(difference_between_pg_and_pat))
+        combined_score_no_randomization = polarization_score_global#difference_factor*polarization_score_global*speed_score
         
         if combined_score_no_randomization > new_best_score:
             print "possible new score: {}".format(combined_score_no_randomization)
@@ -757,17 +755,16 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
     
 if __name__ == '__main__':
     
-    moddable_parameters = [('kgtp_rac_multiplier', 10.0, 40.0, 1.0),
- ('kgtp_rho_multiplier', 10.0, 40.0, 1.0),
+    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
+ ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
  ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
  ('kdgtp_rho_multiplier', 1.0, 40.0, 1.0),
- ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.05),
- ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.05),
+ ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.01),
+ ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.01),
  ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),
  ('kgtp_rho_autoact_multiplier', 1.0, 300.0, 5.0),
  ('kdgtp_rac_mediated_rho_inhib_multiplier', 100., 2000., 100.),
- ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.), 
- ('tension_mediated_rac_inhibition_half_strain', 0.03, 0.1, 0.005), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
+ ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.)]
     
 #    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
 # ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),

@@ -97,14 +97,14 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     for i in range(num_nodes):
         sum_rho = sum_rho + rho_membrane_active[i]
         
-    avg_rac = sum_rac/num_nodes
-    avg_rho = sum_rho/num_nodes
+#    avg_rac = sum_rac/num_nodes
+#    avg_rho = sum_rho/num_nodes
     
-    if sum_rac > 0.4 or avg_rac < 1e-6:
-        return 0.0
-    
-    if sum_rho > 0.4 or avg_rho < 1e-6:
-        return 0.0
+#    if sum_rac > 0.4 or avg_rac < 1e-6:
+#        return 0.0
+#    
+#    if sum_rho > 0.4 or avg_rho < 1e-6:
+#        return 0.0
     
     significant_rac = np.zeros(num_nodes, dtype=np.int64)
     normalized_rac = rac_membrane_active/max_rac
@@ -819,9 +819,44 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, subexperime
     distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
     net_distance = np.sum(distance_per_tstep)
     
-    persistence = net_displacement_mag/net_distance
-    
+    if net_distance > 0.0:
+        persistence = net_displacement_mag/net_distance
+    else:
+        persistence = np.nan
+        
     return (subexperiment_index, rpt_number, cell_centroids, persistence)
+
+@nb.jit(nopython=True)
+def get_min_max_x_centroid_per_timestep(all_cell_centroids):
+    min_x_centroid_per_timestep = np.zeros((all_cell_centroids.shape[1], 2), dtype=np.float64)
+    max_x_centroid_per_timestep = np.zeros((all_cell_centroids.shape[1], 2), dtype=np.float64)
+    
+    num_cells = all_cell_centroids.shape[0]
+    num_timesteps = all_cell_centroids.shape[1]
+    
+    for ti in range(num_timesteps):
+        min_x_centroid_index = 0
+        max_x_centroid_index = 0
+        min_x_value = 0.0
+        max_x_value = 0.0
+        
+        for ci in range(num_cells):
+            this_x_value = all_cell_centroids[ci][ti][0]
+            if ci == 0:
+                min_x_value = this_x_value
+                max_x_value = this_x_value
+            else:
+                if this_x_value < min_x_value:
+                    min_x_centroid_index = ci
+                    min_x_value = this_x_value
+                if this_x_value > max_x_value:
+                    max_x_centroid_index = ci
+                    max_x_value = this_x_value
+                    
+        min_x_centroid_per_timestep[ti] = all_cell_centroids[min_x_centroid_index][ti]
+        max_x_centroid_per_timestep[ti] = all_cell_centroids[max_x_centroid_index][ti]
+    
+    return min_x_centroid_per_timestep, max_x_centroid_per_timestep
 
 def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number):
     # calculate centroid positions
@@ -838,11 +873,18 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
         net_distance = np.sum(distance_per_tstep)
         
-        persistence = net_displacement_mag/net_distance
+        if net_distance > 0.0:
+            persistence = net_displacement_mag/net_distance
+        else:
+            persistence = np.nan
         
         centroids_and_persistences.append((cell_centroids, persistence))
         
-    return centroids_and_persistences 
+    all_cell_centroids = np.array([x[0] for x in centroids_and_persistences])
+    min_x_centroid_per_timestep, max_x_centroid_per_timestep = get_min_max_x_centroid_per_timestep(all_cell_centroids)
+    group_centroid_per_timestep = np.average(all_cell_centroids, axis=0)
+        
+    return min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_per_timestep, centroids_and_persistences 
 
 # ===========================================================================
 
@@ -1168,7 +1210,7 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
                 convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
             else:
                 convex_hull_areas_per_tstep.append(np.nan)
-        return convex_hull_areas_per_tstep/convex_hull_areas_per_tstep[0]
+        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0]
 
         
 #    

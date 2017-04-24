@@ -669,6 +669,56 @@ def present_collated_cell_motion_data(extracted_results, experiment_dir, time_in
     fig.savefig(save_path, forward=True)
     plt.close(fig)
     plt.close("all")
+
+#timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_per_timestep_per_repeat, experiment_dir, total_time_in_hours, group_width=num_cells_width*cell_diameter
+def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_repeat, max_x_centroid_per_tstep_per_repeat, group_centroid_per_tstep_per_repeat, save_dir, total_time_in_hours):
+    timepoints = np.arange(group_centroid_per_tstep_per_repeat[0].shape[0])*T/60.0
+    
+    fig_simple, ax_simple = plt.subplots()
+    fig_full, ax_full = plt.subplots()
+    
+    for repeat_number in range(len(group_centroid_per_tstep_per_repeat)):
+        max_x_centroid_per_tstep = max_x_centroid_per_tstep_per_repeat[repeat_number]
+        min_x_centroid_per_tstep = min_x_centroid_per_tstep_per_repeat[repeat_number]
+        
+        group_width = max_x_centroid_per_tstep[0][0] - min_x_centroid_per_tstep[0][0]
+        
+        group_centroid_per_tstep = group_centroid_per_tstep_per_repeat[repeat_number]
+
+        relative_group_centroid_per_tstep = group_centroid_per_tstep - group_centroid_per_tstep[0]
+        relative_max_centroid_per_tstep = max_x_centroid_per_tstep - group_centroid_per_tstep[0]
+        relative_min_centroid_per_tstep = min_x_centroid_per_tstep - group_centroid_per_tstep[0]
+        
+        
+        normalized_relative_group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]/group_width
+        normalized_relative_max_centroid_x_coords = relative_max_centroid_per_tstep[:,0]/group_width
+        normalized_relative_min_centroid_x_coords = relative_min_centroid_per_tstep[:,0]/group_width
+        
+        ax_simple.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+        ax_full.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+        ax_full.plot(timepoints, normalized_relative_max_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
+        ax_full.plot(timepoints, normalized_relative_min_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
+        
+    ax_simple.set_ylabel("group centroid position (normalized by initial group width)")
+    ax_simple.set_xlabel("time (min.)")
+    ax_full.set_ylabel("position (normalized by initial group width)")
+    ax_full.set_xlabel("time (min.)")
+    
+    ax_simple.grid(which=u'both')
+    ax_full.grid(which=u'both')
+    
+    if save_dir == None:
+        plt.show()
+    else:
+        fig_simple.set_size_inches(12, 8)
+        fig_simple.savefig(os.path.join(save_dir, "collated_group_centroid_drift_simple.png"), forward=True)
+        plt.close(fig_simple)
+        
+        fig_full.set_size_inches(12, 8)
+        fig_full.savefig(os.path.join(save_dir, "collated_group_centroid_drift_full.png"), forward=True)
+        plt.close(fig_full)
+        
+        plt.close("all")
             
 # ============================================================================
 
@@ -703,7 +753,7 @@ def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, 
     
     average_lifetimes = [np.average(x) for x in binned_direction_data]
     ax.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
-    
+    ax.set_ylabel('min.', labelpad=-100, rotation=0)
     ax.set_title('Average protrusion lifetime given direction')
         
     if save_dir == None:
@@ -923,14 +973,14 @@ def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test
     
     fig, ax = plt.subplots()
     
-    cax = ax.imshow(average_cell_group_area_data, interpolation='none', cmap=plt.get_cmap('gist_heat_r'))
+    cax = ax.imshow(average_cell_group_area_data, interpolation='none', cmap=plt.get_cmap('viridis_r'))
     ax.set_yticks(np.arange(len(num_cells_to_test)))
     ax.set_xticks(np.arange(len(test_coas)))
     ax.set_yticklabels(num_cells_to_test)
     ax.set_xticklabels(test_coas)
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
-    upper_lim = np.min([np.max(average_cell_group_area_data), max_normalized_group_area])
-    cbar = fig.colorbar(cax, boundaries=np.linspace(1.0, upper_lim, num=100), ticks=np.linspace(1.0, upper_lim, num=5))
+    cbar = fig.colorbar(cax, boundaries=np.linspace(1.0, max_normalized_group_area, num=100), ticks=np.linspace(1.0, max_normalized_group_area, num=5))
+    cax.set_clim(1.0, max_normalized_group_area)
 
     
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
@@ -951,16 +1001,15 @@ def graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_c
     
     fig, ax = plt.subplots()
     
-    cax = ax.imshow(average_cell_persistence, interpolation='none', cmap=plt.get_cmap('gist_heat'))
+    bin_boundaries = np.linspace(0.5, 1.0, num=100)
+    cax = ax.imshow(average_cell_persistence, interpolation='none', cmap=plt.get_cmap('viridis'))      
+    cbar = fig.colorbar(cax, boundaries=bin_boundaries, ticks=np.linspace(0.5, 1.0, num=5))
+    cax.set_clim(0.5, 1.0)
     ax.set_yticks(np.arange(len(test_cils)))
     ax.set_xticks(np.arange(len(test_coas)))
     ax.set_yticklabels(test_cils)
     ax.set_xticklabels(test_coas)
-    # Add colorbar, make sure to specify tick locations to match desired ticklabels
-    upper_lim = 1.0
-    cbar = fig.colorbar(cax, boundaries=np.linspace(0, upper_lim, num=100), ticks=np.linspace(0, upper_lim, num=5))
-
-    
+     
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
     if save_dir == None:
         plt.show()
@@ -971,6 +1020,8 @@ def graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_c
         fig.savefig(save_path, forward=True)
         plt.close(fig)
         plt.close("all")
+        
+
     
     
 

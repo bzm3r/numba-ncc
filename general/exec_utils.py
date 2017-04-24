@@ -9,6 +9,7 @@ from __future__ import division
 import core.parameterorg as parameterorg
 import numpy as np
 import visualization.datavis as datavis
+import visualization.animator as animator
 import os
 import time
 import copy
@@ -203,6 +204,7 @@ def get_pickled_env_path(env_dir):
     
 # ========================================================================
 
+
 def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
     
     for repeat_number in xrange(num_experiment_repeats):
@@ -292,7 +294,7 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
     
 # =======================================================================
 
-def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict,  environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True):
+def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_visualizations=False):
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
@@ -324,6 +326,33 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                             an_environment.extend_simulation_runtime(new_num_timesteps)
                             if (an_environment.simulation_complete()):
                                 print "Simulation has been completed. Continuing..."
+                                if remake_visualizations == True:
+                                    
+                                    images_global_dir = os.path.join(environment_dir, "images_global")
+                                    if os.path.exists(images_global_dir):
+                                        shutil.rmtree(images_global_dir)
+                                        
+                                    ani_sets = an_environment.animation_settings
+                                    ani_sets.update(animation_settings)
+                                    curr_tpoint = an_environment.curr_tpoint
+                                    visuals_save_dir = os.path.join(environment_dir, "T={}".format(curr_tpoint + 1))
+                                    
+                                    if os.path.exists(visuals_save_dir):
+                                        shutil.rmtree(visuals_save_dir)
+                                    
+                                    cell_group_indices = []
+                                    cell_Ls = []
+                                    cell_etas = []
+                                    cell_skip_dynamics = []
+                
+                                    for a_cell in an_environment.cells_in_environment:
+                                        cell_group_indices.append(a_cell.cell_group_index)
+                                        cell_Ls.append(a_cell.L/1e-6)
+                                        cell_etas.append(a_cell.eta)
+                                        cell_skip_dynamics.append(a_cell.skip_dynamics)
+                    
+                                    animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
+                                    an_environment.make_visuals(curr_tpoint + 1, visuals_save_dir, ani_sets, animation_object, True, True)
                                 del an_environment
                                 continue
                             

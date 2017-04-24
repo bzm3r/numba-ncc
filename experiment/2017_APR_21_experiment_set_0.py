@@ -19,7 +19,7 @@ randomization_time_variance_factor_m = 0.1
 
 max_timepoints_on_ram = 100
 seed = 2836
-allowed_drift_before_geometry_recalc = 20.0
+allowed_drift_before_geometry_recalc = 40.0
 
 parameter_dict.update([('kgtp_rac_multiplier', 5.0),
   ('kgtp_rho_multiplier', 23.0),
@@ -34,7 +34,142 @@ parameter_dict.update([('kgtp_rac_multiplier', 5.0),
   ('tension_mediated_rac_inhibition_half_strain', 0.095000000000000001),
   ('stiffness_edge', 8000.0), ('randomization_magnitude', 10.0), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_node_percentage', 0.45)])
 
-sub_experiment_number = 0
+#sub_experiment_number = 0
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=16.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+#sub_experiment_number = 1
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=40.0, default_coa=16.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+#sub_experiment_number = 2
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=2.0, default_coa=16.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+#sub_experiment_number = 3
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=10.0, default_coa=16.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+#
+#sub_experiment_number = 4
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=20.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+
+#sub_experiment_number = 5
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=12.0, default_cil=120.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+#
+#sub_experiment_number = 6
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=12.0, default_cil=80.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+
+#sub_experiment_number = 7
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=12.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+#sub_experiment_number = 8
+#
+#ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=8.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+"""
+RhoA doesn't last for as long after CIL happens...what if we give it a bit of a kick?
+"""
+
+parameter_dict.update([('kgtp_rac_multiplier', 5.0),
+  ('kgtp_rho_multiplier', 23.0),
+  ('kdgtp_rac_multiplier', 40.0),
+  ('kdgtp_rho_multiplier', 40.0),
+  ('threshold_rac_activity_multiplier', 0.35000000000000014),
+  ('threshold_rho_activity_multiplier', 0.25000000000000006),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 0.75*170.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 900.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1900.0),
+  ('tension_mediated_rac_inhibition_half_strain', 0.095000000000000001),
+  ('stiffness_edge', 8000.0), ('randomization_magnitude', 10.0), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_node_percentage', 0.45)])
+
+sub_experiment_number = 9
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=8.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+"""
+Last try seemed somewhat successful. What if we give Rho more of a boost?
+"""
+
+parameter_dict.update([('kgtp_rac_multiplier', 5.0),
+  ('kgtp_rho_multiplier', 23.0),
+  ('kdgtp_rac_multiplier', 40.0),
+  ('kdgtp_rho_multiplier', 40.0),
+  ('threshold_rac_activity_multiplier', 0.35000000000000014),
+  ('threshold_rho_activity_multiplier', 0.25000000000000006),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 170.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 900.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1900.0),
+  ('tension_mediated_rac_inhibition_half_strain', 0.095000000000000001),
+  ('stiffness_edge', 8000.0), ('randomization_magnitude', 10.0), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_node_percentage', 0.45)])
+
+sub_experiment_number = 10
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=8.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+"""
+Wow! What a change! What if we reduce kgtp_rho_autoact slightly?
+"""
+
+parameter_dict.update([('kgtp_rac_multiplier', 5.0),
+  ('kgtp_rho_multiplier', 23.0),
+  ('kdgtp_rac_multiplier', 40.0),
+  ('kdgtp_rho_multiplier', 40.0),
+  ('threshold_rac_activity_multiplier', 0.35000000000000014),
+  ('threshold_rho_activity_multiplier', 0.25000000000000006),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 0.9*170.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 900.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1900.0),
+  ('tension_mediated_rac_inhibition_half_strain', 0.095000000000000001),
+  ('stiffness_edge', 8000.0), ('randomization_magnitude', 10.0), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_node_percentage', 0.45)])
+
+sub_experiment_number = 11
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=8.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+"""
+Increasing COA slightly, given what happened in the last experiment.
+"""
+
+parameter_dict.update([('kgtp_rac_multiplier', 5.0),
+  ('kgtp_rho_multiplier', 23.0),
+  ('kdgtp_rac_multiplier', 40.0),
+  ('kdgtp_rho_multiplier', 40.0),
+  ('threshold_rac_activity_multiplier', 0.35000000000000014),
+  ('threshold_rho_activity_multiplier', 0.25000000000000006),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 0.9*170.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 900.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1900.0),
+  ('tension_mediated_rac_inhibition_half_strain', 0.095000000000000001),
+  ('stiffness_edge', 8000.0), ('randomization_magnitude', 10.0), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_node_percentage', 0.45)])
+
+sub_experiment_number = 12
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=12.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=12.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=1)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=16.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=1)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=20.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=1)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=20.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=3, num_cells_height=1)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=20.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=2)
+
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=4605, allowed_drift_before_geometry_recalc=20.0, default_coa=28.0, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=2000, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=2)
+
+
 
 #ets.coa_factor_variation_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6.0, timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=2836, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0], default_cil=80.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_to_test=[2, 4, 9, 16, 25, 49], skip_low_coa=True)
 
@@ -42,11 +177,15 @@ sub_experiment_number = 0
 
 #ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=32.0, default_cil=120.0, num_experiment_repeats=20, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=1)
 
-#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=3, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
+#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
 
-#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
+#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=3, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
 
-ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[4.0, 8.0, 12.0, 16.0, 20.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=3, num_cells_height=5, auto_calculate_num_cells=True, run_experiments=True)
+#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
+
+#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[24.0, 28.0, 32.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=6, num_cells_height=1, auto_calculate_num_cells=True, run_experiments=True)
+
+#ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[4.0, 8.0, 12.0, 16.0, 20.0], test_cils=[120.0], num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=5, num_cells_height=3, auto_calculate_num_cells=True, run_experiments=True)
 
 #ets.corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_coas=[16.0, 20.0, 24.0, 28.0], test_cils=[40.0, 60.0, 80.0, 120.0], num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=2, num_cells_height=2, auto_calculate_num_cells=True)
 

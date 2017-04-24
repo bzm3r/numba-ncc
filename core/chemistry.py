@@ -132,14 +132,14 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         else:
             kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-#        i_plus1 = (i + 1)%num_nodes
-#        i_minus1 = (i - 1)%num_nodes
-#        
-#        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        i_plus1 = (i + 1)%num_nodes
+        i_minus1 = (i - 1)%num_nodes
+        
+        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]*(1.0 - smooth_factor)
-#        if cil_factor > 1.0:
-#            coa_signal = 0.0
+        if cil_factor > 1.0:
+            coa_signal = 0.0
             
         result[i] = (coa_signal + randomization_factors[i])*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1)
         

@@ -18,7 +18,7 @@ ys = [2.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0]
 data = np.array([[ 1.13708228,  1.15775943,  1.09909963,  1.07444652,  1.15186194,
          1.24467625,  1.08018951,  1.09650866,  1.10843243],
        [ 1.4868342 ,  1.23499967,  1.27789272,  1.33407617,  1.21617012,
-         1.35789445,  3.0,  1.4388506 ,  1.45982506],
+         1.35789445,  1.08018951,  1.4388506 ,  1.45982506],
        [ 1.2299272 ,  1.15364873,  1.16565969,  1.14922818,  1.21443923,
          1.25054165,  1.21660854,  1.22005011,  1.21774616],
        [ 1.138349  ,  1.10882325,  1.10547519,  1.16245244,  1.15801007,
@@ -26,7 +26,7 @@ data = np.array([[ 1.13708228,  1.15775943,  1.09909963,  1.07444652,  1.1518619
        [ 1.10217415,  1.08730538,  1.09861504,  1.10073579,  1.13955315,
          1.08479129,  1.11631074,  1.11863382,  1.14388193],
        [ 1.06222266,  1.07525101,  1.05918822,  1.07566021,  1.08318263,
-         1.08461649,  1.08750276,  1.08947182,  1.10528072]])
+         1.08461649,  1.08750276,  1.08947182,  6.0]])
 
 def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, max_normalized_group_area=3.0):
     
@@ -38,8 +38,9 @@ def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test
     ax.set_yticklabels(num_cells_to_test)
     ax.set_xticklabels(test_coas)
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
-    upper_lim = np.min([np.max(average_cell_group_area_data), max_normalized_group_area])
-    cbar = fig.colorbar(cax, boundaries=np.linspace(1.0, upper_lim, num=100), ticks=np.linspace(1.0, upper_lim, num=5))
+    cbar = fig.colorbar(cax, boundaries=np.linspace(1.0, max_normalized_group_area, num=100), ticks=np.linspace(1.0, max_normalized_group_area, num=5))
+    cax.set_clim(1.0, max_normalized_group_area)
+    
 
     
     # Add colorbar, make sure to specify tick locations to match desired ticklabels

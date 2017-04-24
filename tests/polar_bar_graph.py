@@ -22,4 +22,5 @@ for r,bar in zip(radii, bars):
     bar.set_facecolor( cm.jet(r/10.))
     bar.set_alpha(0.5)
 
+
 plt.show()
