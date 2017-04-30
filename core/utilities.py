@@ -97,15 +97,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
     for i in range(num_nodes):
         sum_rho = sum_rho + rho_membrane_active[i]
         
-#    avg_rac = sum_rac/num_nodes
-#    avg_rho = sum_rho/num_nodes
-    
-#    if sum_rac > 0.4 or avg_rac < 1e-6:
-#        return 0.0
-#    
-#    if sum_rho > 0.4 or avg_rho < 1e-6:
-#        return 0.0
-    
+
     significant_rac = np.zeros(num_nodes, dtype=np.int64)
     normalized_rac = rac_membrane_active/max_rac
     for i in range(num_nodes):
@@ -155,7 +147,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         if front_width_rating > 1.0:
             front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
             
-        return (front_width_rating)*rac_amount_score*rho_amount_score
+        return front_width_rating*rac_amount_score*rho_amount_score#(front_width_rating)*rac_amount_score*rho_amount_score
     
     elif num_rac_fronts > 1:
         worst_distance_between_fronts = (num_nodes -np.sum(front_widths))/float(num_rac_fronts)
@@ -196,7 +188,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         if front_width_rating > 1.0:
             front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
             
-        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score#combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
         
     return 0.0
 # ==============================================================================
@@ -242,36 +234,32 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
     
     cell_centroids = centroids_per_tstep*a_cell.L/1e-6
     num_tsteps = cell_centroids.shape[0]
+
+    net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]
+    net_displacement_mag = np.linalg.norm(net_displacement)
+
+    distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
+    net_distance = np.sum(distance_per_tstep)
     
-    rougher_cell_centroids = cell_centroids[::30]
+    persistence = net_displacement_mag/net_distance
     
-    movement_steps = rougher_cell_centroids[1:] - rougher_cell_centroids[:-1]
-    movement_step_mags = np.linalg.norm(movement_steps, axis=1)
+    velocities = distance_per_tstep*(60.0/a_cell.T)
+    average_velocity = np.average(velocities)
     
-    total_distance_travelled = np.sum(movement_step_mags)
-        
-    if total_distance_travelled < 10.0:
-        velocity_score = 0.0
-        persistence_score = 0.0
+    persistence_score = 1.0 - score_function(0.5, 1.0, persistence)
+    if velocity_score > 3.5:
+        velocity_score = 1.0 - score_function(3.5, 5.0, velocity_score)
     else:
-        net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]
-        net_displacement_mag = np.linalg.norm(net_displacement)
+        velocity_score = score_function(0.0, 2.5, average_velocity)
+        
+    avg_strain = np.average(np.average(a_cell.system_history[:, :, parameterorg.local_strains_index], axis=1))
     
-        distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
-        net_distance = np.sum(distance_per_tstep)
-        
-        persistence = net_displacement_mag/net_distance
-        
-        velocities = distance_per_tstep*(60.0/a_cell.T)
-        average_velocity = np.average(velocities)
-        
-        persistence_score = 1.0 - score_function(0.5, 1.0, persistence)
-        if velocity_score > 3.5:
-            velocity_score = 1.0 - score_function(3.5, 5.0, velocity_score)
-        else:
-            velocity_score = score_function(0.0, 2.5, average_velocity)
+    strain_score = 1.0
     
-    return polarity_score, persistence_score, velocity_score
+    if strain_score > 0.1:
+        strain_score = 1.0 - score_function(0.1, 0.2, avg_strain)
+    
+    return polarity_score, persistence_score, velocity_score, strain_score
 
 def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_cell, should_be_polarized_by_in_hours=0.5):
     T = a_cell.T
@@ -294,27 +282,23 @@ def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_c
     
     cell_centroids = centroids_per_tstep*a_cell.L/1e-6
     num_tsteps = cell_centroids.shape[0]
+
+    velocities = (cell_centroids[1:] - cell_centroids[:num_tsteps-1])*(60.0/a_cell.T)
+    speeds = np.linalg.norm(velocities, axis=1)
+    avg_speed = np.average(speeds)
     
-    rougher_cell_centroids = cell_centroids[::30]
-    
-    movement_steps = rougher_cell_centroids[1:] - rougher_cell_centroids[:-1]
-    movement_step_mags = np.linalg.norm(movement_steps, axis=1)
-    
-    total_distance_travelled = np.sum(movement_step_mags)
-        
-    if total_distance_travelled < 10.0:
-        speed_score = 0.0
+    if avg_speed > 3.5:
+        speed_score = 1.0 - score_function(3.5, 5.0, avg_speed)
     else:
-        velocities = (cell_centroids[1:] - cell_centroids[:num_tsteps-1])*(60.0/a_cell.T)
-        speeds = np.linalg.norm(velocities, axis=1)
-        avg_speed = np.average(speeds)
-        
-        if avg_speed > 3.5:
-            speed_score = 1.0 - score_function(3.5, 5.0, avg_speed)
-        else:
-            speed_score = score_function(0.0, 2.5, avg_speed)
+        speed_score = score_function(0.0, 2.5, avg_speed)
     
-    return polarity_score_global, polarity_score_at_SBPBP_tstep, speed_score
+    avg_strain = np.average(np.average(a_cell.system_history[(should_be_polarized_by_tstep + 1):, :, parameterorg.local_strains_index], axis=1))
+    
+    strain_score = 1.0
+    if strain_score > 0.1:
+        strain_score = 1.0 - score_function(0.1, 0.2, avg_strain)
+    
+    return polarity_score_global, polarity_score_at_SBPBP_tstep, speed_score, strain_score
     
 def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)

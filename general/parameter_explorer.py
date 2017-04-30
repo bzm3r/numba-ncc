@@ -12,7 +12,22 @@ import copy
 # --------------------------------------------------------------------
 BEST_UPDATES = []
 closeness_dist_squared_criteria = (0.5e-6)**2
-STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 20.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e100), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 9.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0)])
+
+STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 1.0), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 30.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e5), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 10.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0)])
+
+
+STANDARD_PARAMETER_DICT.update([('kgtp_rac_multiplier', 1.8*10.0),
+  ('kgtp_rho_multiplier', 0.75*10.0),
+  ('kdgtp_rac_multiplier', 1.5*10.),
+  ('kdgtp_rho_multiplier', 3.5*10.0),
+  ('threshold_rac_activity_multiplier', 0.2),
+  ('threshold_rho_activity_multiplier', 0.2),
+  ('kgtp_rac_autoact_multiplier', 0.85*250.0),
+  ('kgtp_rho_autoact_multiplier', 0.5*250.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0),
+  ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 6.5), ('max_force_rac', 0.1*10e3), ('eta', 0.1*1e5), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 4.0), ('randomization_node_percentage', 0.25), ('stiffness_edge', 2500.)])
+
 
 
 def score_function(min_cutoff, max_cutoff, x):
@@ -135,6 +150,43 @@ def generate_random_updates_based_on_current_state(num_new_updates, parameter_di
 #=====================================================================
     
 
+def generate_random_update_based_on_current_state_simulated_annealing_variant(parameter_dict, moddable_parameter_labels, mod_deltas, mod_min_max):
+    parameter_updates = [[]]
+    
+    for i in range(len(moddable_parameter_labels)):
+        mpl = moddable_parameter_labels[i]
+        old_value = parameter_dict[mpl]
+        if np.random.rand() < 0.5:
+            delta = mod_deltas[i]
+            this_min_max = mod_min_max[i]
+            
+            minj, maxj = this_min_max
+            
+            if old_value == minj:
+                sign_choice = [1]
+            elif old_value == maxj:
+                sign_choice = [-1]
+            else:
+                sign_choice = [-1, 1]
+                
+            for n in range(1):
+                new_value = old_value + np.random.choice(sign_choice)*delta
+                
+                if new_value > maxj:
+                    new_value = maxj
+                elif new_value < minj:
+                    new_value = minj
+                    
+                parameter_updates[n].append((mpl, new_value))
+        else:
+            for n in range(1):
+                parameter_updates[n].append((mpl, old_value))
+            
+    return parameter_updates
+
+#=====================================================================
+    
+
 def generate_comprehensive_exploration_updates_based_on_current_given_update(given_update, moddable_parameter_labels, mod_deltas, mod_min_max, num_trials_to_generate_per_label=3):
     parameter_updates = []
     
@@ -183,14 +235,11 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_a
     for i, u in enumerate(trial_updates):
         for n in range(num_experiment_repeats):
             if scores_and_updates_without_randomization != None:
-                if scores_and_updates_without_randomization[i][0][0] > 0.0 and scores_and_updates_without_randomization[i][0][2] > 0.0:
-                    trial_dict = copy.deepcopy(current_dict)
-                    trial_dict.update(u)
-                    if not randomization:
-                        trial_dict.update([('randomization_scheme', None)])
-                    task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours, seed=seeds[n]))
-                else:
-                    task_list.append(None)
+                trial_dict = copy.deepcopy(current_dict)
+                trial_dict.update(u)
+                if not randomization:
+                    trial_dict.update([('randomization_scheme', None)])
+                task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours, seed=seeds[n]))
             else:
                 trial_dict = copy.deepcopy(current_dict)
                 trial_dict.update(u)
@@ -223,7 +272,7 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_a
             if rc != None:
                 scores.append(cu.calculate_parameter_exploration_score_from_cell(rc, significant_difference=0.2, weigh_by_timepoint=False))
             else:
-                scores.append([0.001, 0.001, 0.001])
+                scores.append([0.001, 0.001, 0.001, 0.001])
         
         scores = np.average(scores, axis=0)
         scores_and_updates.append((scores, u))
@@ -280,7 +329,7 @@ def run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict
             if rc != None:
                 scores.append(cu.calculate_parameter_exploration_score_from_cell_no_randomization_variant(rc, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours))
             else:
-                scores.append([0.001, 0.001, 0.001])
+                scores.append([0.001, 0.001, 0.001, 0.001])
         
         scores = np.average(scores, axis=0)
         scores_and_updates.append((scores, u))
@@ -299,19 +348,18 @@ def rate_results_and_find_best_update(current_best_score, current_dict, current_
             u = scores_and_updates_no_randomization[n][1]
         else:
             u = scores_and_updates_with_randomization[n][1]
-            
+        
         score_without_randomization = np.array(scores_and_updates_no_randomization[n][0])
+        polarization_score_no_randomization, persistence_score_no_randomization, speed_score_no_randomization, strain_score_no_randomization = score_without_randomization
         
-        polarization_score_no_randomization, speed_score_no_randomization = score_without_randomization[0], score_without_randomization[2]
-        
-        polarization_score_no_randomization = score_function(0.0, 0.7, polarization_score_no_randomization)
-        combined_score_no_randomization = polarization_score_no_randomization*speed_score_no_randomization
+        combined_score_no_randomization = polarization_score_no_randomization*speed_score_no_randomization*strain_score_no_randomization
         
         combined_score = combined_score_no_randomization
         score_with_randomization = np.array([-1, -1, -1])
         if scores_and_updates_with_randomization != None:
             score_with_randomization = np.array(scores_and_updates_with_randomization[n][0])
-            combined_score_with_randomization = score_with_randomization[0]*score_with_randomization[1]
+            polarization_score_with_randomization, persistence_score_with_randomization, speed_score_with_randomization, strain_score_with_randomization = score_with_randomization
+            combined_score_with_randomization = polarization_score_with_randomization*persistence_score_with_randomization*strain_score_with_randomization*speed_score_with_randomization
             combined_score = combined_score*combined_score_with_randomization #np.average([combined_score_with_randomization, combined_score_no_randomization])
         
         if combined_score > new_best_score:
@@ -335,12 +383,12 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
     for n in range(len(scores_and_updates_no_randomization)):
         u = scores_and_updates_no_randomization[n][1]
         
-        polarization_score_global, polarization_score_at_SBPBT, speed_score = scores_and_updates_no_randomization[n][0]
+        polarization_score_global, polarization_score_at_SBPBT, speed_score, strain_score = scores_and_updates_no_randomization[n][0]
  
         #difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
         
         #difference_factor = 1. - score_function(0.0, 1.0, np.abs(difference_between_pg_and_pat))
-        combined_score_no_randomization = polarization_score_global#difference_factor*polarization_score_global*speed_score
+        combined_score_no_randomization = polarization_score_global*speed_score*strain_score#difference_factor*polarization_score_global*speed_score
         
         if combined_score_no_randomization > new_best_score:
             print "possible new score: {}".format(combined_score_no_randomization)
@@ -356,7 +404,7 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
 #=====================================================================
     
 
-def parameter_explorer_polarization_wanderer(modification_program, required_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, num_experiment_repeats_no_randomization=1, total_time_in_hours=2., seed=None, sequential=False, max_loops=100):
+def parameter_explorer_polarization_wanderer(modification_program, required_score, num_new_dicts_to_generate=8, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=1.5, seed=None, sequential=False, max_loops=100, initial_update=None):
     
     global BEST_UPDATES
     
@@ -372,7 +420,12 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
-    current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict)
+    
+    if initial_update == None:
+        current_best_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict)
+    else:
+        current_best_update = initial_update
+        
     current_dict.update(current_best_update)
     
     default_dict_has_randomization_scheme = False
@@ -396,6 +449,11 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         seeds = np.random.random_integers(0, 10000, size=num_experiment_repeats)
     elif seed == None:
         seeds = [None]*num_experiment_repeats
+    elif type(seed) == list:
+        if len(seed) != num_experiment_repeats:
+            raise StandardError("Not enough seeds given!")
+        else:
+            seeds = seed
     
     while not stop_criterion_met:
         improvement = False
@@ -404,11 +462,11 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         print "preparing modded dicts..."
         trial_updates = generate_random_updates_based_on_current_state(num_new_dicts_to_generate, current_dict, mod_labels, mod_deltas, mod_min_max)
         
-        scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats_no_randomization, seeds=seeds, total_time_in_hours=total_time_in_hours)
+        scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_no_randomization)
         
         scores_and_updates_with_randomization = None
         if default_dict_has_randomization_scheme:
-            scores_and_updates_with_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=True, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours, scores_and_updates_without_randomization=scores_and_updates_no_randomization)
+            scores_and_updates_with_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=True, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_with_randomization, scores_and_updates_without_randomization=scores_and_updates_no_randomization)
             
         
         current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES, scores_and_updates_with_randomization=scores_and_updates_with_randomization)
@@ -469,6 +527,11 @@ def parameter_explorer_polarization_wanderer_no_randomization_variant(modificati
         seeds = np.random.random_integers(0, 10000, size=num_experiment_repeats)
     elif seed == None:
         seeds = [None]*num_experiment_repeats
+    elif type(seed) == list:
+        if len(seed) != num_experiment_repeats:
+            raise StandardError("Not enough seeds given!")
+        else:
+            seeds = seed
     
     while not stop_criterion_met:
         improvement = False
@@ -751,42 +814,193 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
         print "======================================="
         
     return ordered_update_list
+
+# =============================================================================
+def calculate_simulated_annealing_acceptance_probability(new_score, current_score, temperature, max_temperature):
+    
+    c = np.log(0.5)/(-1.*0.1)
+    
+
+    delta_e = -1*(new_score - current_score)/current_score
+    if delta_e < 0.0:
+        ap = 1.0
+    else:
+        ap = np.exp(-c*(delta_e/temperature))
+    
+
+    print "delta_e:", delta_e
+    print "ap: ", ap
+
+    
+    return ap
+
+
+def parameter_explorer_polarization_simulated_annealing(modification_program, required_score, annealing_schedule, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=2., seed=None, sequential=False, initial_update=None):
+        
+    global BEST_UPDATES
+    
+    mod_deltas = [x[3] for x in modification_program]
+    mod_min_max = [x[1:3] for x in modification_program]
+    mod_labels = [x[0] for x in modification_program]
+    
+    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    
+    for ml in mod_labels:
+        if ml not in acceptable_labels:
+            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+        
+    global STANDARD_PARAMETER_DICT
+    current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
+    
+    if initial_update == None:
+        current_update = generate_random_starting_update(mod_labels, mod_deltas, mod_min_max, current_dict)
+    else:
+        current_update = initial_update
+    current_dict.update(current_update)
+    
+    default_dict_has_randomization_scheme = False
+    if 'randomization_scheme' in current_dict:
+        if current_dict['randomization_scheme'] != None:
+            default_dict_has_randomization_scheme = True
+    
+    print "Determining initial score..."
+    worker_pool = None
+    if not sequential:
+        worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
+    
+    if type(seed) == int:
+        num_experiment_repeats = 1
+        seeds = [seed]*num_experiment_repeats
+    elif seed == "auto-generate":
+        seeds = np.random.random_integers(0, 10000, size=num_experiment_repeats)
+    elif seed == None:
+        seeds = [None]*num_experiment_repeats
+    elif type(seed) == list:
+        if len(seed) != num_experiment_repeats:
+            raise StandardError("Not enough seeds given!")
+        else:
+            seeds = seed
+            
+    current_score = 0.0
+    scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, [current_update], randomization=False, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_no_randomization)
+        
+    scores_and_updates_with_randomization = None
+    if default_dict_has_randomization_scheme:
+        scores_and_updates_with_randomization = run_and_score_trial_dicts(worker_pool, current_dict, [current_update], randomization=True, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_with_randomization, scores_and_updates_without_randomization=scores_and_updates_no_randomization)
+    
+    no_randomization_polarization_score, no_randomization_speed_score = scores_and_updates_no_randomization[0][0][0], scores_and_updates_no_randomization[0][0][2]
+    
+    if default_dict_has_randomization_scheme:
+        with_randomization_polarization_score, with_randomization_persistence_score = scores_and_updates_with_randomization[0][0][0], scores_and_updates_with_randomization[0][0][1]
+    else:
+        with_randomization_polarization_score, with_randomization_persistence_score = 1., 1.
+        
+    print "nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score
+    print "wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score
+        
+    current_score = 0.25*(no_randomization_polarization_score + no_randomization_speed_score)*(with_randomization_polarization_score + with_randomization_persistence_score)
+    
+    print "initial score: ", current_score    
+    print "=================="
+    max_temperature = annealing_schedule[0]
+    for temperature in annealing_schedule:
+        print "temperature: ", temperature
+        print "current score: ", current_score
+        
+        print "preparing modded dicts..."
+        trial_updates = generate_random_update_based_on_current_state_simulated_annealing_variant(current_dict, mod_labels, mod_deltas, mod_min_max)
+        
+        scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_no_randomization)
+        
+        scores_and_updates_with_randomization = None
+        if default_dict_has_randomization_scheme:
+            scores_and_updates_with_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=True, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_with_randomization, scores_and_updates_without_randomization=scores_and_updates_no_randomization)
+            
+        no_randomization_polarization_score, no_randomization_speed_score = scores_and_updates_no_randomization[0][0][0], scores_and_updates_no_randomization[0][0][2]
+    
+        if default_dict_has_randomization_scheme:
+            with_randomization_polarization_score, with_randomization_persistence_score = scores_and_updates_with_randomization[0][0][0], scores_and_updates_with_randomization[0][0][1]
+        else:
+            with_randomization_polarization_score, with_randomization_persistence_score = 1., 1.
+            
+        print "nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score
+        print "wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score
+            
+        new_score = 0.25*(no_randomization_polarization_score + no_randomization_speed_score)*(with_randomization_polarization_score + with_randomization_persistence_score)
+        
+        acceptance_probability = calculate_simulated_annealing_acceptance_probability(new_score, current_score, temperature, max_temperature)
+        print "acceptance probability: ", acceptance_probability
+        if np.random.rand() < acceptance_probability:
+            print "accepted."
+            if default_dict_has_randomization_scheme:
+                current_update = scores_and_updates_with_randomization[0][1]
+            else:
+                current_update = scores_and_updates_no_randomization[0][1]
+                
+            current_score = new_score
+            current_dict.update(current_update)
+            BEST_UPDATES.append(current_update)
+        else:
+            print "rejected."
+            
+        print "=================="
+            
+    return BEST_UPDATES
+
         
     
 if __name__ == '__main__':
     
+    #moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0), ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),('kdgtp_rac_multiplier', 1.0, 40.0, 1.0), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
+    
+    scale = 1.0
     moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
- ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
- ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
- ('kdgtp_rho_multiplier', 1.0, 40.0, 1.0),
- ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.01),
- ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.01),
- ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),
- ('kgtp_rho_autoact_multiplier', 1.0, 300.0, 5.0),
- ('kdgtp_rac_mediated_rho_inhib_multiplier', 100., 2000., 100.),
- ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.)]
+  ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
+  ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
+  ('kdgtp_rho_multiplier', 1.0, 40.0, 10.0),
+  ('kgtp_rac_autoact_multiplier', 50.0, 500.0, 5.0),
+  ('kgtp_rho_autoact_multiplier', 50.0, 500.0, 5.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 100.0, 2000.0, 50.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3), ('eta', 0.1*1e5, 2.0*1e5, 0.1*1e5), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
     
-#    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
-# ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
-# ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
-# ('kdgtp_rho_multiplier', 1.0, 40.0, 1.0),
-# ('threshold_rac_activity_multiplier', 0.1, 0.8, 0.05),
-# ('threshold_rho_activity_multiplier', 0.1, 0.8, 0.05),
-# ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),
-# ('kgtp_rho_autoact_multiplier', 1.0, 300.0, 5.0),
-# ('kdgtp_rac_mediated_rho_inhib_multiplier', 100., 2000., 100.),
-# ('kdgtp_rho_mediated_rac_inhib_multiplier', 100., 2000., 100.), 
-# ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005),
-#  ('randomization_time_mean', 1.0, 40.0, 2.0),
-#  ('randomization_time_variance_factor', 0.01, 0.5, 0.02),
-#  ('randomization_magnitude', 2.0, 20.0, 1.0), ('stiffness_edge', 1000.0, 8000.0, 500.0), ('randomization_node_percentage', 0.25, 0.5, 0.05)]
+#    initial_update = [('kgtp_rac_multiplier', 10.5),
+# ('kgtp_rho_multiplier', 6.25),
+# ('kdgtp_rac_multiplier', 19.0),
+# ('kdgtp_rho_multiplier', 29.0),
+# ('threshold_rac_activity_multiplier', 0.26250000000000012),
+# ('threshold_rho_activity_multiplier', 0.67499999999999938),
+# ('kgtp_rac_autoact_multiplier', 232.77906108928937),
+# ('kgtp_rho_autoact_multiplier', 161.0),
+# ('kdgtp_rac_mediated_rho_inhib_multiplier', 1800.0),
+# ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0),
+# ('tension_mediated_rac_inhibition_half_strain', 0.017499999999999998),
+# ('randomization_time_mean', 37.0),
+# ('randomization_time_variance_factor', 0.11499999999999994),
+# ('randomization_magnitude', 12.0),
+# ('stiffness_edge', 6125.0),
+# ('randomization_node_percentage', 0.33750000000000008)]
+
+    #initial_update = None
     
-    
-    
+    #annealing_schedule = 1.0*np.linspace(1.0, 1e-9, num=1000, endpoint=True)
+    #BEST_UPDATES = parameter_explorer_polarization_simulated_annealing(moddable_parameters, 0.8, annealing_schedule, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=2., seed=[1686, 6606, 5669], sequential=False, initial_update=None)
+    initial_update = [('kgtp_rac_multiplier', 34.0),
+  ('kgtp_rho_multiplier', 11.0),
+  ('kdgtp_rac_multiplier', 20.0),
+  ('kdgtp_rho_multiplier', 40.0),
+  ('kgtp_rac_autoact_multiplier', 445.0),
+  ('kgtp_rho_autoact_multiplier', 120.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1850.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1500.0),
+  ('tension_mediated_rac_inhibition_magnitude', 85.0),
+  ('max_force_rac', 2000.0),
+  ('eta', 10000.0),
+  ('stiffness_edge', 8000.0)]
+    BEST_UPDATES = parameter_explorer_polarization_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=1.5, seed=[1686, 6606, 5669], sequential=False, max_loops=50, initial_update=initial_update)
     #BEST_UPDATES = parameter_explorer_polarization_evolution(moddable_parameters, 0.8, max_population_size=len(moddable_parameters), task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, sequential=False, mutation_probability=0.1, init_population=None)
     
     #BEST_UPDATES = parameter_explorer_polarization_multiwanderer(moddable_parameters, 0.8, max_population_size=3, task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, init_population=None)
     
-    BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=1, num_processes=4, total_time_in_hours=1.5, seed=2836, sequential=False, should_be_polarized_by_in_hours=0.5)
+    #BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=2, num_processes=4, total_time_in_hours=1.5, seed=[1486, 5866], sequential=False, should_be_polarized_by_in_hours=0.5)
     
     #BEST_UPDATES = parameter_explorer_polarization_conservative_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, num_processes=4, total_time_in_hours=3., seed=2836, sequential=False)
