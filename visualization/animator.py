@@ -48,6 +48,29 @@ def draw_polygon_jit(polygon_coords, polygon_color, polygon_line_width, context)
             
     context.close_path()
     context.stroke()
+    
+# -------------------------------------
+
+@nb.jit()
+def draw_dot_jit(centre_coords, polygon_color, polygon_line_width, context):
+    context.new_path()
+    r, g, b = polygon_color
+    context.set_source_rgb(r, g, b)
+    context.set_line_width(polygon_line_width)
+
+    polygon_coords = np.zeros((10, 2), dtype=np.float64)
+    polygon_coords[:, 0] = centre_coords[0] + polygon_line_width*np.cos(np.linspace(0, 2*np.pi, num=10, endpoint=True))
+    polygon_coords[:, 1] = centre_coords[1] + polygon_line_width*np.sin(np.linspace(0, 2*np.pi, num=10, endpoint=True))
+    
+    for n, coord in enumerate(polygon_coords):
+        x, y = coord
+        if n == 0:
+            context.move_to(x, y)
+        else:
+            context.line_to(x, y)
+            
+    context.close_path()
+    context.stroke()
 
 # -------------------------------------
 
@@ -331,7 +354,7 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
 def draw_animation_frame_for_given_timestep(tasks):
     
     for task in tasks:
-        timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str = task
+        timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, unique_timesteps, global_image_dir, global_image_name_format_str = task
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
         context = cairo.Context(surface)
             
@@ -379,6 +402,10 @@ def draw_animation_frame_for_given_timestep(tasks):
         if space_migratory_bdry_polygon.shape[0] != 0:
             context.new_path()
             draw_polygon_jit(space_migratory_bdry_polygon/1e-6, colors.RGB_BRIGHT_RED, 2, context)
+            
+        if chemoattractant_source_location.shape[0] != 0:
+            context.new_path()
+            draw_dot_jit(chemoattractant_source_location, colors.RGB_DARK_GREEN, 2, context)
         
         image_fp = os.path.join(global_image_dir, global_image_name_format_str.format(timestep))
         surface.write_to_png(image_fp)
@@ -393,7 +420,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # -------------------------------------    
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True):        
+    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, cell_polygon_colors=[], default_cell_polygon_color=(0,0,0), rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_source_location=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True):        
         self.global_scale = global_scale
         self.rotation_theta = rotation_theta
         self.translation_x = translation_x
@@ -462,6 +489,7 @@ class EnvironmentAnimation():
         
         self.space_physical_bdry_polygon = space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
+        self.chemoattractant_source_location = chemoattractant_source_location
         
         self.timestep_length = timestep_length
             
@@ -662,6 +690,7 @@ class EnvironmentAnimation():
         transform_matrix = self.transform_matrix
         space_physical_bdry_polygon = self.space_physical_bdry_polygon
         space_migratory_bdry_polygon = self.space_migratory_bdry_polygon
+        chemoattractant_source_location = self.chemoattractant_source_location
         
         image_prep_st = time.time()       
         st = time.time()
@@ -669,7 +698,7 @@ class EnvironmentAnimation():
         drawing_tasks = []
         for i, t in enumerate(unique_undrawn_timesteps):
             self.image_drawn_array[t] = 1
-            drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str))
+            drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, unique_timesteps, global_image_dir, global_image_name_format_str))
         
         num_tasks = len(drawing_tasks)
         chunklen = (num_tasks + num_threads - 1) // num_threads

@@ -138,10 +138,12 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]*(1.0 - smooth_factor)
+        external_gradient_signal = external_gradient_on_nodes[i]
         if cil_factor > 1.0:
             coa_signal = 0.0
+            external_gradient_signal = 0.0
             
-        result[i] = (coa_signal + randomization_factors[i])*kgtp_rac_baseline + kgtp_rac_autoact*(external_gradient_on_nodes[i] + 1)
+        result[i] = (coa_signal + randomization_factors[i] + external_gradient_signal)*kgtp_rac_baseline + kgtp_rac_autoact
         
     return result
 
@@ -166,11 +168,15 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)            
-def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_half_strain, tension_mediated_rac_inhibition_magnitude, local_strains):
+def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_half_strain, tension_mediated_rac_inhibition_magnitude, strain_calculation_type, local_strains):
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
-    strain_inhibition = tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)#np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
+    
+    if strain_calculation_type == 0:
+        strain_inhibition = 1. + tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)#np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
+    else:
+        strain_inhibition = hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)
     
     for i in range(num_nodes):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])
@@ -183,7 +189,7 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
         
         migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        result[i] = (cil_factor)*(migr_bdry_factor)*(strain_inhibition + 1.0)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
+        result[i] = (cil_factor)*(migr_bdry_factor)*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
         
     return result
         

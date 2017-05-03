@@ -997,7 +997,7 @@ def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test
         plt.close("all")
         
         
-def graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_coas, average_cell_persistence, num_cells, num_cells_width, num_cells_height, save_dir=None):
+def graph_confinement_data(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None):
     
     fig, ax = plt.subplots()
     
@@ -1005,17 +1005,17 @@ def graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_c
     cax = ax.imshow(average_cell_persistence, interpolation='none', cmap=plt.get_cmap('viridis'))      
     cbar = fig.colorbar(cax, boundaries=bin_boundaries, ticks=np.linspace(0.5, 1.0, num=5))
     cax.set_clim(0.5, 1.0)
-    ax.set_yticks(np.arange(len(test_cils)))
-    ax.set_xticks(np.arange(len(test_coas)))
-    ax.set_yticklabels(test_cils)
-    ax.set_xticklabels(test_coas)
+    ax.set_yticks(np.arange(len(test_num_cells)))
+    ax.set_xticks(np.arange(len(test_heights)))
+    ax.set_yticklabels(test_num_cells)
+    ax.set_xticklabels(test_heights)
      
     # Add colorbar, make sure to specify tick locations to match desired ticklabels
     if save_dir == None:
         plt.show()
     else:
         fig.set_size_inches(12, 8)
-        save_path = os.path.join(save_dir, "corridor_migration_vary_coa_cil_({}, {}, {})_{}".format(num_cells, num_cells_width, num_cells_height, sub_experiment_number) + ".png")
+        save_path = os.path.join(save_dir, "conefinement_test_graph_{}".format(sub_experiment_number) + ".png")
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
