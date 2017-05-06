@@ -384,9 +384,9 @@ class Cell():
         external_gradient_on_nodes = np.zeros(self.num_nodes, dtype=np.float64)
         self.system_history[access_index, :, parameterorg.external_gradient_on_nodes_index] = np.zeros(self.num_nodes, dtype=np.float64)
         
-        intercellular_contact_factors = np.ones(self.num_nodes)
+        intercellular_contact_factors = np.zeros(self.num_nodes)
         self.system_history[access_index, :, parameterorg.cil_signal_index] = intercellular_contact_factors
-        migr_bdry_contact_factors = np.ones(self.num_nodes)
+        migr_bdry_contact_factors = np.zeros(self.num_nodes)
             
         close_point_on_other_cells_to_each_node_exists = np.zeros((self.num_nodes, self.num_cells_in_environment), dtype=np.int64)
         close_point_on_other_cells_to_each_node = np.zeros((self.num_nodes, self.num_cells_in_environment, 2), dtype=np.float64)
@@ -574,7 +574,7 @@ class Cell():
         intercellular_contact_factors = chemistry.calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, self.interaction_factors_intercellular_contact_per_celltype, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_smoothness_factors)
             
         if self.space_migratory_bdry_polygon.size == 0:
-            migr_bdry_contact_factors = np.ones(num_nodes, dtype=np.int64)
+            migr_bdry_contact_factors = np.zeros(num_nodes, dtype=np.int64)
         else:
             migr_bdry_contact_factors = mechanics.calculate_migr_bdry_contact_factors(num_nodes, node_coords, self.space_migratory_bdry_polygon, self.interaction_factor_migr_bdry_contact)
         

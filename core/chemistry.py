@@ -127,23 +127,21 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
     kgtp_rac_autoact = 0.0
     
     for i in range(num_nodes):
-        if migr_bdry_contact_factors[i] > 1.0:
-            kgtp_rac_autoact = 0.0
-        else:
-            kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
+        kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-        i_plus1 = (i + 1)%num_nodes
-        i_minus1 = (i - 1)%num_nodes
+        #i_plus1 = (i + 1)%num_nodes
+        #i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]*(1.0 - smooth_factor)
         external_gradient_signal = external_gradient_on_nodes[i]
+        
         if cil_factor > 1.0:
             coa_signal = 0.0
             external_gradient_signal = 0.0
             
-        result[i] = (coa_signal + randomization_factors[i] + external_gradient_signal)*kgtp_rac_baseline + kgtp_rac_autoact
+        result[i] = (randomization_factors[i] + coa_signal + external_gradient_signal)*kgtp_rac_baseline + kgtp_rac_autoact
         
     return result
 
@@ -155,14 +153,14 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
     for i in range(num_nodes):
         kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active[i])
         
-        i_plus1 = (i + 1)%num_nodes
-        i_minus1 = (i - 1)%num_nodes
+        #i_plus1 = (i + 1)%num_nodes
+        #i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        result[i] = (kgtp_rho_autoact + (migr_bdry_factor)*(cil_factor)*kgtp_rho_baseline)#(migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
+        result[i] =  (1.0 + migr_bdry_factor + cil_factor)*kgtp_rho_baseline + kgtp_rho_autoact#(migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
         
     return result
 
@@ -173,23 +171,20 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
     
     global_tension = np.sum(local_strains)/num_nodes
     
-    if strain_calculation_type == 0:
-        strain_inhibition = 1. + tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)#np.exp(tension_mediated_rac_inhibition_exponent*global_tension)
-    else:
-        strain_inhibition = hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)
+    strain_inhibition = tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)
     
     for i in range(num_nodes):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])
         
-        i_plus1 = (i + 1)%num_nodes
-        i_minus1 = (i - 1)%num_nodes
+        #i_plus1 = (i + 1)%num_nodes
+        #i_minus1 = (i - 1)%num_nodes
 
         
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        result[i] = (cil_factor)*(migr_bdry_factor)*(strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
+        result[i] = (1. + cil_factor + migr_bdry_factor + strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
         
     return result
         
@@ -247,7 +242,7 @@ def calculate_diffusion(num_nodes, concentrations, diffusion_constant, edgeplus_
 @nb.jit(nopython=True)   
 def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, intercellular_contact_factor_magnitudes, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_smoothness_factors):
 
-    intercellular_contact_factors = np.ones(num_nodes, dtype=np.float64)
+    intercellular_contact_factors = np.zeros(num_nodes, dtype=np.float64)
     
     for other_ci in range(num_cells):
         if other_ci != this_cell_index:
@@ -259,21 +254,13 @@ def calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cell
                 if new_ic_mag > current_ic_mag:
                     intercellular_contact_factors[ni] = new_ic_mag
                     current_ic_mag = new_ic_mag
-                
-#                if are_nodes_inside_other_cells[ni][other_ci] == 1 or close_point_on_other_cells_to_each_node_exists[ni][other_ci] == 1:
-#                    
-#                    new_ic_mag = intercellular_contact_factor_magnitudes[other_ci]*close_point_smoothness_factors[ni][other_ci]
-#                    
-#                    if new_ic_mag > current_ic_mag:
-#                        intercellular_contact_factors[ni] = new_ic_mag
-#                        current_ic_mag = new_ic_mag
         
     return intercellular_contact_factors
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
 def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, coa_distribution_exponent,  cell_dependent_coa_signal_strengths, max_coa_signal,  intercellular_dist_squared_matrix, line_segment_intersection_matrix, closeness_dist_squared_criteria, intersection_exponent):
-    coa_signals = np.ones(num_nodes, dtype=np.float64)
+    coa_signals = np.zeros(num_nodes, dtype=np.float64)
     too_close_dist_squared = 1e-6
     
     for ni in range(num_nodes):
@@ -296,14 +283,10 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
                     
                     coa_signal = 0.0
                     if max_coa_signal < 0:
-                        if dist_squared_between_nodes < too_close_dist_squared:
-                            coa_signal = 1.0
-                        else:
+                        if dist_squared_between_nodes > too_close_dist_squared:
                             coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))*intersection_factor
                     else:
-                        if dist_squared_between_nodes < too_close_dist_squared:
-                            coa_signal = 1.0
-                        else:
+                        if dist_squared_between_nodes > too_close_dist_squared:
                             coa_signal = np.exp(coa_distribution_exponent*np.sqrt(dist_squared_between_nodes))*intersection_factor
                     
                     if max_coa_signal < 0.0:
