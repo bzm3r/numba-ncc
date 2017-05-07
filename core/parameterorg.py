@@ -59,7 +59,7 @@ user_interaction_parameters = {'interaction_factors_intercellular_contact_per_ce
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
-user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.1*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1000, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.01*1e5, 1e100]}
+user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.001*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.01*1e5, 1e100]}
 
 user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None, 'randomization_node_percentage': [0.01, 0.5], 'randomization_type': None}
     

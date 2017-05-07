@@ -961,7 +961,7 @@ if __name__ == '__main__':
   ('kgtp_rac_autoact_multiplier', 50.0, 500.0, 5.0),
   ('kgtp_rho_autoact_multiplier', 50.0, 500.0, 5.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 100.0, 2000.0, 50.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3), ('eta', 0.1*1e5, 2.0*1e5, 0.1*1e5), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3), ('eta', 1.0*1e5, 1.0*1e5, 0.1*1e5), ('stiffness_edge', 1., 100., 1.0)]
     
 #    initial_update = [('kgtp_rac_multiplier', 10.5),
 # ('kgtp_rho_multiplier', 6.25),
@@ -984,23 +984,23 @@ if __name__ == '__main__':
     
     #annealing_schedule = 1.0*np.linspace(1.0, 1e-9, num=1000, endpoint=True)
     #BEST_UPDATES = parameter_explorer_polarization_simulated_annealing(moddable_parameters, 0.8, annealing_schedule, task_chunk_size=4, num_processes=4, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=2., seed=[1686, 6606, 5669], sequential=False, initial_update=None)
-    initial_update = [('kgtp_rac_multiplier', 34.0),
-  ('kgtp_rho_multiplier', 11.0),
-  ('kdgtp_rac_multiplier', 20.0),
-  ('kdgtp_rho_multiplier', 40.0),
-  ('kgtp_rac_autoact_multiplier', 445.0),
-  ('kgtp_rho_autoact_multiplier', 120.0),
-  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1850.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1500.0),
-  ('tension_mediated_rac_inhibition_magnitude', 85.0),
-  ('max_force_rac', 2000.0),
-  ('eta', 10000.0),
-  ('stiffness_edge', 8000.0)]
-    BEST_UPDATES = parameter_explorer_polarization_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), task_chunk_size=2, num_processes=2, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=1.5, seed=[1686, 6606, 5669], sequential=False, max_loops=50, initial_update=initial_update)
+    #initial_update = [('kgtp_rac_multiplier', 34.0),
+#  ('kgtp_rho_multiplier', 11.0),
+#  ('kdgtp_rac_multiplier', 20.0),
+#  ('kdgtp_rho_multiplier', 40.0),
+#  ('kgtp_rac_autoact_multiplier', 445.0),
+#  ('kgtp_rho_autoact_multiplier', 120.0),
+#  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1850.0),
+#  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1500.0),
+#  ('tension_mediated_rac_inhibition_magnitude', 85.0),
+#  ('max_force_rac', 2000.0),
+#  ('eta', 10000.0),
+#  ('stiffness_edge', 8000.0)]
+    #BEST_UPDATES = parameter_explorer_polarization_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), task_chunk_size=2, num_processes=2, num_experiment_repeats=3, total_time_in_hours_with_randomization=4., total_time_in_hours_no_randomization=1.5, seed=[1686, 6606, 5669], sequential=False, max_loops=50, initial_update=initial_update)
     #BEST_UPDATES = parameter_explorer_polarization_evolution(moddable_parameters, 0.8, max_population_size=len(moddable_parameters), task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, sequential=False, mutation_probability=0.1, init_population=None)
     
     #BEST_UPDATES = parameter_explorer_polarization_multiwanderer(moddable_parameters, 0.8, max_population_size=3, task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, init_population=None)
     
-    #BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=2, num_processes=4, total_time_in_hours=1.5, seed=[1486, 5866], sequential=False, should_be_polarized_by_in_hours=0.5)
+    BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=2, num_processes=2, total_time_in_hours=1.5, seed=[1486, 5866], sequential=False, should_be_polarized_by_in_hours=0.5)
     
     #BEST_UPDATES = parameter_explorer_polarization_conservative_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, num_processes=4, total_time_in_hours=3., seed=2836, sequential=False)
