@@ -137,7 +137,7 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         coa_signal = coa_signals[i]*(1.0 - smooth_factor)
         external_gradient_signal = external_gradient_on_nodes[i]
         
-        if cil_factor > 1.0:
+        if cil_factor > 0.0:
             coa_signal = 0.0
             external_gradient_signal = 0.0
             
@@ -184,7 +184,7 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
         
         migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
-        result[i] = (1. + cil_factor + migr_bdry_factor + strain_inhibition)*(kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib)
+        result[i] = (1. + cil_factor + migr_bdry_factor + strain_inhibition)*kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib
         
     return result
         
