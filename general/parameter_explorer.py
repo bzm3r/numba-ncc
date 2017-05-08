@@ -26,7 +26,7 @@ STANDARD_PARAMETER_DICT.update([('kgtp_rac_multiplier', 1.8*10.0),
   ('kgtp_rho_autoact_multiplier', 0.5*250.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
   ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0),
-  ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 6.5), ('max_force_rac', 0.1*10e3), ('eta', 0.1*1e5), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 4.0), ('randomization_node_percentage', 0.25), ('stiffness_edge', 2500.)])
+  ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 6.5), ('max_force_rac', 0.1*10e3), ('eta', 1e5), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 4.0), ('randomization_node_percentage', 0.25), ('stiffness_edge', 1.)])
 
 
 
@@ -388,7 +388,7 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
         #difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
         
         #difference_factor = 1. - score_function(0.0, 1.0, np.abs(difference_between_pg_and_pat))
-        combined_score_no_randomization = polarization_score_global*speed_score*strain_score#difference_factor*polarization_score_global*speed_score
+        combined_score_no_randomization = polarization_score_global#difference_factor*polarization_score_global*speed_score
         
         if combined_score_no_randomization > new_best_score:
             print "possible new score: {}".format(combined_score_no_randomization)
@@ -961,7 +961,7 @@ if __name__ == '__main__':
   ('kgtp_rac_autoact_multiplier', 50.0, 500.0, 5.0),
   ('kgtp_rho_autoact_multiplier', 50.0, 500.0, 5.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 100.0, 2000.0, 50.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3), ('eta', 1.0*1e5, 1.0*1e5, 0.1*1e5), ('stiffness_edge', 1., 100., 1.0)]
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3)]
     
 #    initial_update = [('kgtp_rac_multiplier', 10.5),
 # ('kgtp_rho_multiplier', 6.25),

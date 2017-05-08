@@ -134,10 +134,10 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
         
         cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
-        coa_signal = coa_signals[i]*(1.0 - smooth_factor)
+        coa_signal = coa_signals[i]#*(1.0 - smooth_factor)
         external_gradient_signal = external_gradient_on_nodes[i]
         
-        if cil_factor > 0.0:
+        if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
             external_gradient_signal = 0.0
             
