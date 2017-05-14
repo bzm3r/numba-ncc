@@ -14,6 +14,8 @@ import general.moore_data_table as moore_data_table
 import numba as nb
 import copy
 import scipy.spatial as space
+import scipy.optimize as scipio
+
 
 
 # ==============================================================================
@@ -790,33 +792,15 @@ def rotate_contact_kinematics_data_st_pre_lies_along_given_and_post_maintains_an
         
     return aligned_pre_data, aligned_post_data
     
-# =================================================================================
-
-def analyze_single_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number):
-    # calculate centroid positions
-    cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*relevant_environment.cells_in_environment[0].L/1e-6
-    num_tsteps = cell_centroids.shape[0]
-    
-    net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]
-    net_displacement_mag = np.linalg.norm(net_displacement)
-
-    distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
-    net_distance = np.sum(distance_per_tstep)
-    
-    if net_distance > 0.0:
-        persistence = net_displacement_mag/net_distance
-    else:
-        persistence = np.nan
-        
-    return (subexperiment_index, rpt_number, cell_centroids, persistence)
+# =============================================================================
 
 @nb.jit(nopython=True)
-def get_min_max_x_centroid_per_timestep(all_cell_centroids):
-    min_x_centroid_per_timestep = np.zeros((all_cell_centroids.shape[1], 2), dtype=np.float64)
-    max_x_centroid_per_timestep = np.zeros((all_cell_centroids.shape[1], 2), dtype=np.float64)
+def get_min_max_x_centroid_per_timestep(all_cell_centroid_xs):
+    min_x_centroid_per_timestep = np.zeros(all_cell_centroid_xs.shape[1], dtype=np.float64)
+    max_x_centroid_per_timestep = np.zeros(all_cell_centroid_xs.shape[1], dtype=np.float64)
     
-    num_cells = all_cell_centroids.shape[0]
-    num_timesteps = all_cell_centroids.shape[1]
+    num_cells = all_cell_centroid_xs.shape[0]
+    num_timesteps = all_cell_centroid_xs.shape[1]
     
     for ti in range(num_timesteps):
         min_x_centroid_index = 0
@@ -825,7 +809,7 @@ def get_min_max_x_centroid_per_timestep(all_cell_centroids):
         max_x_value = 0.0
         
         for ci in range(num_cells):
-            this_x_value = all_cell_centroids[ci][ti][0]
+            this_x_value = all_cell_centroid_xs[ci][ti]
             if ci == 0:
                 min_x_value = this_x_value
                 max_x_value = this_x_value
@@ -837,17 +821,61 @@ def get_min_max_x_centroid_per_timestep(all_cell_centroids):
                     max_x_centroid_index = ci
                     max_x_value = this_x_value
                     
-        min_x_centroid_per_timestep[ti] = all_cell_centroids[min_x_centroid_index][ti]
-        max_x_centroid_per_timestep[ti] = all_cell_centroids[max_x_centroid_index][ti]
+        min_x_centroid_per_timestep[ti] = all_cell_centroid_xs[min_x_centroid_index][ti]
+        max_x_centroid_per_timestep[ti] = all_cell_centroid_xs[max_x_centroid_index][ti]
     
     return min_x_centroid_per_timestep, max_x_centroid_per_timestep
 
-def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number):
+def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomization, time_unit = "min."):
+    
+    if time_unit == "min.":
+        T = relevant_environment.T/60.0
+    elif time_unit == "sec":
+        T = relevant_environment.T
+    else:
+        raise StandardError("Unknown time unit given: ", time_unit)
+        
+    # calculate centroid positions
+    cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*relevant_environment.cells_in_environment[0].L/1e-6
+    num_tsteps = cell_centroids.shape[0]
+    
+    net_displacement = cell_centroids[num_tsteps-1] - cell_centroids[0]
+    net_displacement_mag = np.linalg.norm(net_displacement)
+
+    cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
+    distance_per_tstep = np.linalg.norm(cell_centroid_displacements, axis=1)
+    net_distance = np.sum(distance_per_tstep)
+    
+    cell_speeds = distance_per_tstep/T
+        
+    if net_distance > 0.0:
+        if not no_randomization:
+            positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(cell_centroid_displacements)
+            persistence_time, positive_ts = estimate_persistence_time(T, positive_das)
+        else:
+            persistence_time = np.nan
+        
+        persistence_ratio = net_displacement_mag/net_distance
+    else:
+        persistence_ratio = np.nan
+        persistence_time = np.nan
+        
+    return time_unit, (cell_centroids, (persistence_ratio, persistence_time), cell_speeds)
+
+def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number, time_unit="min."):
     # calculate centroid positions
     num_cells = relevant_environment.num_cells
     
-    centroids_and_persistences = []
+    if time_unit == "min.":
+        T = relevant_environment.T/60.0
+    elif time_unit == "sec":
+        T = relevant_environment.T
+    else:
+        raise StandardError("Unknown time unit given: ", time_unit)
+        
+    centroids_persistences_speeds = []
     for n in range(num_cells):
+        print "    Analyzing cell {}...".format(n)
         cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*relevant_environment.cells_in_environment[n].L/1e-6
         num_tsteps = cell_centroids.shape[0]
         
@@ -855,20 +883,50 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         net_displacement_mag = np.linalg.norm(net_displacement)
     
         distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1)
+        speeds = distance_per_tstep/T
         net_distance = np.sum(distance_per_tstep)
         
         if net_distance > 0.0:
-            persistence = net_displacement_mag/net_distance
+            persistence_ratio = net_displacement_mag/net_distance
+            this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
+            this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(this_cell_centroid_displacements)
+            persistence_time, this_cell_positive_ts = estimate_persistence_time(T, this_cell_positive_das)
         else:
-            persistence = np.nan
+            persistence_time = np.nan
+            persistence_ratio = np.nan
         
-        centroids_and_persistences.append((cell_centroids, persistence))
+        centroids_persistences_speeds.append((cell_centroids, (persistence_ratio, persistence_time), speeds))
+    
+    all_cell_centroids = np.array([x[0] for x in centroids_persistences_speeds])
+    all_cell_centroid_xs = np.array([x[0][:,0] for x in centroids_persistences_speeds])
+    
+    if num_cells > 1:
+        group_centroid_per_timestep = np.average(all_cell_centroids, axis=0)
+        min_x_centroid_per_timestep, max_x_centroid_per_timestep = get_min_max_x_centroid_per_timestep(all_cell_centroid_xs)
+        group_centroid_x_per_timestep = group_centroid_per_timestep[:,0]
         
-    all_cell_centroids = np.array([x[0] for x in centroids_and_persistences])
-    min_x_centroid_per_timestep, max_x_centroid_per_timestep = get_min_max_x_centroid_per_timestep(all_cell_centroids)
-    group_centroid_per_timestep = np.average(all_cell_centroids, axis=0)
+        group_net_displacement = group_centroid_per_timestep[-1] - group_centroid_per_timestep[0]
+        group_net_displacement_mag = np.linalg.norm(group_net_displacement)
+        group_net_distance = np.sum(np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps-1], axis=1))
+        group_persistence_ratio = group_net_displacement_mag/group_net_distance
         
-    return min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_per_timestep, centroids_and_persistences 
+        group_displacements = group_centroid_per_timestep[1:] - group_centroid_per_timestep[:-1]
+        group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(group_displacements)
+        group_persistence_time, group_positive_ts = estimate_persistence_time(T, group_positive_das)
+        
+        group_velocities = calculate_velocities(group_centroid_per_timestep, T)
+        group_speed_per_timestep = np.linalg.norm(group_velocities, axis=1)
+    else:
+        group_centroid_x_per_timestep = all_cell_centroid_xs[0]
+        min_x_centroid_per_timestep, max_x_centroid_per_timestep = np.nan*np.empty_like(group_centroid_x_per_timestep), np.nan*np.empty_like(group_centroid_x_per_timestep)
+        
+        group_centroid_per_timestep = all_cell_centroids[0]
+        group_velocities = calculate_velocities(group_centroid_per_timestep, T)
+        group_speed_per_timestep = np.linalg.norm(group_velocities, axis=1)
+        group_persistence_ratio = np.nan
+        group_persistence_time = np.nan
+        
+    return time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds 
 
 # ===========================================================================
 
@@ -1196,6 +1254,75 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
                 convex_hull_areas_per_tstep.append(np.nan)
         return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0]
 
+# =============================================================================
+
+@nb.jit(nopython=True)
+def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
+    ax, ay = a
+    bx, by = b
+    
+    norm_a = np.sqrt(ax*ax + ay*ay)
+    norm_b = np.sqrt(bx*bx + by*by)
+    
+    if norm_a < 1e-6:
+        a = np.random.rand(2)
+        ax, ay = a
+        norm_a = np.sqrt(ax*ax + ay*ay)
+        
+        
+    if norm_b < 1e-6:
+        b = np.random.rand(2)
+        bx, by = b
+        norm_b = np.sqrt(bx*bx + by*by)
+
+    ax_, ay_ = a/norm_a
+    bx_, by_ = b/norm_b
+    
+    return ax_*bx_ + ay_*by_
+
+@nb.jit(nopython=True)
+def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
+    N = displacements.shape[0]
+    
+    all_das = np.zeros(N, dtype=np.float64)
+    first_negative_n = -1
+    
+    for n in range(N):
+        sum_cos_thetas = 0.0
+        m = 0.0
+        
+        i = 0
+        while i + n < N:
+            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
+            sum_cos_thetas += cos_theta
+            m += 1
+            i += 1
+        
+        da = (1./m)*sum_cos_thetas 
+        if da < 0.0 and first_negative_n == -1:
+            first_negative_n = n
+            break
+        
+        all_das[n] = da
+        
+    if first_negative_n == -1:
+        first_negative_n = N
+        
+    return all_das[:first_negative_n]
+
+def estimate_persistence_time(timestep, positive_das):
+    ts = np.arange(positive_das.shape[0])*timestep
+#    A = np.zeros((ts.shape[0], 2), dtype=np.float64)
+#    A[:, 0] = ts
+#    pt = -1./(np.linalg.lstsq(A, np.log(positive_das))[0][0])
+    popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
+    pt = popt[0]
+    
+    return pt, ts
+
+
+        
+        
         
 #    
 #    

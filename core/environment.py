@@ -380,7 +380,7 @@ class Environment():
             
             cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
             
-            datavis.graph_cell_velocity_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
             
             protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
             protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
@@ -397,7 +397,7 @@ class Environment():
             
             datavis.graph_group_area_over_time(self.num_cells, t, self.T/60.0, self.storefile_path, save_name='delaunay_T={}'.format(t-1), save_dir=visuals_save_dir)
             
-            datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
+            datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=visuals_save_dir, max_tstep=t)
         
         if produce_animations:
             animation_obj.create_animation_from_data(visuals_save_dir, timestep_to_draw_till=t)

@@ -761,6 +761,7 @@ class EnvironmentAnimation():
             '-an', # Tells FFMPEG not to expect any audio
             '-threads', str(4),
             '-vcodec', 'libx264', 
+            '-pix_fmt', 'yuv420p',
             animation_output_path ]
             
             subprocess.call(command)

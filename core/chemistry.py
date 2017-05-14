@@ -129,10 +129,10 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_active, migr_bdry_contact_fa
     for i in range(num_nodes):
         kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active[i])
         
-        #i_plus1 = (i + 1)%num_nodes
-        #i_minus1 = (i - 1)%num_nodes
+        i_plus1 = (i + 1)%num_nodes
+        i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]#*(1.0 - smooth_factor)
         external_gradient_signal = external_gradient_on_nodes[i]
@@ -153,12 +153,12 @@ def calculate_kgtp_rho(num_nodes, conc_rho_membrane_active, intercellular_contac
     for i in range(num_nodes):
         kgtp_rho_autoact = kgtp_rho_autoact_baseline*hill_function(exponent_rho_autoact, threshold_rho_autoact, conc_rho_membrane_active[i])
         
-        #i_plus1 = (i + 1)%num_nodes
-        #i_minus1 = (i - 1)%num_nodes
+        i_plus1 = (i + 1)%num_nodes
+        i_minus1 = (i - 1)%num_nodes
         
-        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
         result[i] =  (1.0 + migr_bdry_factor + cil_factor)*kgtp_rho_baseline + kgtp_rho_autoact#(migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
         
@@ -176,13 +176,13 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
     for i in range(num_nodes):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])
         
-        #i_plus1 = (i + 1)%num_nodes
-        #i_minus1 = (i - 1)%num_nodes
+        i_plus1 = (i + 1)%num_nodes
+        i_minus1 = (i - 1)%num_nodes
 
         
-        cil_factor = intercellular_contact_factors[i]#(intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
         
-        migr_bdry_factor = migr_bdry_contact_factors[i]#(migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
+        migr_bdry_factor = (migr_bdry_contact_factors[i] + migr_bdry_contact_factors[i_plus1] + migr_bdry_contact_factors[i_minus1])/3.0
         
         result[i] = (1. + cil_factor + migr_bdry_factor + strain_inhibition)*kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib
         

@@ -335,7 +335,8 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                     ani_sets = an_environment.animation_settings
                                     ani_sets.update(animation_settings)
                                     curr_tpoint = an_environment.curr_tpoint
-                                    visuals_save_dir = os.path.join(environment_dir, "T={}".format(curr_tpoint))
+                                    draw_tpoint = curr_tpoint + 1
+                                    visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
                                     
                                     if os.path.exists(visuals_save_dir):
                                         shutil.rmtree(visuals_save_dir)
@@ -352,7 +353,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                         cell_skip_dynamics.append(a_cell.skip_dynamics)
                     
                                     animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-                                    an_environment.make_visuals(curr_tpoint, visuals_save_dir, ani_sets, animation_object, True, True)
+                                    an_environment.make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, True, True)
                                 del an_environment
                                 continue
                             
