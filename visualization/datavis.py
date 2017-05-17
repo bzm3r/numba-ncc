@@ -104,7 +104,7 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     group_centroid_displacements = relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1]
     all_cell_centroid_displacements = np.array([x[1:] - x[:-1] for x in relative_all_cell_centroids_per_tstep])
     
-    group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time(group_centroid_displacements)
+    group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements)
     group_persistence_time, group_positive_ts = cu.estimate_persistence_time(T, group_positive_das)
     group_persistence_time = np.round(group_persistence_time, 0)
     
@@ -114,7 +114,7 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     
     for ci in range(all_cell_centroid_displacements.shape[1]):
         this_cell_centroid_displacements = all_cell_centroid_displacements[:,ci,:]
-        this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time(this_cell_centroid_displacements)
+        this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
         this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(T, this_cell_positive_das)
         this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
         

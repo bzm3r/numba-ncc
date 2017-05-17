@@ -15,6 +15,7 @@ import numba as nb
 import copy
 import scipy.spatial as space
 import scipy.optimize as scipio
+import threading
 
 
 
@@ -850,7 +851,7 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
         
     if net_distance > 0.0:
         if not no_randomization:
-            positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(cell_centroid_displacements)
+            positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(cell_centroid_displacements)
             persistence_time, positive_ts = estimate_persistence_time(T, positive_das)
         else:
             persistence_time = np.nan
@@ -889,7 +890,7 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         if net_distance > 0.0:
             persistence_ratio = net_displacement_mag/net_distance
             this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
-            this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(this_cell_centroid_displacements)
+            this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
             persistence_time, this_cell_positive_ts = estimate_persistence_time(T, this_cell_positive_das)
         else:
             persistence_time = np.nan
@@ -911,7 +912,7 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         group_persistence_ratio = group_net_displacement_mag/group_net_distance
         
         group_displacements = group_centroid_per_timestep[1:] - group_centroid_per_timestep[:-1]
-        group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time(group_displacements)
+        group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_displacements)
         group_persistence_time, group_positive_ts = estimate_persistence_time(T, group_positive_das)
         
         group_velocities = calculate_velocities(group_centroid_per_timestep, T)
@@ -1310,13 +1311,60 @@ def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
         
     return all_das[:first_negative_n]
 
+@nb.jit(nopython=True, nogil=True)
+def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacements):
+    
+    for n in ns:
+        m = 0.0
+        sum_cos_thetas = 0.0
+        i = 0 
+        
+        while i + n < N:
+            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
+            sum_cos_thetas += cos_theta
+            m += 1
+            i += 1
+        
+        dacs[n] = (1./m)*sum_cos_thetas
+
+@nb.jit(nopython=True)
+def find_first_negative_n(dacs):
+    for n, dac in enumerate(dacs):
+        if n < 0.0:
+            return n
+    
+def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(displacements, num_threads=4):
+    N = displacements.shape[0]
+    dacs = np.empty(N, dtype=np.float64)*np.nan
+     
+#    task_indices = np.arange(N)
+#    chunklen = (N + num_threads - 1)//num_threads
+#    
+#    chunks = []
+#    for i in range(num_threads):
+#        chunk = [N, task_indices[i*chunklen:(i + 1)*chunklen], dacs, displacements]
+#        chunks.append(chunk)
+#            
+#    threads = [threading.Thread(target=calculate_direction_autocorr_coeff_parallel_worker, args=c) for c in chunks]
+#    
+#    for thread in threads:
+#        thread.start()
+#    for thread in threads:
+#        thread.join()
+#    
+#    first_negative_n = find_first_negative_n(dacs)
+    return dacs#dacs[:first_negative_n]
+
 def estimate_persistence_time(timestep, positive_das):
     ts = np.arange(positive_das.shape[0])*timestep
 #    A = np.zeros((ts.shape[0], 2), dtype=np.float64)
 #    A[:, 0] = ts
 #    pt = -1./(np.linalg.lstsq(A, np.log(positive_das))[0][0])
-    popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
-    pt = popt[0]
+    try:
+        popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
+        pt = popt[0]
+    except:
+        pt = np.nan
     
     return pt, ts
 

@@ -63,42 +63,20 @@ sub_experiment_number = 0
 #
 
 #ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=20.0, default_coa=24.0, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=1.0, remake_visualizations=remake_visualizations)
-#
-#test_num_cells = [1]
-#coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0, 1: 24.0}
-#test_heights = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-#ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
 
-#test_num_cells = [2, 4, 9]
-#coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-#test_heights = [1, 2, 3]
-#ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
-
-
-#test_num_cells = [2, 4, 9]
-#coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-#test_heights = [4, 5, 6]
-#ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experim ent_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
-
-#test_num_cells = [2, 4, 9]
-#coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-#test_heights = [7, 8, 9]
-#ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
-
-test_num_cells = [16, 25, 36]
-coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-test_heights = [1, 2, 3]
+test_num_cells = [1, 2, 4, 9, 16, 25, 36]
+coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0, 1: 24.0}
+test_heights = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
 
-
-#test_num_cells = [16, 25, 36]
+#test_num_cells = [49]
 #coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-#test_heights = [4, 5, 6]
+#test_heights = [1, 2, 3, 4]
 #ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
-#
-#test_num_cells = [16, 25, 36]
+
+#test_num_cells = [49]
 #coa_dict={49: 8.0, 36: 8.0, 25: 12.0, 16: 16.0, 9: 20.0, 4: 24.0, 2: 24.0}
-#test_heights = [7, 8, 9]
+#test_heights = [5, 6, 7, 8, 9]
 #ets.corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_num_cells=test_num_cells, test_heights=test_heights, coa_dict=coa_dict, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False)
 
 #ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=20.0, default_coa=6.0, default_cil=60.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=7, num_cells_height=7, remake_visualizations=False)
