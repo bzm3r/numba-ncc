@@ -607,7 +607,7 @@ def coa_factor_variation_test(date_str, experiment_number, sub_experiment_number
 
 # ============================================================================
 
-def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, auto_calculate_num_cells=True, num_cells=None, run_experiments=True, remake_visualizations=False, place_at_corridor_center=False):
+def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, num_cells_width=4, num_cells_height=4, auto_calculate_num_cells=True, num_cells=None, run_experiments=True, remake_visualizations=False, place_at_corridor_center=False, do_final_analysis=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if auto_calculate_num_cells:
@@ -692,38 +692,40 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     if run_experiments == True:
         eu.run_template_experiments(experiment_dir, experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_visualizations=remake_visualizations)
         
-        experiment_name_format_string = experiment_name + "_RPT={}"
-        cell_centroids_persistences_speeds_per_repeat = []
-        group_centroid_per_timestep_per_repeat = []
-        group_centroid_x_per_timestep_per_repeat = []
-        min_x_centroid_per_timestep_per_repeat = []
-        max_x_centroid_per_timestep_per_repeat = []
-        group_speed_per_timestep_per_repeat = []
-        group_persistence_ratio_per_repeat = []
-        group_persistence_time_per_repeat = []
-        
-        for rpt_number in xrange(num_experiment_repeats):
-            environment_name = experiment_name_format_string.format(rpt_number)
-            environment_dir = os.path.join(experiment_dir, environment_name)
-            storefile_path = eu.get_storefile_path(environment_dir)
-            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+        if do_final_analysis:
+            experiment_name_format_string = experiment_name + "_RPT={}"
+            cell_centroids_persistences_speeds_per_repeat = []
+            group_centroid_per_timestep_per_repeat = []
+            group_centroid_x_per_timestep_per_repeat = []
+            min_x_centroid_per_timestep_per_repeat = []
+            max_x_centroid_per_timestep_per_repeat = []
+            group_speed_per_timestep_per_repeat = []
+            group_persistence_ratio_per_repeat = []
+            group_persistence_time_per_repeat = []
+            protrusion_lifetime_given_direction_per_repeat = []
             
-            time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds  = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
+            for rpt_number in xrange(num_experiment_repeats):
+                environment_name = experiment_name_format_string.format(rpt_number)
+                environment_dir = os.path.join(experiment_dir, environment_name)
+                storefile_path = eu.get_storefile_path(environment_dir)
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                
+                time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds  = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
+                
+                cell_centroids_persistences_speeds_per_repeat.append(centroids_persistences_speeds)
+                group_centroid_per_timestep_per_repeat.append(group_centroid_per_timestep)
+                group_centroid_x_per_timestep_per_repeat.append(group_centroid_x_per_timestep)
+                min_x_centroid_per_timestep_per_repeat.append(min_x_centroid_per_timestep)
+                max_x_centroid_per_timestep_per_repeat.append(max_x_centroid_per_timestep)
+                group_speed_per_timestep_per_repeat.append(group_speed_per_timestep)
+                
+                group_persistence_ratio_per_repeat.append(group_persistence_ratio)
+                
+                group_persistence_time_per_repeat.append(group_persistence_time)
+                # ================================================================
             
-            cell_centroids_persistences_speeds_per_repeat.append(centroids_persistences_speeds)
-            group_centroid_per_timestep_per_repeat.append(group_centroid_per_timestep)
-            group_centroid_x_per_timestep_per_repeat.append(group_centroid_x_per_timestep)
-            min_x_centroid_per_timestep_per_repeat.append(min_x_centroid_per_timestep)
-            max_x_centroid_per_timestep_per_repeat.append(max_x_centroid_per_timestep)
-            group_speed_per_timestep_per_repeat.append(group_speed_per_timestep)
-            
-            group_persistence_ratio_per_repeat.append(group_persistence_ratio)
-            
-            group_persistence_time_per_repeat.append(group_persistence_time)
-            # ================================================================
-        
-        datavis.present_collated_cell_motion_data(time_unit, cell_centroids_persistences_speeds_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours)
-        datavis.present_collated_group_centroid_drift_data(timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, experiment_dir, total_time_in_hours)
+            datavis.present_collated_cell_motion_data(time_unit, cell_centroids_persistences_speeds_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours)
+            datavis.present_collated_group_centroid_drift_data(timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, experiment_dir, total_time_in_hours)
 
     print "Done."
     
@@ -932,12 +934,13 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
 
 # =============================================================================
 
-def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], coa_dict=[], default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False):
+def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], coa_dict=[], default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_visualizations=False, do_final_analysis_after_running_experiments=False):
     
     test_num_cells = sorted(test_num_cells)
     test_heights = sorted(test_heights)
     
-    average_cell_persistence = np.zeros((len(test_num_cells), len(test_heights)), dtype=np.float64)
+    average_cell_persistence_ratios = np.zeros((len(test_num_cells), len(test_heights)), dtype=np.float64)
+    average_cell_persistence_times = np.zeros((len(test_num_cells), len(test_heights)), dtype=np.float64)
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
     
     for xi, tnc in enumerate(test_num_cells):
@@ -945,7 +948,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
             calculated_width = int(np.ceil(float(tnc)/th))
             print "========="
             print "num_cells = {}, height = {}".format(tnc, th)
-            experiment_name = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, num_cells_width=calculated_width, num_cells_height=th, auto_calculate_num_cells=False, num_cells=tnc, run_experiments=run_experiments, remake_visualizations=remake_visualizations)
+            experiment_name = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, closeness_dist_squared_criteria=closeness_dist_squared_criteria, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, num_cells_width=calculated_width, num_cells_height=th, auto_calculate_num_cells=False, num_cells=tnc, run_experiments=run_experiments, remake_visualizations=remake_visualizations, do_final_analysis=do_final_analysis_after_running_experiments)
             
             experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
             experiment_name_format_string = experiment_name + "_RPT={}"
@@ -953,7 +956,8 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
             if run_experiments == False:
                 if not os.path.exists(experiment_dir):
                     print "Experiment directory does not exist."
-                    average_cell_persistence[xi, yi] = np.nan
+                    average_cell_persistence_ratios[xi, yi] = np.nan
+                    average_cell_persistence_times[xi, yi] = np.nan
                     continue
                 else:
                     no_data = False
@@ -977,11 +981,13 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
                             no_data = True
                             break
                     if no_data:
-                        average_cell_persistence[xi, yi] = np.nan
+                        average_cell_persistence_ratios[xi, yi] = np.nan
+                        average_cell_persistence_times[xi, yi] = np.nan
                         continue
                 
                     print "Data exists."
-            all_cell_persistences = []
+            all_cell_persistence_ratios = []
+            all_cell_persistence_times = []
             for rpt_number in range(num_experiment_repeats):
                 environment_name = experiment_name_format_string.format(rpt_number)
                 environment_dir = os.path.join(experiment_dir, environment_name)
@@ -990,17 +996,21 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
                 
                 time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds   = cu.analyze_cell_motion(relevant_environment, storefile_path, 0, rpt_number)
                 
-                all_cell_persistences += [x[1] for x in centroids_persistences_speeds]
+                all_cell_persistence_ratios += [x[1][0] for x in centroids_persistences_speeds]
+                all_cell_persistence_times += [x[1][1] for x in centroids_persistences_speeds]
                 
-            avg_p = np.average(all_cell_persistences)
-            average_cell_persistence[xi, yi] = avg_p
+            avg_pr = np.average(all_cell_persistence_ratios)
+            avg_pt = np.average(all_cell_persistence_times)
+            average_cell_persistence_ratios[xi, yi] = avg_pr
+            average_cell_persistence_times[xi, yi] = avg_pt
 
 
 
     print "========="
     
     #graph_confinement_data(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, num_cells, num_cells_width, num_cells_height, save_dir=None)
-    datavis.graph_confinement_data(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=experiment_set_directory)
+    datavis.graph_confinement_data_persistence_ratios(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence_ratios, save_dir=experiment_set_directory)
+    datavis.graph_confinement_data_persistence_times(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence_times, save_dir=experiment_set_directory)
         
     print "Complete."
     

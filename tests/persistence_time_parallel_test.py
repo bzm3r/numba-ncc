@@ -92,7 +92,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(displaceme
     N = displacements.shape[0]
     dacs = np.empty(N, dtype=np.float64)
      
-    task_indices = np.arange(N)
+    task_indices = np.arange(1, N, 10)
     chunklen = (N + num_threads - 1)//num_threads
     
     chunks = []
