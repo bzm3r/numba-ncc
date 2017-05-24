@@ -694,7 +694,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         
         if do_final_analysis:
             experiment_name_format_string = experiment_name + "_RPT={}"
-            cell_centroids_persistences_speeds_per_repeat = []
+            centroids_persistences_speeds_protrusionlifetimes_per_repeat = []
             group_centroid_per_timestep_per_repeat = []
             group_centroid_x_per_timestep_per_repeat = []
             min_x_centroid_per_timestep_per_repeat = []
@@ -702,7 +702,6 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
             group_speed_per_timestep_per_repeat = []
             group_persistence_ratio_per_repeat = []
             group_persistence_time_per_repeat = []
-            protrusion_lifetime_given_direction_per_repeat = []
             
             for rpt_number in xrange(num_experiment_repeats):
                 environment_name = experiment_name_format_string.format(rpt_number)
@@ -710,9 +709,9 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                 storefile_path = eu.get_storefile_path(environment_dir)
                 relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
                 
-                time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds  = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
+                time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds_protrusionlifetimes  = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
                 
-                cell_centroids_persistences_speeds_per_repeat.append(centroids_persistences_speeds)
+                centroids_persistences_speeds_protrusionlifetimes_per_repeat.append(centroids_persistences_speeds_protrusionlifetimes)
                 group_centroid_per_timestep_per_repeat.append(group_centroid_per_timestep)
                 group_centroid_x_per_timestep_per_repeat.append(group_centroid_x_per_timestep)
                 min_x_centroid_per_timestep_per_repeat.append(min_x_centroid_per_timestep)
@@ -724,7 +723,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                 group_persistence_time_per_repeat.append(group_persistence_time)
                 # ================================================================
             
-            datavis.present_collated_cell_motion_data(time_unit, cell_centroids_persistences_speeds_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours)
+            datavis.present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_protrusionlifetimes_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours)
             datavis.present_collated_group_centroid_drift_data(timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, experiment_dir, total_time_in_hours)
 
     print "Done."

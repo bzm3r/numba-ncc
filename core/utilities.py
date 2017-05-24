@@ -895,8 +895,10 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         else:
             persistence_time = np.nan
             persistence_ratio = np.nan
+            
+        protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_average_directions, protrusion_start_end_causes = collate_protrusion_data_for_cell(n, T, storefile_path)
         
-        centroids_persistences_speeds_protrusionlifetimes.append((cell_centroids, (persistence_ratio, persistence_time), speeds, protrusion_lifetimes))
+        centroids_persistences_speeds_protrusionlifetimes.append((cell_centroids, (persistence_ratio, persistence_time), speeds, protrusion_lifetime_and_average_directions))
     
     all_cell_centroids = np.array([x[0] for x in centroids_persistences_speeds_protrusionlifetimes])
     all_cell_centroid_xs = np.array([x[0][:,0] for x in centroids_persistences_speeds_protrusionlifetimes])

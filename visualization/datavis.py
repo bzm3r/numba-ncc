@@ -749,7 +749,7 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
     
 # =============================================================================
         
-def present_collated_cell_motion_data(time_unit, cell_centroids_persistences_speeds_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hourss, fontsize=22):
+def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_protrusionlifetimes_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hourss, fontsize=22):
     max_x_data_lim = 0.0
     min_x_data_lim = 0.0
     max_y_data_lim = 0.0
@@ -758,13 +758,13 @@ def present_collated_cell_motion_data(time_unit, cell_centroids_persistences_spe
     persistence_ratios = []
     persistence_times = []
     average_cell_speeds = []
-    
+    all_protrusion_lifetimes_and_average_directions = np.zeros((0, 2), dtype=np.float64)
     
     ci = 0
     fig_time, ax_time = plt.subplots()
-    for this_repeat_all_cell_data in cell_centroids_persistences_speeds_per_repeat:
+    for this_repeat_all_cell_data in centroids_persistences_speeds_protrusionlifetimes_per_repeat:
         for cell_data in this_repeat_all_cell_data:
-            ccs, persistence_data, speeds = cell_data
+            ccs, persistence_data, speeds, protrusion_lifetimes_and_average_direction = cell_data
             persistence_ratio, persistence_time = persistence_data
             persistence_ratios.append(persistence_ratio)
             persistence_times.append(persistence_time)
@@ -785,6 +785,8 @@ def present_collated_cell_motion_data(time_unit, cell_centroids_persistences_spe
                 min_x_data_lim = this_min_x_data_lim
             if this_min_y_data_lim < min_y_data_lim:
                 min_y_data_lim = this_min_y_data_lim
+                
+            all_protrusion_lifetimes_and_average_directions = np.append(all_protrusion_lifetimes_and_average_directions, protrusion_lifetimes_and_average_direction, axis=0) 
                 
             ax_time.plot(relative_ccs[:,0], relative_ccs[:,1], marker=None, color=colors.color_list300[ci%300], alpha=0.5)
             ci += 1
@@ -839,6 +841,8 @@ def present_collated_cell_motion_data(time_unit, cell_centroids_persistences_spe
     ax_box.xaxis.set_ticks([]) 
     ax_box.xaxis.set_ticks_position('none') 
     
+    graph_protrusion_lifetimes_radially(np.array([all_protrusion_lifetimes_and_average_directions]), 20, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir", mins_or_secs=None)
+    
     for item in ([ax_box.title, ax_box.xaxis.label, ax_box.yaxis.label]  +
              ax_box.get_xticklabels() + ax_box.get_yticklabels()):
         item.set_fontsize(fontsize)
@@ -873,7 +877,12 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
     fig_full, ax_full = plt.subplots()
     fig_box, ax_box = plt.subplots()
     
-    for repeat_number in range(len(group_x_centroid_per_tstep_per_repeat)):
+    num_repeats = len(group_x_centroid_per_tstep_per_repeat)
+    
+    bar_step = int(0.01*num_repeats*timepoints.shape[0])
+    bar_offset = int(0.01*timepoints.shape[0])
+
+    for repeat_number in range(num_repeats):
         max_x_centroid_per_tstep = max_x_centroid_per_tstep_per_repeat[repeat_number]
         min_x_centroid_per_tstep = min_x_centroid_per_tstep_per_repeat[repeat_number]
         
@@ -883,34 +892,52 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
         
         group_x_centroid_per_tstep = group_x_centroid_per_tstep_per_repeat[repeat_number]
 
-        relative_group_x_centroid_per_tstep = group_x_centroid_per_tstep - group_x_centroid_per_tstep[0]
-        relative_max_x_centroid_per_tstep = max_x_centroid_per_tstep - group_x_centroid_per_tstep[0]
-        relative_min_x_centroid_per_tstep = min_x_centroid_per_tstep - group_x_centroid_per_tstep[0]
-        
-        
+        relative_group_x_centroid_per_tstep = group_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
+        relative_max_x_centroid_per_tstep = max_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
+        relative_min_x_centroid_per_tstep = min_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
+            
         normalized_relative_group_centroid_x_coords = relative_group_x_centroid_per_tstep/group_width
         normalized_relative_max_centroid_x_coords = relative_max_x_centroid_per_tstep/group_width
         normalized_relative_min_centroid_x_coords = relative_min_x_centroid_per_tstep/group_width
+        
+        bar_indices = np.arange(0, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64) + bar_offset*repeat_number
+        
+        if repeat_number == 0:
+            bar_indices = np.append(bar_indices, timepoints.shape[0] - 1)
+        
+        bar_timepoints = timepoints[bar_indices]
         
         ax_simple_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
         ax_simple.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
         
         ax_full_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
-        ax_full_normalized.plot(timepoints, normalized_relative_max_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
-        ax_full_normalized.plot(timepoints, normalized_relative_min_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
+        bar_points = normalized_relative_group_centroid_x_coords[bar_indices]
+        bar_min_points = normalized_relative_min_centroid_x_coords[bar_indices]
+        bar_max_points = normalized_relative_max_centroid_x_coords[bar_indices]
+        lower_bounds = np.abs(bar_points - bar_min_points)
+        upper_bounds = np.abs(bar_points - bar_max_points)
+        ax_full_normalized.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
+        #ax_full_normalized.plot(timepoints, normalized_relative_max_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
+        #ax_full_normalized.plot(timepoints, normalized_relative_min_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
         
         ax_full.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
-        ax_full.plot(timepoints, relative_max_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
-        ax_full.plot(timepoints, relative_min_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
+        bar_points = relative_group_x_centroid_per_tstep[bar_indices]
+        bar_min_points = relative_min_x_centroid_per_tstep[bar_indices]
+        bar_max_points = relative_max_x_centroid_per_tstep[bar_indices]
+        lower_bounds = np.abs(bar_points - bar_min_points)
+        upper_bounds = np.abs(bar_points - bar_max_points)
+        ax_full.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
+#        ax_full.plot(timepoints, relative_max_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
+#        ax_full.plot(timepoints, relative_min_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
         
         
         
     ax_simple_normalized.set_ylabel("position \n (normalized by initial group width)")
-    ax_simple.set_ylabel("position ($\micro$m)")
+    ax_simple.set_ylabel("position ($\mu$m)")
     ax_simple.set_xlabel("time (min.)")
     ax_simple_normalized.set_xlabel("time (min.)")
     ax_full_normalized.set_ylabel("position \n (normalized by initial group width)")
-    ax_full.set_ylabel("position ($\micro$m)")
+    ax_full.set_ylabel("position ($\mu$m)")
     ax_full_normalized.set_xlabel("time (min.)")
     ax_full.set_xlabel("time (min.)")
     ax_simple_normalized.grid(which=u'both')
@@ -964,7 +991,7 @@ def generate_theta_bins(num_bins):
     delta = 2*np.pi/num_bins
     return np.array([[((2*n + 1)*delta)%(2*np.pi), (2*n + 3)*delta%(2*np.pi)] for n in range(num_bins)]), np.array([((2*n + 1)*delta)%(2*np.pi) for n in range(num_bins)]), delta
 
-def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, mins_or_secs="mins"):
+def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, save_name=None, mins_or_secs="mins", fontsize=22):
     bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
 
     binned_direction_data = [list() for x in range(num_polar_graph_bins)]    
@@ -986,23 +1013,55 @@ def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, 
             if binned == False:
                 binned_direction_data[-1].append(lifetime)
         
-    fig = plt.figure(figsize=(8,8))
-    ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+    fig_avg = plt.figure(figsize=(10, 10))
+    ax_avg = fig_avg.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
     
     average_lifetimes = [np.average(x) for x in binned_direction_data]
-    ax.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
-    ax.set_ylabel('min.', labelpad=-100, rotation=0)
-    ax.set_title('Average protrusion lifetime given direction')
-        
+    
+    ax_avg.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
+    ax_avg.set_ylabel('min.', labelpad=-100, rotation=0)
+    #ax.set_title('Average protrusion lifetime given direction')
+    
+    
+    fig_total = plt.figure(figsize=(10, 10))
+    ax_total = fig_total.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+    
+    total_lifetimes = [np.sum(x) for x in binned_direction_data]
+    
+    ax_total.bar(bin_midpoints, total_lifetimes, width=delta, bottom=0.0)
+    ax_total.set_ylabel('min.', labelpad=-100, rotation=0)
+    
     if save_dir == None:
         plt.show()
     else:
-        fig.set_size_inches(8, 8)
-        save_path = os.path.join(save_dir, "protrusion_lifetime_versus_direction" + ".png")
+        if save_name == None:
+            save_name = "protrusion_lifetime_versus_direction"
+            
+        for item in ([ax_avg.title, ax_avg.xaxis.label, ax_avg.yaxis.label]  +
+             ax_avg.get_xticklabels() + ax_avg.get_yticklabels()):
+            item.set_fontsize(fontsize)
+        
+        
+        fig_avg.set_size_inches(10, 10)
+        save_path = os.path.join(save_dir, "avg_" + save_name + ".png")
         print "save_path: ", save_path
-        fig.savefig(save_path, forward=True)
-        plt.close(fig)
+        fig_avg.savefig(save_path, forward=True)
+        plt.close(fig_avg)
         plt.close("all")
+        
+        for item in ([ax_total.title, ax_total.xaxis.label, ax_total.yaxis.label]  +
+             ax_total.get_xticklabels() + ax_total.get_yticklabels()):
+            item.set_fontsize(fontsize)
+        
+        if save_name == None:
+            save_name = "protrusion_lifetime_versus_direction"
+        fig_total.set_size_inches(10, 10)
+        save_path = os.path.join(save_dir, "total_" + save_name + ".png")
+        print "save_path: ", save_path
+        fig_total.savefig(save_path, forward=True)
+        plt.close(fig_total)
+        plt.close("all")
+        
         
 def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=None):
     bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
