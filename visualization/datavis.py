@@ -100,57 +100,57 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     init_group_centroid_per_tstep = group_centroid_per_tstep[0]
     relative_group_centroid_per_tstep = group_centroid_per_tstep - init_group_centroid_per_tstep
     relative_all_cell_centroids_per_tstep = all_cell_centroids_per_tstep - init_group_centroid_per_tstep
-
-    group_centroid_displacements = relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1]
-    all_cell_centroid_displacements = np.array([x[1:] - x[:-1] for x in relative_all_cell_centroids_per_tstep])
+#
+#    group_centroid_displacements = relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1]
+#    all_cell_centroid_displacements = np.array([x[1:] - x[:-1] for x in relative_all_cell_centroids_per_tstep])
+#    
+#    group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements)
+#    group_persistence_time, group_positive_ts = cu.estimate_persistence_time(T, group_positive_ns, group_positive_das)
+#    group_persistence_time = np.round(group_persistence_time, 0)
     
-    group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements)
-    group_persistence_time, group_positive_ts = cu.estimate_persistence_time(T, group_positive_ns, group_positive_das)
-    group_persistence_time = np.round(group_persistence_time, 0)
-    
-    positive_ts_per_cell = []
-    positive_das_per_cell = []
-    all_cell_persistence_times = []
-    
-    for ci in range(all_cell_centroid_displacements.shape[1]):
-        this_cell_centroid_displacements = all_cell_centroid_displacements[:,ci,:]
-        this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
-        this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
-        this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
-        
-        positive_ts_per_cell.append(this_cell_positive_ts)
-        positive_das_per_cell.append(this_cell_positive_das)
-        all_cell_persistence_times.append(this_cell_persistence_time)
-        
-        if save_dir != None:
-            fig, ax = plt.subplots()
-            graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
-            ax.set_title(graph_title)
-            ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
-            ax.plot(this_cell_positive_ts, np.exp(-1*this_cell_positive_ts/this_cell_persistence_time), color='r', marker='.')
+#    positive_ts_per_cell = []
+#    positive_das_per_cell = []
+#    all_cell_persistence_times = []
+#    
+#    for ci in range(all_cell_centroid_displacements.shape[1]):
+#        this_cell_centroid_displacements = all_cell_centroid_displacements[:,ci,:]
+#        this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
+#        this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
+#        this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
+#        
+#        positive_ts_per_cell.append(this_cell_positive_ts)
+#        positive_das_per_cell.append(this_cell_positive_das)
+#        all_cell_persistence_times.append(this_cell_persistence_time)
+#        
+#        if save_dir != None:
+#            fig, ax = plt.subplots()
+#            graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
+#            ax.set_title(graph_title)
+#            ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
+#            ax.plot(this_cell_positive_ts, np.exp(-1*this_cell_positive_ts/this_cell_persistence_time), color='r', marker='.')
+#            
+#            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+#                item.set_fontsize(fontsize)
+#                
+#            fig.set_size_inches(12, 8)
+#            this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
+#            if not os.path.exists(this_cell_save_dir):
+#                os.makedirs(this_cell_save_dir)
+#            fig.savefig(os.path.join(this_cell_save_dir, 'persistence_time_estimation' + '.png'), forward=True)
+#            plt.close(fig)
             
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(fontsize)
-                
-            fig.set_size_inches(12, 8)
-            this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
-            if not os.path.exists(this_cell_save_dir):
-                os.makedirs(this_cell_save_dir)
-            fig.savefig(os.path.join(this_cell_save_dir, 'persistence_time_estimation' + '.png'), forward=True)
-            plt.close(fig)
-            
-    if save_dir != None:
-        fig, ax = plt.subplots()
-        ax.set_title("persistence time: {}".format(np.round(group_persistence_time, decimals=0)))
-        ax.plot(group_positive_ts, group_positive_das, color='g', marker='.')
-        ax.plot(group_positive_ts, np.exp(-1*group_positive_ts/group_persistence_time), color='r', marker='.')
-        
-        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-            item.set_fontsize(fontsize)
-            
-        fig.set_size_inches(12, 8)
-        fig.savefig(os.path.join(save_dir, 'group_persistence_time_estimation' + '.png'), forward=True)
-        plt.close(fig)
+#    if save_dir != None:
+#        fig, ax = plt.subplots()
+#        ax.set_title("persistence time: {}".format(np.round(group_persistence_time, decimals=0)))
+#        ax.plot(group_positive_ts, group_positive_das, color='g', marker='.')
+#        ax.plot(group_positive_ts, np.exp(-1*group_positive_ts/group_persistence_time), color='r', marker='.')
+#        
+#        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+#            item.set_fontsize(fontsize)
+#            
+#        fig.set_size_inches(12, 8)
+#        fig.savefig(os.path.join(save_dir, 'group_persistence_time_estimation' + '.png'), forward=True)
+#        plt.close(fig)
         
     # ------------------------
     
@@ -193,9 +193,10 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
     
-    average_cell_persistence_time = np.round(np.average(all_cell_persistence_times), decimals=2)
-    std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
-    ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio, group_persistence_time, time_unit, average_cell_persistence_time, time_unit, std_cell_persistence_time, time_unit))
+#    average_cell_persistence_time = np.round(np.average(all_cell_persistence_times), decimals=2)
+#    std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
+    #ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio, group_persistence_time, time_unit, average_cell_persistence_time, time_unit, std_cell_persistence_time, time_unit))
+    ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio))
     #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
 
@@ -691,9 +692,9 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
     persistence_ratios = [x[1][0] for x in centroids_persistences_speeds_per_repeat]
     mean_persistence_ratio = np.round(np.average(persistence_ratios), 2)
     std_persistence_ratio = np.round(np.std(persistence_ratios), 2)
-    persistence_times = [x[1][1] for x in centroids_persistences_speeds_per_repeat]
-    mean_persistence_time = np.round(np.average(persistence_times), 0)
-    std_persistence_time = np.round(np.std(persistence_times), 0)
+    #persistence_times = [x[1][1] for x in centroids_persistences_speeds_per_repeat]
+    #mean_persistence_time = np.round(np.average(persistence_times), 0)
+    #std_persistence_time = np.round(np.std(persistence_times), 0)
     average_cell_speeds = [np.average(x[2]) for x in centroids_persistences_speeds_per_repeat]
     
     for i, cps in enumerate(centroids_persistences_speeds_per_repeat):
@@ -707,7 +708,8 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
             
         ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300])
 
-    ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
+    #ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
+    ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio))
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
@@ -799,11 +801,12 @@ def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_p
     mean_persistence_ratio = np.round(np.average(persistence_ratios), 2)
     std_persistence_ratio = np.round(np.std(persistence_ratios), 2)
     mean_group_persistence_ratio = np.round(np.average(group_persistence_ratio_per_repeat), 2)
-    mean_persistence_time = np.round(np.average(persistence_times), 0)
-    std_persistence_time = np.round(np.std(persistence_times), 0)
-    mean_group_persistence_time = np.round(np.average(group_persistence_time_per_repeat), 0)
+#    mean_persistence_time = np.round(np.average(persistence_times), 0)
+#    std_persistence_time = np.round(np.std(persistence_times), 0)
+#    mean_group_persistence_time = np.round(np.average(group_persistence_time_per_repeat), 0)
 
-    ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {} \n Persistence time cell mean: {} {}, (std {} {}), group mean: {} {}".format(total_time_in_hourss, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit, mean_group_persistence_time, time_unit))
+    #ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {} \n Persistence time cell mean: {} {}, (std {} {}), group mean: {} {}".format(total_time_in_hourss, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit, mean_group_persistence_time, time_unit))
+    ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {}".format(total_time_in_hourss, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio))
     
     ax_time.set_ylabel("micrometers")
     ax_time.set_xlabel("micrometers")
@@ -885,12 +888,15 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
     for repeat_number in range(num_repeats):
         max_x_centroid_per_tstep = max_x_centroid_per_tstep_per_repeat[repeat_number]
         min_x_centroid_per_tstep = min_x_centroid_per_tstep_per_repeat[repeat_number]
+        group_x_centroid_per_tstep = group_x_centroid_per_tstep_per_repeat[repeat_number]
         
         group_width = max_x_centroid_per_tstep[0] - min_x_centroid_per_tstep[0]
+        graph_upper_lower_bounds = True
         if np.isnan(group_width):
             group_width = 40.0
-        
-        group_x_centroid_per_tstep = group_x_centroid_per_tstep_per_repeat[repeat_number]
+            max_x_centroid_per_tstep = group_x_centroid_per_tstep
+            min_x_centroid_per_tstep = group_x_centroid_per_tstep
+            graph_upper_lower_bounds = False
 
         relative_group_x_centroid_per_tstep = group_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
         relative_max_x_centroid_per_tstep = max_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
@@ -900,36 +906,39 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
         normalized_relative_max_centroid_x_coords = relative_max_x_centroid_per_tstep/group_width
         normalized_relative_min_centroid_x_coords = relative_min_x_centroid_per_tstep/group_width
         
-        bar_indices = np.arange(0, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64) + bar_offset*repeat_number
-        
-        if repeat_number == 0:
-            bar_indices = np.append(bar_indices, timepoints.shape[0] - 1)
-        
-        bar_timepoints = timepoints[bar_indices]
-        
-        ax_simple_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
-        ax_simple.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
-        
-        ax_full_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
-        bar_points = normalized_relative_group_centroid_x_coords[bar_indices]
-        bar_min_points = normalized_relative_min_centroid_x_coords[bar_indices]
-        bar_max_points = normalized_relative_max_centroid_x_coords[bar_indices]
-        lower_bounds = np.abs(bar_points - bar_min_points)
-        upper_bounds = np.abs(bar_points - bar_max_points)
-        ax_full_normalized.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
-        #ax_full_normalized.plot(timepoints, normalized_relative_max_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
-        #ax_full_normalized.plot(timepoints, normalized_relative_min_centroid_x_coords, color=colors.color_list300[repeat_number%300], alpha=0.2)
-        
-        ax_full.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
-        bar_points = relative_group_x_centroid_per_tstep[bar_indices]
-        bar_min_points = relative_min_x_centroid_per_tstep[bar_indices]
-        bar_max_points = relative_max_x_centroid_per_tstep[bar_indices]
-        lower_bounds = np.abs(bar_points - bar_min_points)
-        upper_bounds = np.abs(bar_points - bar_max_points)
-        ax_full.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
-#        ax_full.plot(timepoints, relative_max_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
-#        ax_full.plot(timepoints, relative_min_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300], alpha=0.2)
-        
+        if graph_upper_lower_bounds:
+            bar_indices = np.arange(0, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64) + bar_offset*repeat_number
+            
+            if repeat_number == 0:
+                bar_indices = np.append(bar_indices, timepoints.shape[0] - 1)
+            
+            bar_timepoints = timepoints[bar_indices]
+            
+            ax_simple_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+            ax_simple.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
+            
+            ax_full_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+            bar_points = normalized_relative_group_centroid_x_coords[bar_indices]
+            bar_min_points = normalized_relative_min_centroid_x_coords[bar_indices]
+            bar_max_points = normalized_relative_max_centroid_x_coords[bar_indices]
+            lower_bounds = np.abs(bar_points - bar_min_points)
+            upper_bounds = np.abs(bar_points - bar_max_points)
+            ax_full_normalized.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
+
+            
+            ax_full.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
+            bar_points = relative_group_x_centroid_per_tstep[bar_indices]
+            bar_min_points = relative_min_x_centroid_per_tstep[bar_indices]
+            bar_max_points = relative_max_x_centroid_per_tstep[bar_indices]
+            lower_bounds = np.abs(bar_points - bar_min_points)
+            upper_bounds = np.abs(bar_points - bar_max_points)
+            ax_full.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
+        else:
+            ax_simple_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+            ax_simple.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
+            
+            ax_full_normalized.plot(timepoints, normalized_relative_group_centroid_x_coords, color=colors.color_list300[repeat_number%300])
+            ax_full.plot(timepoints, relative_group_x_centroid_per_tstep, color=colors.color_list300[repeat_number%300])
         
         
     ax_simple_normalized.set_ylabel("position \n (normalized by initial group width)")
@@ -944,8 +953,8 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
     ax_simple.grid(which=u'both')
     ax_full_normalized.grid(which=u'both')
     ax_full.grid(which=u'both')
-    ax_simple.set_ylim([0, 1000])
-    ax_full.set_ylim([0, 1000])
+    ax_simple.set_ylim([0, 1500])
+    ax_full.set_ylim([0, 1500])
     
     average_group_speed_per_repeat = [np.average(x) for x in group_speed_per_timestep_per_repeat]
     violin = ax_box.violinplot(average_group_speed_per_repeat, showmedians=True, points=len(average_group_speed_per_repeat))

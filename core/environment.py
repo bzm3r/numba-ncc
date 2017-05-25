@@ -264,26 +264,40 @@ class Environment():
         if total_cell_group_area > cell_group_bounding_box_area:
             raise StandardError("Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint.")
         
-        num_cells_along_x = custom_floor(np.abs(x_length/cell_diameter), 1e-4)
-        num_cells_along_y = custom_floor(np.abs(y_length/cell_diameter), 1e-4)
+        num_cells_along_x = np.int(x_length/cell_diameter)
+        num_cells_along_y = np.int(y_length/cell_diameter)
         
         cell_x_coords = xmin + np.sign(x_length)*np.arange(num_cells_along_x)*cell_diameter
         cell_y_coords = ymin + np.sign(y_length)*np.arange(num_cells_along_y)*cell_diameter
-        
-        M = np.meshgrid(cell_x_coords, cell_y_coords)
-        x_values_on_grid = M[0]
-        y_values_on_grid = M[1]
-        x_y = np.dstack((x_values_on_grid, y_values_on_grid))
-        x_y = x_y.reshape((num_cells_along_x*num_cells_along_y, 2))
-        
         x_step = np.sign(x_length)*cell_diameter
         y_step = np.sign(y_length)*cell_diameter
-        for i, bb_lower_left_corner in enumerate(x_y):
-            if i == num_cells:
-                break
+        
+#        M = np.meshgrid(cell_x_coords, cell_y_coords)
+#        x_values_on_grid = M[0]
+#        y_values_on_grid = M[1]
+#        x_y = np.dstack((x_values_on_grid, y_values_on_grid))
+#        x_y = x_y.reshape((num_cells_along_x*num_cells_along_y, 2))
+#        
+#        x_step = np.sign(x_length)*cell_diameter
+#        y_step = np.sign(y_length)*cell_diameter
+#        for i, bb_lower_left_corner in enumerate(x_y):
+#            if i == num_cells:
+#                break
+#            
+#            x_coord, y_coord = bb_lower_left_corner
+#            cell_bounding_boxes[i] = [x_coord, x_coord + x_step, y_coord, y_coord + y_step]
+
+        xi = 0
+        yi = 0
+        for ci in range(num_cells):
+            cell_bounding_boxes[ci] = [cell_x_coords[xi], cell_x_coords[xi] + x_step, cell_y_coords[yi], cell_y_coords[yi] + y_step]
+
             
-            x_coord, y_coord = bb_lower_left_corner
-            cell_bounding_boxes[i] = [x_coord, x_coord + x_step, y_coord, y_coord + y_step]
+            if yi == (num_cells_along_y - 1):
+                yi = 0
+                xi += 1
+            else:
+                yi += 1
                 
         return cell_bounding_boxes
                 

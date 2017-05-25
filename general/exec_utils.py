@@ -294,7 +294,7 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
     
 # =======================================================================
 
-def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_visualizations=False):
+def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
     
     template_experiment_name_format_string = template_experiment_name + "_RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
@@ -326,7 +326,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                             an_environment.extend_simulation_runtime(new_num_timesteps)
                             if (an_environment.simulation_complete()):
                                 print "Simulation has been completed. Continuing..."
-                                if remake_visualizations == True:
+                                if remake_animation or remake_graphs:
                                     
                                     images_global_dir = os.path.join(environment_dir, "images_global")
                                     if os.path.exists(images_global_dir):
@@ -353,7 +353,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                         cell_skip_dynamics.append(a_cell.skip_dynamics)
                     
                                     animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-                                    an_environment.make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, True, True)
+                                    an_environment.make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
                                 del an_environment
                                 continue
                             
