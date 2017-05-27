@@ -709,7 +709,7 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
         ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300])
 
     #ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
-    ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio))
+    ax.set_title("Persistence ratio over {} hours (mean: {}, std: {})").format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio))
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")

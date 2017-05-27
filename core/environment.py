@@ -264,8 +264,8 @@ class Environment():
         if total_cell_group_area > cell_group_bounding_box_area:
             raise StandardError("Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint.")
         
-        num_cells_along_x = np.int(x_length/cell_diameter)
-        num_cells_along_y = np.int(y_length/cell_diameter)
+        num_cells_along_x = custom_floor(x_length/cell_diameter, 1e-6)
+        num_cells_along_y = custom_floor(y_length/cell_diameter, 1e-6)
         
         cell_x_coords = xmin + np.sign(x_length)*np.arange(num_cells_along_x)*cell_diameter
         cell_y_coords = ymin + np.sign(y_length)*np.arange(num_cells_along_y)*cell_diameter

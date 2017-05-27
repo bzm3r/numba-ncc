@@ -1176,9 +1176,9 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
         
     
 def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=None):
-    rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)
-    rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
-    uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(cell_index, max_tstep, "unit_in_vec", storefile_path)
+    rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep = hardio.get_multiple_data_until_timestep(cell_index, max_tstep, ["rac_membrane_active", "rho_membrane_active", "unit_in_vec"], ['n', 'n', 'v'], storefile_path)
+    #rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
+    #uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(cell_index, max_tstep, "unit_in_vec", storefile_path)
     
     normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(rac_membrane_active_per_tstep)
     protrusion_existence_per_tstep, protrusion_direction_per_tstep = determine_protrusion_existence_and_direction(normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep)

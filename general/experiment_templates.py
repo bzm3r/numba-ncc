@@ -638,13 +638,13 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     box_widths = [num_cells_width*cell_diameter]
 
     x_space_between_boxes = [2*cell_diameter]
-    width_factor = 1.5
-    if np.sum(num_cells_in_boxes) == 2:
-        width_factor = 3
-    else:
-        width_factor = 1.5
+#    width_factor = 1.5
+#    if np.sum(num_cells_in_boxes) == 2:
+#        width_factor = 3
+#    else:
+#        width_factor = 1.5
       
-    plate_width, plate_height = max(1000, box_widths[0]*8*width_factor), (box_heights[0] + 40 + 100)#min(1000, box_widths[0]*10*width_factor), (box_heights[0] + 40 + 100)
+    plate_width, plate_height = max(1000, box_widths[0]*8), (box_heights[0] + 40 + 100)#min(1000, box_widths[0]*10*width_factor), (box_heights[0] + 40 + 100)
 
     if place_at_corridor_center == True:
         boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, plate_width, plate_height, "CENTER", "ORIGIN", origin_y_offset=55, migratory_corridor_size=[box_widths[0]*100, box_heights[0]], physical_bdry_polygon_extra=20, migratory_bdry_x_offset=-1*0.5*box_widths[0]*100)

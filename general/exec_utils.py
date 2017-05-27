@@ -329,7 +329,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                 if remake_animation or remake_graphs:
                                     
                                     images_global_dir = os.path.join(environment_dir, "images_global")
-                                    if os.path.exists(images_global_dir):
+                                    if os.path.exists(images_global_dir) and remake_animation:
                                         shutil.rmtree(images_global_dir)
                                         
                                     ani_sets = an_environment.animation_settings
@@ -338,8 +338,14 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                     draw_tpoint = curr_tpoint + 1
                                     visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
                                     
-                                    if os.path.exists(visuals_save_dir):
-                                        shutil.rmtree(visuals_save_dir)
+                                    if os.path.exists(visuals_save_dir) and remake_animation:
+                                        visuals_dir_content = os.listdir(visuals_save_dir)
+                                        for content in visuals_dir_content:
+                                            content_path = os.path.join(visuals_save_dir, content)
+                                            if os.path.isdir(content_path):
+                                                if content[:8] == "images_n":
+                                                    shutil.rmtree(content_path)
+                                                    break
                                     
                                     cell_group_indices = []
                                     cell_Ls = []

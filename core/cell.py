@@ -768,8 +768,9 @@ class Cell():
         self.curr_tpoint = environment_tpoint
         
         self.system_history = np.zeros((self.max_timepoints_on_ram + 1, self.num_nodes,  len(parameterorg.output_info_labels)))
-        for info_label in parameterorg.output_info_labels:
-            self.system_history[0,:,parameterorg.info_indices_dict[info_label]] = hardio.get_data_for_tsteps(self.cell_index, environment_tpoint, info_label, storefile_path)
+        fetched_cell_data = hardio.get_cell_data_for_tsteps(self.cell_index, environment_tpoint, parameterorg.output_info_labels, storefile_path)
+        for info_label, fetched_data in zip(parameterorg.output_info_labels, fetched_cell_data):
+            self.system_history[0,:,parameterorg.info_indices_dict[info_label]] = fetched_data
         
 # -----------------------------------------------------------------
     def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, external_gradient_fn, be_talkative=False):
