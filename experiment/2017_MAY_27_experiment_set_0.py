@@ -20,8 +20,8 @@ randomization_time_variance_factor_m = 0.1
 max_timepoints_on_ram = 100
 seed = 2836
 allowed_drift_before_geometry_recalc = 20.0
-remake_animation = True
-remake_graphs = True
+remake_animation = False
+remake_graphs = False
 default_cil = 180.0
 
 base_output_dir = "A:\\numba-ncc\\output" 
@@ -618,6 +618,58 @@ parameter_dict.update([('num_nodes', sub_experiment_number + 1), ('kgtp_rac_mult
   ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
 
 sub_experiment_number += 1
+
+ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=77244, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, show_randomized_nodes=True)
+
+parameter_dict.update([('num_nodes', 50), ('kgtp_rac_multiplier', 12.0),
+  ('kgtp_rho_multiplier', 14.0),
+  ('kdgtp_rac_multiplier', 4.0),
+  ('kdgtp_rho_multiplier', 30.0),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 3*65.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
+  ('tension_mediated_rac_inhibition_magnitude', 40.0),
+  ('max_force_rac', 3000.0),
+  ('eta', 2.9*10000.0),
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
+
+sub_experiment_number = 50
+
+ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=77244, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, show_randomized_nodes=True)
+
+parameter_dict.update([('num_nodes', 75), ('kgtp_rac_multiplier', 12.0),
+  ('kgtp_rho_multiplier', 14.0),
+  ('kdgtp_rac_multiplier', 4.0),
+  ('kdgtp_rho_multiplier', 30.0),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 3*65.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
+  ('tension_mediated_rac_inhibition_magnitude', 40.0),
+  ('max_force_rac', 3000.0),
+  ('eta', 2.9*10000.0),
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
+
+sub_experiment_number = 75
+
+ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=77244, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, show_randomized_nodes=True)
+
+
+parameter_dict.update([('num_nodes', 100), ('kgtp_rac_multiplier', 12.0),
+  ('kgtp_rho_multiplier', 14.0),
+  ('kdgtp_rac_multiplier', 4.0),
+  ('kdgtp_rho_multiplier', 30.0),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 3*65.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
+  ('tension_mediated_rac_inhibition_magnitude', 40.0),
+  ('max_force_rac', 3000.0),
+  ('eta', 2.9*10000.0),
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
+
+sub_experiment_number = 100
 
 ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=77244, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, show_randomized_nodes=True)
 

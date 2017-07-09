@@ -292,7 +292,7 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
     
     return an_environment.cells_in_environment[0]
     
-# =======================================================================
+# ====================================================================
 
 def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
     
@@ -359,7 +359,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                                         cell_skip_dynamics.append(a_cell.skip_dynamics)
                     
                                     animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-                                    an_environment.make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
+                                    an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
                                 del an_environment
                                 continue
                             
@@ -398,7 +398,7 @@ def run_template_experiments(experiment_directory, template_experiment_name, par
                 
             print "Simulation run time: {}s".format(simulation_time)
             
-# =======================================================================
+# =====================================================================
 
 def raise_scriptname_error(scriptname, message=None):
     if message == None:
@@ -418,9 +418,13 @@ def check_if_date_is_proper(date_pieces, scriptname):
     if not len(date_pieces[2]) == 2:
         raise_scriptname_error(scriptname, "Incorrect number of digits in month (2 needed)")
 
+# ================================================================
+
 def check_if_experiment_number_is_proper(expnum, scriptname):
     if not expnum.isnumeric():
         raise_scriptname_error(scriptname, "Experiment number is not a number")
+
+# ================================================================
         
 def get_date_and_experiment_number(scriptname):
     name_pieces = scriptname.split('_')
@@ -435,15 +439,29 @@ def get_date_and_experiment_number(scriptname):
         EXPERIMENT_NUMBER = int(name_pieces[5])
         
         return DATE_STR, EXPERIMENT_NUMBER
-        
-def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals):
+
+# ================================================================
+
+
+def load_empty_env(empty_env_pickle_path):
     env = None
+    
     with open(empty_env_pickle_path, 'rb') as f:
         env = dill.load(f)
+        
+    return env
+
+# ================================================================
+
+def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals):
+    env = load_empty_env(empty_env_pickle_path)
     
-    env.init_from_store()
-    env.produce_intermediate_visuals = produce_intermediate_visuals
-    env.produce_final_visuals = produce_final_visuals
+    if env != None:
+        env.init_from_store()
+        env.produce_intermediate_visuals = produce_intermediate_visuals
+        env.produce_final_visuals = produce_final_visuals
+    else:
+        raise StandardError("Could not load environment pickle file at: {}".format(empty_env_pickle_path))
     
     return env
     

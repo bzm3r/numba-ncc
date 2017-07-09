@@ -836,7 +836,6 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
     else:
         raise StandardError("Unknown time unit given: ", time_unit)
         
-    # calculate centroid positions
     cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*relevant_environment.cells_in_environment[0].L/1e-6
     num_tsteps = cell_centroids.shape[0]
     
@@ -851,9 +850,8 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
         
     if net_distance > 0.0:
         if not no_randomization:
-            persistence_time = np.nan
-            #positive_ns, positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(cell_centroid_displacements)
-            #persistence_time, positive_ts = estimate_persistence_time(T, positive_ns, positive_das)
+            positive_ns, positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(cell_centroid_displacements)
+            persistence_time, positive_ts = estimate_persistence_time(T, positive_ns, positive_das)
         else:
             persistence_time = np.nan
         
@@ -865,7 +863,6 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
     return time_unit, (cell_centroids, (persistence_ratio, persistence_time), cell_speeds)
 
 def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_index, rpt_number, time_unit="min."):
-    # calculate centroid positions
     num_cells = relevant_environment.num_cells
     
     if time_unit == "min.":
@@ -890,10 +887,9 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         
         if net_distance > 0.0:
             persistence_ratio = net_displacement_mag/net_distance
-            #this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
-            #this_cell_positive_ns, this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
-            #persistence_time, this_cell_positive_ts = estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
-            persistence_time = np.nan
+            this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
+            this_cell_positive_ns, this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
+            persistence_time, this_cell_positive_ts = estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
         else:
             persistence_time = np.nan
             persistence_ratio = np.nan
@@ -912,16 +908,15 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         
         init_group_centroid_per_timestep = group_centroid_per_timestep[0]
         relative_group_centroid_per_timestep = group_centroid_per_timestep - init_group_centroid_per_timestep
-        #group_centroid_displacements_per_timestep = relative_group_centroid_per_timestep[1:] - relative_group_centroid_per_timestep[:-1]
+        group_centroid_displacements_per_timestep = relative_group_centroid_per_timestep[1:] - relative_group_centroid_per_timestep[:-1]
         
         group_net_displacement = relative_group_centroid_per_timestep[-1] - relative_group_centroid_per_timestep[0]
         group_net_displacement_mag = np.linalg.norm(group_net_displacement)
         group_net_distance = np.sum(np.linalg.norm(relative_group_centroid_per_timestep[1:] - relative_group_centroid_per_timestep[:-1], axis=1))
         group_persistence_ratio = group_net_displacement_mag/group_net_distance
 
-        #group_positive_ns, group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements_per_timestep)
-        #group_persistence_time, group_positive_ts = estimate_persistence_time(T, group_positive_ns, group_positive_das)
-        group_persistence_time = np.nan
+        group_positive_ns, group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements_per_timestep)
+        group_persistence_time, group_positive_ts = estimate_persistence_time(T, group_positive_ns, group_positive_das)
         
         group_velocities = calculate_velocities(group_centroid_per_timestep, T)
         group_speed_per_timestep = np.linalg.norm(group_velocities, axis=1)
@@ -1177,8 +1172,6 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
     
 def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=None):
     rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep = hardio.get_multiple_data_until_timestep(cell_index, max_tstep, ["rac_membrane_active", "rho_membrane_active", "unit_in_vec"], ['n', 'n', 'v'], storefile_path)
-    #rho_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rho_membrane_active", storefile_path)
-    #uivs_per_node_per_timestep = hardio.get_vector_data_until_timestep(cell_index, max_tstep, "unit_in_vec", storefile_path)
     
     normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(rac_membrane_active_per_tstep)
     protrusion_existence_per_tstep, protrusion_direction_per_tstep = determine_protrusion_existence_and_direction(normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep)
@@ -1262,78 +1255,178 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
             else:
                 convex_hull_areas_per_tstep.append(np.nan)
         return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0]
+    
+# =============================================================================
 
+@nb.jit(nopython=True)
+def is_prospective_edge_already_counted(prospective_edge, edges):
+    for ei in range(edges.shape[0]):
+        edge = edges[ei]
+        if edge[0] == -1:
+            return False
+        else:
+            if np.all(edge == prospective_edge):
+                return True
+            
+    return False
+
+def determine_edges(dt):
+    edges = -1*np.ones((dt.points.shape[0] + dt.simplices.shape[0] - 1, 2), dtype=np.int64)
+    sorted_simplices = np.sort(dt.simplices, axis=1)
+    pairs = np.array([[0, 1], [0, 2], [1, 2]])
+    
+    ei = 0
+    for simplex in sorted_simplices:
+        for pair in pairs:
+            if ei == edges.shape[0]:
+                break
+            
+            prospective_edge = simplex[pair]
+            
+            if not is_prospective_edge_already_counted(prospective_edge, edges):
+                edges[ei] = prospective_edge
+                ei += 1
+        else: #http://psung.blogspot.ca/2007/12/for-else-in-python.html
+            continue # executed only if the loop ended normally
+        break # only executed if continue under else statement was skipped
+                
+    return edges
+
+@nb.jit(nopython=True)
+def calculate_edge_lengths(points, edges):
+    edge_lengths = np.zeros(edges.shape[0], dtype=np.float64)
+    
+    for ei in range(edges.shape[0]):
+        edge = edges[ei]
+        x, y = points[edge[0]] - points[edge[1]]
+        edge_lengths[ei] = np.sqrt(x*x + y*y)
+        
+        
+    return edge_lengths
+
+def calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path):
+    all_cell_centroids_per_tstep = np.zeros((num_timepoints, num_cells, 2), dtype=np.float64)
+    
+    # ------------------------
+    
+    for ci in xrange(num_cells):
+        cell_centroids_per_tstep = calculate_cell_centroids_until_tstep(ci, num_timepoints, storefile_path)
+        
+        all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
+        
+    # ------------------------
+    if num_cells < 0:
+        raise StandardError("Negative number of cells given!")
+        
+    if num_cells == 0:
+        return np.zeros(num_timepoints, dtype=np.float64), np.zeros(num_timepoints, dtype=np.float64)
+    elif num_cells == 1:
+        return np.ones(num_timepoints, dtype=np.float64), np.ones(num_timepoints, dtype=np.float64)
+    elif num_cells == 2:
+        distance_between_cells_at_all_timesteps = np.linalg.norm(all_cell_centroids_per_tstep[:, 0, :] - all_cell_centroids_per_tstep[:, 1, :], axis=1)
+        
+        return np.nan*np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps/distance_between_cells_at_all_timesteps[0]
+    else:
+        delaunay_triangulations_per_tstep = []
+        
+        for cell_centroids in all_cell_centroids_per_tstep:
+            try:
+                delaunay_triangulations_per_tstep.append(space.Delaunay(cell_centroids))
+            except:
+                delaunay_triangulations_per_tstep.append(None)
+        
+        convex_hull_areas_per_tstep = []
+        average_cell_separation_per_tstep = []
+        min_cell_separation_tstep0 = -1.0
+        for ti, dt_and_all_cell_centroids in enumerate(zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep)):
+            dt, all_cell_centroids = dt_and_all_cell_centroids
+            if dt != None:
+                simplices = all_cell_centroids[dt.simplices]
+                simplex_areas = np.array([geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
+                convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
+                edges = determine_edges(dt)
+                edge_lengths = calculate_edge_lengths(dt.points, edges)
+                
+                if ti == 0:
+                    min_cell_separation_tstep0 = np.min(edge_lengths)
+                    
+                average_cell_separation_per_tstep.append(np.average(edge_lengths))
+            else:
+                convex_hull_areas_per_tstep.append(np.nan)
+                average_cell_separation_per_tstep.append(np.nan)
+                
+        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(average_cell_separation_per_tstep)/min_cell_separation_tstep0
+    
 # =============================================================================
 
 @nb.jit(nopython=True)
 def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
-#    ax, ay = a
-#    bx, by = b
-#    
-#    norm_a = np.sqrt(ax*ax + ay*ay)
-#    norm_b = np.sqrt(bx*bx + by*by)
-#    
-#    if norm_a < 1e-6:
-#        a = np.random.rand(2)
-#        ax, ay = a
-#        norm_a = np.sqrt(ax*ax + ay*ay)
-#        
-#        
-#    if norm_b < 1e-6:
-#        b = np.random.rand(2)
-#        bx, by = b
-#        norm_b = np.sqrt(bx*bx + by*by)
-#
-#    ax_, ay_ = a/norm_a
-#    bx_, by_ = b/norm_b
+    ax, ay = a
+    bx, by = b
     
-    return 0#ax_*bx_ + ay_*by_
+    norm_a = np.sqrt(ax*ax + ay*ay)
+    norm_b = np.sqrt(bx*bx + by*by)
+    
+    if norm_a < 1e-6:
+        a = np.random.rand(2)
+        ax, ay = a
+        norm_a = np.sqrt(ax*ax + ay*ay)
+        
+        
+    if norm_b < 1e-6:
+        b = np.random.rand(2)
+        bx, by = b
+        norm_b = np.sqrt(bx*bx + by*by)
+
+    ax_, ay_ = a/norm_a
+    bx_, by_ = b/norm_b
+    
+    return ax_*bx_ + ay_*by_
 
 @nb.jit(nopython=True)
 def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
     N = displacements.shape[0]
     
     all_das = np.zeros(N, dtype=np.float64)
-#    first_negative_n = -1
-#    
-#    for n in range(N):
-#        sum_cos_thetas = 0.0
-#        m = 0.0
-#        
-#        i = 0
-#        while i + n < N:
-#            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
-#            sum_cos_thetas += cos_theta
-#            m += 1
-#            i += 1
-#        
-#        da = (1./m)*sum_cos_thetas 
-#        if da < 0.0 and first_negative_n == -1:
-#            first_negative_n = n
-#            break
-#        
-#        all_das[n] = da
-#        
-#    if first_negative_n == -1:
-#        first_negative_n = N
+    first_negative_n = -1
+    
+    for n in range(N):
+        sum_cos_thetas = 0.0
+        m = 0.0
         
-    return all_das#all_das[:first_negative_n]
+        i = 0
+        while i + n < N:
+            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
+            sum_cos_thetas += cos_theta
+            m += 1
+            i += 1
+        
+        da = (1./m)*sum_cos_thetas 
+        if da < 0.0 and first_negative_n == -1:
+            first_negative_n = n
+            break
+        
+        all_das[n] = da
+        
+    if first_negative_n == -1:
+        first_negative_n = N
+        
+    return all_das[:first_negative_n]
 
 @nb.jit(nopython=True, nogil=True)
 def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacements):
-    pass
-#    for n in ns:
-#        m = 0.0
-#        sum_cos_thetas = 0.0
-#        i = 0 
-#        
-#        while i + n < N:
-#            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
-#            sum_cos_thetas += cos_theta
-#            m += 1
-#            i += 1
-#        
-#        dacs[n] = (1./m)*sum_cos_thetas
+    for n in ns:
+        m = 0.0
+        sum_cos_thetas = 0.0
+        i = 0 
+        
+        while i + n < N:
+            cos_theta = calculate_cos_theta_for_direction_autocorr_coeffs(displacements[i], displacements[i + n])
+            sum_cos_thetas += cos_theta
+            m += 1
+            i += 1
+        
+        dacs[n] = (1./m)*sum_cos_thetas
 
 @nb.jit(nopython=True)
 def find_first_negative_n(dacs):
@@ -1342,44 +1435,49 @@ def find_first_negative_n(dacs):
             return n
     
 def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(displacements, num_threads=4):
-#    N = displacements.shape[0]
-#    dacs = np.ones(N, dtype=np.float64)
-#    
-#    task_indices = np.arange(1, N, 30) #np.linspace(1, N, num=N/30.0, dtype=np.int64)
-#    chunklen = (N + num_threads - 1)//num_threads
-#    
-#    chunks = []
-#    for i in range(num_threads):
-#        chunk = [N, task_indices[i*chunklen:(i + 1)*chunklen], dacs, displacements]
-#        chunks.append(chunk)
-#            
-#    threads = [threading.Thread(target=calculate_direction_autocorr_coeff_parallel_worker, args=c) for c in chunks]
-#    
-#    for thread in threads:
-#        thread.start()
-#    for thread in threads:
-#        thread.join()
-#    
-#    np.append([0], task_indices)
-#    dacs = dacs[task_indices]
+    N = displacements.shape[0]
+    dacs = np.ones(N, dtype=np.float64)
     
-    #first_negative_index = find_first_negative_n(dacs)
-    return np.nan, np.nan#task_indices[:first_negative_index], dacs[:first_negative_index]
+    task_indices = np.arange(1, N, 30) #np.linspace(1, N, num=N/30.0, dtype=np.int64)
+    chunklen = (N + num_threads - 1)//num_threads
+    
+    chunks = []
+    for i in range(num_threads):
+        chunk = [N, task_indices[i*chunklen:(i + 1)*chunklen], dacs, displacements]
+        chunks.append(chunk)
+            
+    threads = [threading.Thread(target=calculate_direction_autocorr_coeff_parallel_worker, args=c) for c in chunks]
+    
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    
+    np.append([0], task_indices)
+    dacs = dacs[task_indices]
+    
+    first_negative_index = find_first_negative_n(dacs)
+    return task_indices[:first_negative_index], dacs[:first_negative_index]
 
 def estimate_persistence_time(timestep, positive_ns, positive_das):
-    #ts = positive_ns*timestep
+    ts = positive_ns*timestep
 #    A = np.zeros((ts.shape[0], 2), dtype=np.float64)
 #    A[:, 0] = ts
 #    pt = -1./(np.linalg.lstsq(A, np.log(positive_das))[0][0])
-#    try:
-#        popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
-#        pt = popt[0]
-#    except:
-#        pt = np.nan
+    try:
+        popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
+        pt = popt[0]
+    except:
+        pt = np.nan
     
-    return np.nan, np.nan#pt, ts
+    return pt, ts
 
 
+def calculate_mean_and_deviation(data):
+    mean = np.average(data)
+    deviation = np.sqrt(np.var(data))
+    
+    return mean, deviation
         
         
         

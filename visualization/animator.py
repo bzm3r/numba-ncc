@@ -339,9 +339,9 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
     text_r, text_g, text_b = text_color
     context.set_source_rgb(text_r, text_g, text_b)
     context.select_font_face("Consolas", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-    context.set_font_size(font_size/global_scale)
+    context.set_font_size(font_size*global_scale)
 
-    timestamp_string = "T = {} min".format(np.round(timestep*timestep_length/60.0))
+    timestamp_string = "T = {} min".format(int(np.round(timestep*timestep_length/60.0)))
     #timestamp_string = "NT = {} ".format(np.round(timestep))
     text_x_bearing, text_y_bearing, text_width, text_height = context.text_extents(timestamp_string)[:4]
     context.move_to((img_width - 1.2*text_width), (img_height - 1.2*text_height))
@@ -585,7 +585,7 @@ class EnvironmentAnimation():
                     
             if self.show_rgtpase:
                 offset_magnitude = self.offset_magnitudes[cell_index]
-                rgtpase_data_for_undrawn_timesteps = prepare_rgtpase_data(self.rgtpase_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timestep, offset_magnitude, self.storefile_path)
+                rgtpase_data_for_undrawn_timesteps = prepare_rgtpase_data(self.rgtpase_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timestep, self.global_scale*offset_magnitude, self.storefile_path)
                 
                 for x in xrange(self.num_rgtpase_labels + 1):
                     rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index,:,x,:,:] = rgtpase_data_for_undrawn_timesteps[x]

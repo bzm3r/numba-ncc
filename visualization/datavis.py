@@ -5,6 +5,7 @@ Created on Sat Jun  6 12:21:52 2015
 @author: brian
 """
 
+#from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import core.utilities as cu
@@ -14,42 +15,71 @@ import core.geometry as geometry
 import core.hardio as hardio
 from matplotlib import cm
 
+def add_to_general_data_structure(general_data_structure, key_value_tuples):
+    if general_data_structure != None:
+        if type(general_data_structure) != dict:
+            raise StandardError("general_data_structure is not dict, instead: {}".format(type(general_data_structure)))
+        else:
+            general_data_structure.update(key_value_tuples)
 # ====================================================================
 
-def graph_group_area_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, save_name=None, fontsize=22):
-    normalized_areas = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
+def graph_group_area_and_cell_separation_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
+    normalized_areas, normalized_cell_separations = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path)
+   # normalized_areas_new = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
     timepoints = np.arange(normalized_areas.shape[0])*T
     
-    fig, ax = plt.subplots()
+    fig_A, ax_A = plt.subplots()
     
-    ax.plot(timepoints, normalized_areas)
-    ax.set_ylabel("$A/A_0$")
-    ax.set_xlabel("time (min.)")
+    ax_A.plot(timepoints, normalized_areas)
+    ax_A.set_ylabel("$A/A_0$")
+    ax_A.set_xlabel("time (min.)")
     
     # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    ax.grid(which=u'both')
+    ax_A.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax_A.grid(which=u'both')
+    mean, deviation = cu.calculate_mean_and_deviation(normalized_areas)
     
-    if save_dir == None or save_name == None:
+    add_to_general_data_structure(general_data_structure, [("group_area_mean", mean), ("group_area_deviation", deviation)])
+    ax_A.set_title("mean = {}, deviation = {}".format(mean, deviation))
+    
+    fig_S, ax_S = plt.subplots()
+    
+    ax_S.plot(timepoints, normalized_cell_separations)
+    ax_S.set_ylabel("$S/S_0$")
+    ax_S.set_xlabel("time (min.)")
+    mean, deviation = cu.calculate_mean_and_deviation(normalized_cell_separations)
+    ax_S.set_title("mean = {}, deviation = {}".format(mean, deviation))
+
+    add_to_general_data_structure(general_data_structure, [("cell_separation_mean", mean), ("cell_separation_deviation", deviation)])
+    
+    # Put a legend to the right of the current axis
+    ax_S.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax_S.grid(which=u'both')
+    
+    if save_dir == None:
         plt.show()
     else:
-        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
-             ax.get_xticklabels() + ax.get_yticklabels()):
-            item.set_fontsize(fontsize)
+        for save_name, fig, ax in [("group_area", fig_A, ax_A), ("cell_separation", fig_S, ax_S)]:
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+            
+            fig.set_size_inches(12, 8)
+            fig.savefig(os.path.join(save_dir, save_name + '.png'), forward=True)
+            plt.close(fig)
         
-        fig.set_size_inches(12, 8)
-        fig.savefig(os.path.join(save_dir, save_name + '.png'), forward=True)
-        plt.close(fig)
-        plt.close("alll")
+        plt.close("all")
+        
+    return general_data_structure
         
 # ====================================================================
 
-def graph_avg_neighbour_distance_over_time():
+def graph_avg_neighbour_distance_over_time(general_data_structure=None):
     return 
 
 # ====================================================================
 
-def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, fontsize=22):
+def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, fontsize=22, general_data_structure=None):
     timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
     group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]
     group_centroid_y_coords = relative_group_centroid_per_tstep[:,1]
@@ -65,6 +95,18 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
     ax.legend(loc='best')
     ax.grid(which=u'both')
     
+    group_velocities = cu.calculate_velocities(relative_group_centroid_per_tstep, T)
+    group_x_speeds = np.abs(group_velocities[:, 0])
+    group_y_speeds = np.abs(group_velocities[:, 0])
+    group_speeds = np.linalg.norm(group_velocities, axis=1)
+    A = np.vstack([timepoints, np.ones(len(timepoints))]).T
+    fit_group_x_velocity, c = np.linalg.lstsq(A, group_centroid_x_coords)[0]
+    
+    add_to_general_data_structure(general_data_structure, [("group_speeds", group_speeds)])
+    add_to_general_data_structure(general_data_structure, [("average_group_x_speed", np.average(group_x_speeds))])
+    add_to_general_data_structure(general_data_structure, [("average_group_y_speed", np.average(group_y_speeds))])
+    add_to_general_data_structure(general_data_structure [("fit_group_x_velocity", fit_group_x_velocity)])
+    
     if save_dir == None or save_name == None:
         plt.show()
     else:
@@ -76,10 +118,12 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
         fig.savefig(os.path.join(save_dir, "group_" + save_name + '.png'), forward=True)
         plt.close(fig)
         plt.close("all")
+        
+    return general_data_structure
     
 # ====================================================================
 
-def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True, fontsize=22):    
+def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True, fontsize=22, general_data_structure=None):    
     # assuming that num_timepoints, T is same for all cells
     if max_tstep == None:
         max_tstep = num_timepoints
@@ -94,63 +138,69 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
     # ------------------------
-        
+    add_to_general_data_structure(general_data_structure, [("all_cell_centroids_per_tstep", all_cell_centroids_per_tstep)])
+    
     group_centroid_per_tstep = np.array([geometry.calculate_cluster_centroid(cell_centroids) for cell_centroids in all_cell_centroids_per_tstep])
     
     init_group_centroid_per_tstep = group_centroid_per_tstep[0]
+    add_to_general_data_structure(general_data_structure, [("group_centroid_per_tstep", group_centroid_per_tstep)])
     relative_group_centroid_per_tstep = group_centroid_per_tstep - init_group_centroid_per_tstep
     relative_all_cell_centroids_per_tstep = all_cell_centroids_per_tstep - init_group_centroid_per_tstep
-#
-#    group_centroid_displacements = relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1]
-#    all_cell_centroid_displacements = np.array([x[1:] - x[:-1] for x in relative_all_cell_centroids_per_tstep])
-#    
-#    group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements)
-#    group_persistence_time, group_positive_ts = cu.estimate_persistence_time(T, group_positive_ns, group_positive_das)
-#    group_persistence_time = np.round(group_persistence_time, 0)
+
+    group_centroid_displacements = relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1]
+    all_cell_centroid_displacements = np.array([x[1:] - x[:-1] for x in relative_all_cell_centroids_per_tstep])
     
-#    positive_ts_per_cell = []
-#    positive_das_per_cell = []
-#    all_cell_persistence_times = []
-#    
-#    for ci in range(all_cell_centroid_displacements.shape[1]):
-#        this_cell_centroid_displacements = all_cell_centroid_displacements[:,ci,:]
-#        this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
-#        this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
-#        this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
-#        
-#        positive_ts_per_cell.append(this_cell_positive_ts)
-#        positive_das_per_cell.append(this_cell_positive_das)
-#        all_cell_persistence_times.append(this_cell_persistence_time)
-#        
-#        if save_dir != None:
-#            fig, ax = plt.subplots()
-#            graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
-#            ax.set_title(graph_title)
-#            ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
-#            ax.plot(this_cell_positive_ts, np.exp(-1*this_cell_positive_ts/this_cell_persistence_time), color='r', marker='.')
-#            
-#            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-#                item.set_fontsize(fontsize)
-#                
-#            fig.set_size_inches(12, 8)
-#            this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
-#            if not os.path.exists(this_cell_save_dir):
-#                os.makedirs(this_cell_save_dir)
-#            fig.savefig(os.path.join(this_cell_save_dir, 'persistence_time_estimation' + '.png'), forward=True)
-#            plt.close(fig)
+    group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(group_centroid_displacements)
+    group_persistence_time, group_positive_ts = cu.estimate_persistence_time(T, group_positive_ns, group_positive_das)
+    group_persistence_time = np.round(group_persistence_time, 0)
+    
+    add_to_general_data_structure(general_data_structure, [("group_persistence_time", group_persistence_time)])
+    
+    positive_ts_per_cell = []
+    positive_das_per_cell = []
+    all_cell_persistence_times = []
+    
+    for ci in range(all_cell_centroid_displacements.shape[1]):
+        this_cell_centroid_displacements = all_cell_centroid_displacements[:,ci,:]
+        this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(this_cell_centroid_displacements)
+        this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(T, this_cell_positive_ns, this_cell_positive_das)
+        this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
+        
+        positive_ts_per_cell.append(this_cell_positive_ts)
+        positive_das_per_cell.append(this_cell_positive_das)
+        all_cell_persistence_times.append(this_cell_persistence_time)
+        
+        if save_dir != None:
+            fig, ax = plt.subplots()
+            graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
+            ax.set_title(graph_title)
+            ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
+            ax.plot(this_cell_positive_ts, np.exp(-1*this_cell_positive_ts/this_cell_persistence_time), color='r', marker='.')
             
-#    if save_dir != None:
-#        fig, ax = plt.subplots()
-#        ax.set_title("persistence time: {}".format(np.round(group_persistence_time, decimals=0)))
-#        ax.plot(group_positive_ts, group_positive_das, color='g', marker='.')
-#        ax.plot(group_positive_ts, np.exp(-1*group_positive_ts/group_persistence_time), color='r', marker='.')
-#        
-#        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-#            item.set_fontsize(fontsize)
-#            
-#        fig.set_size_inches(12, 8)
-#        fig.savefig(os.path.join(save_dir, 'group_persistence_time_estimation' + '.png'), forward=True)
-#        plt.close(fig)
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig.set_size_inches(12, 8)
+            this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
+            if not os.path.exists(this_cell_save_dir):
+                os.makedirs(this_cell_save_dir)
+            fig.savefig(os.path.join(this_cell_save_dir, 'persistence_time_estimation' + '.png'), forward=True)
+            plt.close(fig)
+    
+    add_to_general_data_structure(general_data_structure, [("all_cell_persistence_times", all_cell_persistence_times)])
+            
+    if save_dir != None:
+        fig, ax = plt.subplots()
+        ax.set_title("persistence time: {}".format(np.round(group_persistence_time, decimals=0)))
+        ax.plot(group_positive_ts, group_positive_das, color='g', marker='.')
+        ax.plot(group_positive_ts, np.exp(-1*group_positive_ts/group_persistence_time), color='r', marker='.')
+        
+        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(fontsize)
+            
+        fig.set_size_inches(12, 8)
+        fig.savefig(os.path.join(save_dir, 'group_persistence_time_estimation' + '.png'), forward=True)
+        plt.close(fig)
         
     # ------------------------
     
@@ -174,6 +224,8 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     group_net_distance = np.sum(np.linalg.norm(relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1], axis=1))
     group_persistence_ratio = np.round(group_net_displacement_mag/group_net_distance, 4)
     
+    add_to_general_data_structure(general_data_structure, [("group_persistence_ratio", group_persistence_ratio)])
+    
     cell_persistence_ratios = []
     for ci in xrange(num_cells):
         ccs = relative_all_cell_centroids_per_tstep[:,ci,:]
@@ -185,6 +237,9 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
         
         ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20])
         #ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
+        
+    add_to_general_data_structure(general_data_structure, [("all_cell_persistence_ratios", cell_persistence_ratios)])
+    
     average_cell_persistence_ratio = np.round(np.average(cell_persistence_ratios), decimals=4)
     std_cell_persistence_ratio = np.round(np.std(cell_persistence_ratios), decimals=4)
     
@@ -193,10 +248,10 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
     
-#    average_cell_persistence_time = np.round(np.average(all_cell_persistence_times), decimals=2)
-#    std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
-    #ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio, group_persistence_time, time_unit, average_cell_persistence_time, time_unit, std_cell_persistence_time, time_unit))
-    ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio))
+    average_cell_persistence_time = np.round(np.average(all_cell_persistence_times), decimals=2)
+    std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
+    ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio, group_persistence_time, time_unit, average_cell_persistence_time, time_unit, std_cell_persistence_time, time_unit))
+    #ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio))
     #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
 
@@ -216,11 +271,13 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
         plt.close("all")
         
     if make_group_centroid_drift_graph == True:
-        graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name)
+        general_data_structure = graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, general_data_structure=general_data_structure)
+        
+    return general_data_structure
         
 # ==============================================================================
 
-def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0, fontsize=22):
+def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0, fontsize=22, general_data_structure=None):
     fig_time, ax_time = plt.subplots()
     fig_box, ax_box = plt.subplots()
 
@@ -240,6 +297,8 @@ def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=N
         
         ax_time.plot(timepoints, cell_speeds, color=colors.color_list20[ci%20])
         average_speeds.append(np.average(cell_speeds))
+        
+    add_to_general_data_structure(general_data_structure, [("all_cell_speeds", average_speeds)])
 
     # Shrink current axis by 20%
     #box = ax_time.get_position()
@@ -283,10 +342,12 @@ def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=N
         plt.close(fig_box)
         plt.close("all")
         
+    return general_data_structure
+        
         
 # ==============================================================================
 
-def graph_important_cell_variables_over_time(T, cell_index, storefile_path, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None, fontsize=22):
+def graph_important_cell_variables_over_time(T, cell_index, storefile_path, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None, fontsize=22, general_data_structure=None):
     fig, ax = plt.subplots()
     
     #randomization_kicks = hardio.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
@@ -344,7 +405,7 @@ def graph_important_cell_variables_over_time(T, cell_index, storefile_path, pola
         
 # ==============================================================================
 
-def graph_strains(T, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, fontsize=22):
+def graph_strains(T, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, fontsize=22, general_data_structure=None):
     fig, ax = plt.subplots()
     
     total_strains = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)
@@ -376,7 +437,7 @@ def graph_strains(T, cell_index, storefile_path, save_dir=None, save_name=None, 
         
 # ==============================================================================
     
-def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdgtp_rho_baseline, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, fontsize=22):
+def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdgtp_rho_baseline, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, fontsize=22, general_data_structure=None):
     fig, ax = plt.subplots()
     
     average_kgtp_rac = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kgtp_rac', storefile_path), axis=1)/kgtp_rac_baseline
@@ -416,7 +477,7 @@ def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdg
         plt.close(fig)
         plt.close("all")
         
-def graph_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2):
+def graph_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, save_dir=None, save_name=None, max_tstep=None, significant_difference=0.2, general_data_structure=None):
     tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags, mean_run_period_speeds = cu.calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_path, significant_difference=significant_difference)
     
     num_run_and_tumble_periods = len(tumble_periods)
@@ -683,7 +744,7 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
         
 # ==========================================================================================
         
-def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_repeat, experiment_dir, total_time_in_hours, time_unit, fontsize=22):
+def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_repeat, experiment_dir, total_time_in_hours, time_unit, fontsize=22, general_data_structure=None):
     fig, ax = plt.subplots()
     fig_box, ax_box = plt.subplots()
     
@@ -692,9 +753,9 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
     persistence_ratios = [x[1][0] for x in centroids_persistences_speeds_per_repeat]
     mean_persistence_ratio = np.round(np.average(persistence_ratios), 2)
     std_persistence_ratio = np.round(np.std(persistence_ratios), 2)
-    #persistence_times = [x[1][1] for x in centroids_persistences_speeds_per_repeat]
-    #mean_persistence_time = np.round(np.average(persistence_times), 0)
-    #std_persistence_time = np.round(np.std(persistence_times), 0)
+    persistence_times = [x[1][1] for x in centroids_persistences_speeds_per_repeat]
+    mean_persistence_time = np.round(np.average(persistence_times), 0)
+    std_persistence_time = np.round(np.std(persistence_times), 0)
     average_cell_speeds = [np.average(x[2]) for x in centroids_persistences_speeds_per_repeat]
     
     for i, cps in enumerate(centroids_persistences_speeds_per_repeat):
@@ -708,8 +769,8 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
             
         ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list300[i%300])
 
-    #ax.set_title("Persistence ratio over {} hours (mean: {}, std: {}) \n Persistence time mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
-    ax.set_title("Persistence ratio over {} hours (mean: {}, std: {})").format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio))
+    ax.set_title("$P_R$ over {} hours (mean: {}, std: {}) \n $P_T$ mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
+    #ax.set_title("Persistence ratio over {} hours (mean: {}, std: {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio))
     
     ax.set_ylabel("micrometers")
     ax.set_xlabel("micrometers")
@@ -751,29 +812,20 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
     
 # =============================================================================
         
-def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_protrusionlifetimes_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hourss, fontsize=22):
+def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22):
     max_x_data_lim = 0.0
     min_x_data_lim = 0.0
     max_y_data_lim = 0.0
     min_y_data_lim = 0.0
     
-    persistence_ratios = []
-    persistence_times = []
-    average_cell_speeds = []
     all_protrusion_lifetimes_and_average_directions = np.zeros((0, 2), dtype=np.float64)
     
-    ci = 0
     fig_time, ax_time = plt.subplots()
-    for this_repeat_all_cell_data in centroids_persistences_speeds_protrusionlifetimes_per_repeat:
-        for cell_data in this_repeat_all_cell_data:
-            ccs, persistence_data, speeds, protrusion_lifetimes_and_average_direction = cell_data
-            persistence_ratio, persistence_time = persistence_data
-            persistence_ratios.append(persistence_ratio)
-            persistence_times.append(persistence_time)
-            average_cell_speeds.append(np.average(speeds))
-            
+    for rpti, all_cell_centroids in enumerate(all_cell_centroids_per_repeat):
+        for ci in range(all_cell_centroids.shape[1]):
+            ccs = all_cell_centroids[:,ci,:]
             relative_ccs = ccs - ccs[0]
-            
+                
             this_max_x_data_lim = np.max(relative_ccs[:,0])
             this_min_x_data_lim = np.min(relative_ccs[:,0])
             this_max_y_data_lim = np.max(relative_ccs[:,1])
@@ -787,26 +839,25 @@ def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_p
                 min_x_data_lim = this_min_x_data_lim
             if this_min_y_data_lim < min_y_data_lim:
                 min_y_data_lim = this_min_y_data_lim
-                
-            all_protrusion_lifetimes_and_average_directions = np.append(all_protrusion_lifetimes_and_average_directions, protrusion_lifetimes_and_average_direction, axis=0) 
+            
+            all_protrusion_lifetimes_and_average_directions = np.append(all_protrusion_lifetimes_and_average_directions, np.array(all_cell_protrusion_lifetimes_and_directions_per_repeat[rpti][ci]), axis=0)
                 
             ax_time.plot(relative_ccs[:,0], relative_ccs[:,1], marker=None, color=colors.color_list300[ci%300], alpha=0.5)
-            ci += 1
             
     for rpt_number in range(len(group_centroid_per_timestep_per_repeat)):
         group_centroid_per_timestep = group_centroid_per_timestep_per_repeat[rpt_number]
         relative_group_centroid_per_timestep = group_centroid_per_timestep - group_centroid_per_timestep[0]
         ax_time.plot(relative_group_centroid_per_timestep[:,0], relative_group_centroid_per_timestep[:,1], marker=None, color=colors.color_list300[rpt_number%300], linewidth=2)
         
-    mean_persistence_ratio = np.round(np.average(persistence_ratios), 2)
-    std_persistence_ratio = np.round(np.std(persistence_ratios), 2)
+    mean_persistence_ratio = np.round(np.average(all_cell_persistence_ratios_per_repeat), 2)
+    std_persistence_ratio = np.round(np.std(all_cell_persistence_ratios_per_repeat), 2)
     mean_group_persistence_ratio = np.round(np.average(group_persistence_ratio_per_repeat), 2)
-#    mean_persistence_time = np.round(np.average(persistence_times), 0)
-#    std_persistence_time = np.round(np.std(persistence_times), 0)
-#    mean_group_persistence_time = np.round(np.average(group_persistence_time_per_repeat), 0)
+    mean_persistence_time = np.round(np.average(all_cell_persistence_times_per_repeat), 0)
+    std_persistence_time = np.round(np.std(all_cell_persistence_times_per_repeat), 0)
+    mean_group_persistence_time = np.round(np.average(group_persistence_time_per_repeat), 0)
 
-    #ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {} \n Persistence time cell mean: {} {}, (std {} {}), group mean: {} {}".format(total_time_in_hourss, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit, mean_group_persistence_time, time_unit))
-    ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {}".format(total_time_in_hourss, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio))
+    ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {} \n Persistence time cell mean: {} {}, (std {} {}), group mean: {} {}".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit, mean_group_persistence_time, time_unit))
+    #ax_time.set_title("Experiment over {} hours \n Persistence ratio, cell mean: {} (std: {}), group mean: {}".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_group_persistence_ratio))
     
     ax_time.set_ylabel("micrometers")
     ax_time.set_xlabel("micrometers")
@@ -837,14 +888,15 @@ def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_p
     
     fig_box, ax_box = plt.subplots()
     
-    violin = ax_box.violinplot(average_cell_speeds, showmedians=True, points=len(average_cell_speeds))
+    all_cell_average_speeds = np.ravel(all_cell_speeds_per_repeat)
+    violin = ax_box.violinplot(all_cell_average_speeds, showmedians=True, points=all_cell_average_speeds.shape[0])
     
     ax_box.yaxis.grid(True)
     ax_box.set_ylabel('average speed ($\mu m$/min.)')
     ax_box.xaxis.set_ticks([]) 
     ax_box.xaxis.set_ticks_position('none') 
     
-    graph_protrusion_lifetimes_radially(np.array([all_protrusion_lifetimes_and_average_directions]), 20, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir", mins_or_secs=None)
+    graph_protrusion_lifetimes_radially(all_protrusion_lifetimes_and_average_directions, 20, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
     
     for item in ([ax_box.title, ax_box.xaxis.label, ax_box.yaxis.label]  +
              ax_box.get_xticklabels() + ax_box.get_yticklabels()):
@@ -871,7 +923,7 @@ def present_collated_cell_motion_data(time_unit, centroids_persistences_speeds_p
     
 
 #timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_per_timestep_per_repeat, experiment_dir, total_time_in_hours, group_width=num_cells_width*cell_diameter
-def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_repeat, max_x_centroid_per_tstep_per_repeat, group_x_centroid_per_tstep_per_repeat, group_speed_per_timestep_per_repeat, save_dir, total_time_in_hours, fontsize=22):
+def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_repeat, max_x_centroid_per_tstep_per_repeat, group_x_centroid_per_tstep_per_repeat, fit_group_x_velocity_per_repeat, save_dir, total_time_in_hours, fontsize=22, general_data_structure=None):
     timepoints = np.arange(group_x_centroid_per_tstep_per_repeat[0].shape[0])*T/60.0
     
     fig_simple_normalized, ax_simple_normalized = plt.subplots()
@@ -907,7 +959,7 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
         normalized_relative_min_centroid_x_coords = relative_min_x_centroid_per_tstep/group_width
         
         if graph_upper_lower_bounds:
-            bar_indices = np.arange(0, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64) + bar_offset*repeat_number
+            bar_indices = np.arange(bar_offset*repeat_number, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64)
             
             if repeat_number == 0:
                 bar_indices = np.append(bar_indices, timepoints.shape[0] - 1)
@@ -955,11 +1007,10 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
     ax_full.grid(which=u'both')
     ax_simple.set_ylim([0, 1500])
     ax_full.set_ylim([0, 1500])
-    
-    average_group_speed_per_repeat = [np.average(x) for x in group_speed_per_timestep_per_repeat]
-    violin = ax_box.violinplot(average_group_speed_per_repeat, showmedians=True, points=len(average_group_speed_per_repeat))
+
+    violin = ax_box.violinplot(fit_group_x_velocity_per_repeat, showmedians=True, points=len(fit_group_x_velocity_per_repeat))
     ax_box.yaxis.grid(True)
-    ax_box.set_ylabel('average group speed ($\mu m$/min.)')
+    ax_box.set_ylabel('average group X velocity ($\mu m$/min.)')
     ax_box.xaxis.set_ticks([]) 
     ax_box.xaxis.set_ticks_position('none') 
 
@@ -998,81 +1049,89 @@ def present_collated_group_centroid_drift_data(T, min_x_centroid_per_tstep_per_r
 
 def generate_theta_bins(num_bins):
     delta = 2*np.pi/num_bins
-    return np.array([[((2*n + 1)*delta)%(2*np.pi), (2*n + 3)*delta%(2*np.pi)] for n in range(num_bins)]), np.array([((2*n + 1)*delta)%(2*np.pi) for n in range(num_bins)]), delta
+    start = 0.5*delta
+    
+    bin_bounds = []
+    current = start
+    for n in range(num_bins - 1):
+        bin_bounds.append([current, current + delta])
+        current += delta
+    bin_bounds.append([2*np.pi - 0.5*delta, start])
+    bin_bounds = np.array(bin_bounds)
+    bin_mids = np.average(bin_bounds, axis=1)
+    bin_mids[-1] = 0.0
+    
+    return bin_bounds, bin_mids, delta
 
-def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, save_name=None, mins_or_secs="mins", fontsize=22):
-    bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
-
-    binned_direction_data = [list() for x in range(num_polar_graph_bins)]    
-    for cell_result in protrusion_lifetime_and_direction_data:
-        for protrusion_result in cell_result:
-            lifetime, direction = protrusion_result
-            
-            if mins_or_secs == "mins":
-                lifetime = lifetime/60.0
-            
-            binned = False
-            for n in range(num_polar_graph_bins - 1):
-                a, b = bins[n]
-                if a <= direction < b:
-                    binned = True
-                    binned_direction_data[n].append(lifetime)
-                    break
-                
-            if binned == False:
-                binned_direction_data[-1].append(lifetime)
+def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, save_name=None, fontsize=22, general_data_structure=None):
+    num_polar_graph_bins = 10
+    bin_bounds, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
+    binned_direction_data = [[] for x in range(num_polar_graph_bins)]    
+    for protrusion_result in protrusion_lifetime_and_direction_data:
+        lifetime, direction = protrusion_result
+        lifetime = lifetime/60.0
         
-    fig_avg = plt.figure(figsize=(10, 10))
+        binned = False
+        for n in range(num_polar_graph_bins - 1):
+            a, b = bin_bounds[n]
+            if a <= direction < b:
+                binned = True
+                binned_direction_data[n].append(lifetime)
+                break
+            
+        if binned == False:
+            binned_direction_data[-1].append(lifetime)
+    
+    fig_scaled = plt.figure(figsize=(10, 11))
+    ax_scaled = fig_scaled.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+    total_lifetimes = np.array([np.sum(x) for x in binned_direction_data])
+    max_total_lifetime = np.max(total_lifetimes)
+    scaled_lifetimes = total_lifetimes/max_total_lifetime
+    
+    ax_scaled.bar(bin_midpoints, scaled_lifetimes, width=delta, bottom=0.0)
+    ax_scaled.set_title("Normalized total protrusion lifetime given direction \n (1.0 = {} min.)".format(np.round(max_total_lifetime, 1)))
+    ax_scaled.title.set_position([.5, 1.1])
+    
+    fig_avg = plt.figure(figsize=(10, 11))
     ax_avg = fig_avg.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
-    
-    average_lifetimes = [np.average(x) for x in binned_direction_data]
-    
-    ax_avg.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
-    ax_avg.set_ylabel('min.', labelpad=-100, rotation=0)
-    #ax.set_title('Average protrusion lifetime given direction')
-    
-    
-    fig_total = plt.figure(figsize=(10, 10))
-    ax_total = fig_total.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
-    
-    total_lifetimes = [np.sum(x) for x in binned_direction_data]
-    
-    ax_total.bar(bin_midpoints, total_lifetimes, width=delta, bottom=0.0)
-    ax_total.set_ylabel('min.', labelpad=-100, rotation=0)
+    #average_lifetimes = np.array([np.std(x) for x in binned_direction_data])
+    #std_lifetimes = np.array([np.std(x) for x in binned_direction_data])
+    bplot = ax_avg.boxplot(binned_direction_data, positions=bin_midpoints, showfliers=False, whis=0.0, showcaps=False, patch_artist=True)
+    for pa in bplot['boxes']:
+        pa.set_facecolor('lightblue')
+        pa.set_alpha(0.25)
+    theta_labels = ["{}$\pi$".format(theta) for theta in np.round(bin_midpoints/np.pi, decimals=2)]
+    ax_avg.set_xticklabels(theta_labels)
+    ax_avg.set_ylim([0, 60.0])
+    #ax_avg.violinplot(binned_direction_data, bin_midpoints, widths=np.ones(num_polar_graph_bins, dtype=np.float64), showmeans=True, showextrema=False)
+    #ax_avg.set_ylim([0, 60.0])
+    #ax_avg.bar(bin_midpoints, average_lifetimes, width=delta, bottom=0.0)
+    #ax_avg.errorbar(bin_midpoints, average_lifetimes, yerr=[np.min()], capsize=0, fmt="o", color='k')
+    bin_sizes = [len(x) for x in binned_direction_data]
+    min_bin_size = np.min(bin_sizes)
+    max_bin_size = np.max(bin_sizes)
+    ax_avg.set_title("Average protrusion lifetime given direction \n (min, max bin_size = {}, {})".format(min_bin_size, max_bin_size))
+    ax_avg.title.set_position([.5, 1.1])
+
     
     if save_dir == None:
         plt.show()
     else:
         if save_name == None:
             save_name = "protrusion_lifetime_versus_direction"
+        
+        for fig_ax_save_prefix in [(fig_scaled, ax_scaled, "scaled_total_"), (fig_avg, ax_avg, "avg_")]:
+            fig, ax, save_prefix = fig_ax_save_prefix
+            for item in ([ax.title, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
             
-        for item in ([ax_avg.title, ax_avg.xaxis.label, ax_avg.yaxis.label]  +
-             ax_avg.get_xticklabels() + ax_avg.get_yticklabels()):
-            item.set_fontsize(fontsize)
+            save_path = os.path.join(save_dir, save_prefix + save_name + ".png")
+            print "save_path: ", save_path
+            fig.savefig(save_path, forward=True)
+            
+        plt.close("all")        
         
-        
-        fig_avg.set_size_inches(10, 10)
-        save_path = os.path.join(save_dir, "avg_" + save_name + ".png")
-        print "save_path: ", save_path
-        fig_avg.savefig(save_path, forward=True)
-        plt.close(fig_avg)
-        plt.close("all")
-        
-        for item in ([ax_total.title, ax_total.xaxis.label, ax_total.yaxis.label]  +
-             ax_total.get_xticklabels() + ax_total.get_yticklabels()):
-            item.set_fontsize(fontsize)
-        
-        if save_name == None:
-            save_name = "protrusion_lifetime_versus_direction"
-        fig_total.set_size_inches(10, 10)
-        save_path = os.path.join(save_dir, "total_" + save_name + ".png")
-        print "save_path: ", save_path
-        fig_total.savefig(save_path, forward=True)
-        plt.close(fig_total)
-        plt.close("all")
-        
-        
-def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=None):
+def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=None, general_data_structure=None):
     bins, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
 
     start_cause_labels = ["coa", "randomization", "coa+rand"]
@@ -1179,10 +1238,11 @@ def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction
         
 # ============================================================================
 
-def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, T, forward_cones, backward_cones, save_dir=None):
+def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, T, forward_cones, backward_cones, num_nodes, save_dir=None, general_data_structure=None):
     times = np.arange(max_tstep)*T/60.0
-    num_forward_protrusions = np.zeros(max_tstep, dtype=np.int64)
-    num_backward_protrusions = np.zeros(max_tstep, dtype=np.int64)
+    num_forward_protrusions = np.zeros(max_tstep, dtype=np.float)
+    num_backward_protrusions = np.zeros(max_tstep, dtype=np.float)
+    num_neither_protrusions = np.zeros(max_tstep, dtype=np.float64)
     
     for cell_protrusion_data in zip(protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data):
         for protrusion_start_end_info, protrusion_lifetime_direction_info in zip(cell_protrusion_data[0], cell_protrusion_data[1]):
@@ -1204,6 +1264,8 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
                 num_forward_protrusions[ti_start:ti_end] += 1
             elif direction_bin == "b":
                 num_backward_protrusions[ti_start:ti_end] += 1
+            else:
+                num_neither_protrusions[ti_start:ti_end] += 1
                 
     fig, ax = plt.subplots()
     
@@ -1212,6 +1274,43 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
     #ax.plot(times, other_cone, label='other')
     
     ax.legend(loc='best')
+    ax.set_ylabel("number of protrusions")
+    ax.set_xlabel("time (min.)")
+    
+    fig_with_other, ax_with_other = plt.subplots()
+    
+    ax_with_other.plot(times, num_forward_protrusions, label='forward')
+    ax_with_other.plot(times, num_backward_protrusions, label='backward')
+    ax_with_other.plot(times, num_neither_protrusions, label='other')
+    #ax.plot(times, other_cone, label='other')
+    
+    ax_with_other.legend(loc='best')
+    ax_with_other.set_ylabel("number of protrusions")
+    ax_with_other.set_xlabel("time (min.)")
+    
+    
+    fig_normalized, ax_normalized = plt.subplots()
+    
+    ax_normalized.plot(times, num_forward_protrusions/num_nodes, label='forward')
+    ax_normalized.plot(times, num_backward_protrusions/num_nodes, label='backward')
+    ax_normalized.plot(times, num_neither_protrusions/num_nodes, label='other')
+    #ax.plot(times, other_cone, label='other')
+    
+    ax_normalized.legend(loc='best')
+    ax_normalized.set_ylabel("number of protrusions/number of nodes per cell")
+    ax_normalized.set_xlabel("time (min.)")
+    
+    
+    fig_normalized_with_other, ax_normalized_with_other = plt.subplots()
+    
+    ax_normalized_with_other.plot(times, num_forward_protrusions/num_nodes, label='forward')
+    ax_normalized_with_other.plot(times, num_backward_protrusions/num_nodes, label='backward')
+    ax_normalized_with_other.plot(times, num_neither_protrusions/num_nodes, label='other')
+    #ax.plot(times, other_cone, label='other')
+    
+    ax_normalized_with_other.legend(loc='best')
+    ax_normalized_with_other.set_ylabel("number of protrusions/number of nodes per cell")
+    ax_normalized_with_other.set_xlabel("time (min.)")
     
     if save_dir == None:
         plt.show()
@@ -1221,14 +1320,34 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
+        
+        fig_with_other.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "num_fbo_protrusions_over_time" + ".png")
+        print "save_path: ", save_path
+        fig_with_other.savefig(save_path, forward=True)
+        plt.close(fig_with_other)
+        
+        fig_normalized.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "normalized_forward_backward_protrusions_over_time" + ".png")
+        print "save_path: ", save_path
+        fig_normalized.savefig(save_path, forward=True)
+        plt.close(fig_normalized)
+        
+        fig_normalized_with_other.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "normalized_fbo_protrusions_over_time" + ".png")
+        print "save_path: ", save_path
+        fig_normalized_with_other.savefig(save_path, forward=True)
+        plt.close(fig_normalized_with_other)
+        
         plt.close("all")
     
 # ============================================================================
 
-def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_directions, T, forward_cones, backward_cones, save_dir=None):
+def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_directions, T, forward_cones, backward_cones, save_dir=None, general_data_structure=None):
     times = np.arange(max_tstep)*T/60.0
-    num_forward_cells = np.zeros(max_tstep, dtype=np.int64)
-    num_backward_cells = np.zeros(max_tstep, dtype=np.int64)
+    num_forward_cells = np.zeros(max_tstep, dtype=np.float64)
+    num_backward_cells = np.zeros(max_tstep, dtype=np.float64)
+    num_other_cells = np.zeros(max_tstep, dtype=np.float64)
     
     for cell_speed_direction_data in all_cell_speeds_and_directions:
         speeds, directions = cell_speed_direction_data
@@ -1250,17 +1369,29 @@ def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_dir
                     num_forward_cells[ti] += 1
                 elif direction_bin == "b":
                     num_backward_cells[ti] += 1
+                else:
+                    num_other_cells[ti] += 1
                 
     fig, ax = plt.subplots()
     
     ax.plot(times, num_forward_cells, label='forward')
     ax.plot(times, num_backward_cells, label='backward')
-    #ax.plot(times, other_cone, label='other')
     
     ax.legend(loc='best')
     
     ax.set_ylabel("number of cells")
     ax.set_xlabel("time (min.)")
+    
+    fig_with_other, ax_with_other = plt.subplots()
+    
+    ax_with_other.plot(times, num_forward_cells, label='forward')
+    ax_with_other.plot(times, num_backward_cells, label='backward')
+    ax_with_other.plot(times, num_other_cells, label='other')
+    
+    ax_with_other.legend(loc='best')
+    
+    ax_with_other.set_ylabel("number of cells")
+    ax_with_other.set_xlabel("time (min.)")
     
     if save_dir == None:
         plt.show()
@@ -1270,12 +1401,20 @@ def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_dir
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
+        
+        fig_with_other.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "num_fbo_cells_over_time" + ".png")
+        print "save_path: ", save_path
+        fig_with_other.savefig(save_path, forward=True)
+        plt.close(fig_with_other)
+        
+        
         plt.close("all")
             
         
 # =============================================================================
 
-def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, max_normalized_group_area=3.0):
+def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, max_normalized_group_area=3.0, general_data_structure=None):
     
     fig, ax = plt.subplots()
     
@@ -1303,7 +1442,7 @@ def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test
         plt.close("all")
         
         
-def graph_confinement_data_persistence_ratios(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None):
+def graph_confinement_data_persistence_ratios(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None, general_data_structure=None):
     
     fig, ax = plt.subplots()
     
@@ -1327,7 +1466,7 @@ def graph_confinement_data_persistence_ratios(sub_experiment_number, test_num_ce
         plt.close(fig)
         plt.close("all")
 
-def graph_confinement_data_persistence_times(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None):
+def graph_confinement_data_persistence_times(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None, general_data_structure=None):
     
     fig, ax = plt.subplots()
     
@@ -1345,6 +1484,37 @@ def graph_confinement_data_persistence_times(sub_experiment_number, test_num_cel
     else:
         fig.set_size_inches(12, 8)
         save_path = os.path.join(save_dir, "confinement_test_graph_persistence_times_{}".format(sub_experiment_number) + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+        
+# =============================================================================
+
+def graph_cell_number_change_data(sub_experiment_number, test_num_cells, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, aspect_ratio, save_dir=None):
+    fig, axarr = plt.subplots(nrows=4, sharex=True)
+    
+    ds_dicts = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation"], [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]))
+    ds_y_label_dict = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation"], ["", "min.", "$\mu$m/min.", ""]))
+    
+    last_index = 3
+    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity"]):
+        ds = ds_dicts[ds_label]
+        
+        axarr[i].errorbar(test_num_cells, np.average(ds, axis=1), yerr=np.std(ds, axis=1), fmt='o')
+        axarr[i].set_title(ds_label)
+        axarr[i].set_ylabel(ds_y_label_dict[ds_label])
+        
+        if i == last_index:
+            axarr[i].set_xlabel("number of cells in group")
+            axarr[i].set_xticks(test_num_cells)
+            axarr[i].set_xticklabels([str(j) for j in test_num_cells])
+            
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(12, 8)
+        save_path = os.path.join(save_dir, "cell_number_change_data_AR={}_{}".format(aspect_ratio, sub_experiment_number) + ".png")
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)
