@@ -16,6 +16,7 @@ import copy
 import scipy.spatial as space
 import scipy.optimize as scipio
 import threading
+import math
 
 
 
@@ -1304,6 +1305,57 @@ def calculate_edge_lengths(points, edges):
         
     return edge_lengths
 
+#@nb.jit(nopython=True)
+def calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_per_tstep):
+    num_timepoints = all_cell_centroids_per_tstep.shape[0]
+    num_cells = all_cell_centroids_per_tstep.shape[1]
+    intercellular_separations_per_timestep = np.zeros((num_timepoints, num_cells - 1), dtype=np.float64)
+    
+    for ti in range(num_timepoints):
+        relevant_cell_centroids = all_cell_centroids_per_tstep[ti]
+        relevant_x_centroids = relevant_cell_centroids[:, 0]
+        sorted_cell_indices = sorted(np.arange(num_cells), key=lambda x: relevant_x_centroids[x])
+        
+        for n in range(num_cells - 1):
+            cia = sorted_cell_indices[n]
+            cib = sorted_cell_indices[n + 1]
+            v = relevant_cell_centroids[cia] - relevant_cell_centroids[cib]
+            d = math.sqrt(v[0]*v[0] + v[1]*v[1])
+            intercellular_separations_per_timestep[ti][n] = d
+            
+            
+    return intercellular_separations_per_timestep
+ 
+@nb.jit(nopython=True)
+def determine_group_aspect_ratio_per_tstep(all_cell_coords_per_tstep):
+    num_timepoints = all_cell_coords_per_tstep.shape[0]
+    group_aspect_ratio_per_tstep = np.zeros(num_timepoints, dtype=np.float64)
+    
+    for ti in range(num_timepoints):
+        cell_coords = all_cell_coords_per_tstep[ti]
+        xs = cell_coords[:, :, 0]
+        ys = cell_coords[:, :, 1]
+        
+        w = np.max(xs) - np.min(xs)
+        h = np.max(ys) - np.min(ys)
+        
+        group_aspect_ratio_per_tstep[ti] = w/h
+        
+    return group_aspect_ratio_per_tstep
+    
+
+def calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints, storefile_path):
+    
+    all_cell_coords_per_tstep = np.zeros((num_timepoints, num_cells, num_nodes, 2), dtype=np.float64)
+    
+    for ci in xrange(num_cells):
+        all_cell_coords_per_tstep[:, ci, :, :] = hardio.get_node_coords_until_tstep(ci, num_timepoints, storefile_path)
+        
+    group_aspect_ratio_per_tstep = determine_group_aspect_ratio_per_tstep(all_cell_coords_per_tstep)
+    
+    return group_aspect_ratio_per_tstep
+    
+    
 def calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path):
     all_cell_centroids_per_tstep = np.zeros((num_timepoints, num_cells, 2), dtype=np.float64)
     
@@ -1313,7 +1365,8 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
         cell_centroids_per_tstep = calculate_cell_centroids_until_tstep(ci, num_timepoints, storefile_path)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
-        
+    
+    
     # ------------------------
     if num_cells < 0:
         raise StandardError("Negative number of cells given!")
@@ -1338,6 +1391,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
         convex_hull_areas_per_tstep = []
         average_cell_separation_per_tstep = []
         min_cell_separation_tstep0 = -1.0
+        do_simple_distance_calculations = False
         for ti, dt_and_all_cell_centroids in enumerate(zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep)):
             dt, all_cell_centroids = dt_and_all_cell_centroids
             if dt != None:
@@ -1349,12 +1403,20 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
                 
                 if ti == 0:
                     min_cell_separation_tstep0 = np.min(edge_lengths)
-                    
+                        
                 average_cell_separation_per_tstep.append(np.average(edge_lengths))
             else:
-                convex_hull_areas_per_tstep.append(np.nan)
-                average_cell_separation_per_tstep.append(np.nan)
+                do_simple_distance_calculations = True
+                break
                 
+                
+        if do_simple_distance_calculations:
+            intercellular_separations_per_timestep = calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_per_tstep)
+            min_cell_separation_tstep0 = np.min(intercellular_separations_per_timestep)
+            average_cell_separation_per_tstep = np.average(intercellular_separations_per_timestep, axis=1)
+            
+            return np.nan*np.ones_like(average_cell_separation_per_tstep), average_cell_separation_per_tstep/min_cell_separation_tstep0
+        
         return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(average_cell_separation_per_tstep)/min_cell_separation_tstep0
     
 # =============================================================================

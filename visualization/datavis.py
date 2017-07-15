@@ -14,6 +14,10 @@ import colors
 import core.geometry as geometry
 import core.hardio as hardio
 from matplotlib import cm
+import matplotlib.patches as mpatch
+import numba as nb
+
+# =============================================================================
 
 def add_to_general_data_structure(general_data_structure, key_value_tuples):
     if general_data_structure != None:
@@ -21,10 +25,12 @@ def add_to_general_data_structure(general_data_structure, key_value_tuples):
             raise StandardError("general_data_structure is not dict, instead: {}".format(type(general_data_structure)))
         else:
             general_data_structure.update(key_value_tuples)
-# ====================================================================
+            
+# =============================================================================
 
-def graph_group_area_and_cell_separation_over_time(num_cells, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
+def graph_group_area_and_cell_separation_over_time(num_cells, num_nodes, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
     normalized_areas, normalized_cell_separations = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path)
+    group_aspect_ratios = cu.calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints, storefile_path)
    # normalized_areas_new = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
     timepoints = np.arange(normalized_areas.shape[0])*T
     
@@ -38,9 +44,8 @@ def graph_group_area_and_cell_separation_over_time(num_cells, num_timepoints, T,
     ax_A.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax_A.grid(which=u'both')
     mean, deviation = cu.calculate_mean_and_deviation(normalized_areas)
-    
-    add_to_general_data_structure(general_data_structure, [("group_area_mean", mean), ("group_area_deviation", deviation)])
     ax_A.set_title("mean = {}, deviation = {}".format(mean, deviation))
+    add_to_general_data_structure(general_data_structure, [("group_area_mean", mean), ("group_area_deviation", deviation)])
     
     fig_S, ax_S = plt.subplots()
     
@@ -49,17 +54,21 @@ def graph_group_area_and_cell_separation_over_time(num_cells, num_timepoints, T,
     ax_S.set_xlabel("time (min.)")
     mean, deviation = cu.calculate_mean_and_deviation(normalized_cell_separations)
     ax_S.set_title("mean = {}, deviation = {}".format(mean, deviation))
-
     add_to_general_data_structure(general_data_structure, [("cell_separation_mean", mean), ("cell_separation_deviation", deviation)])
     
-    # Put a legend to the right of the current axis
-    ax_S.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    ax_S.grid(which=u'both')
+    fig_R, ax_R = plt.subplots()
     
+    ax_R.plot(timepoints, group_aspect_ratios)
+    ax_R.set_ylabel("$R = W/H$")
+    ax_R.set_xlabel("time (min.)")
+    mean, deviation = cu.calculate_mean_and_deviation(group_aspect_ratios)
+    ax_R.set_title("mean = {}, deviation = {}".format(mean, deviation))
+    add_to_general_data_structure(general_data_structure, [("group_aspect_ratio_mean", mean), ("group_aspect_ratio_deviaion", deviation)])
+
     if save_dir == None:
         plt.show()
     else:
-        for save_name, fig, ax in [("group_area", fig_A, ax_A), ("cell_separation", fig_S, ax_S)]:
+        for save_name, fig, ax in [("group_area", fig_A, ax_A), ("cell_separation", fig_S, ax_S), ("group_aspect_ratio", fig_R, ax_R)]:
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
                  ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(fontsize)
@@ -72,12 +81,31 @@ def graph_group_area_and_cell_separation_over_time(num_cells, num_timepoints, T,
         
     return general_data_structure
         
-# ====================================================================
+# =============================================================================
 
 def graph_avg_neighbour_distance_over_time(general_data_structure=None):
     return 
 
-# ====================================================================
+# =============================================================================
+
+@nb.jit(nopython=True)
+def find_approximate_transient_end(group_x_velocities, average_group_x_velocity, next_timesteps_window=60):
+    num_timepoints = group_x_velocities.shape[0]
+    max_velocity = np.max(group_x_velocities)
+    possible_endpoint = 0
+    
+    #possible_endpoints_found = 0
+    for i in xrange(num_timepoints - 1):
+        ti = i + 1
+        velocities_until = group_x_velocities[:ti]
+        average_velocities_until = np.sum(velocities_until)/velocities_until.shape[0]
+        
+        if group_x_velocities[ti] < 0.1*max_velocity and average_velocities_until < 0.1*max_velocity:
+            possible_endpoint = ti
+        
+    return possible_endpoint
+
+# =============================================================================
 
 def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, fontsize=22, general_data_structure=None):
     timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
@@ -86,8 +114,17 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
     
     fig, ax = plt.subplots()
     
+    #A = np.vstack([timepoints, np.zeros(len(timepoints))]).T
+    #delta_t = timepoints[1] - timepoints[0]
+    group_x_velocities = (group_centroid_x_coords[1:] - group_centroid_x_coords[:-1])/(timepoints[1:] - timepoints[:-1])
+    average_group_x_velocity = np.average(group_x_velocities)
+    
+    transient_end_index = find_approximate_transient_end(group_x_velocities, average_group_x_velocity, next_timesteps_window=60)
+    #fit_group_x_velocity, c = np.linalg.lstsq(A, group_centroid_x_coords)[0]
     ax.plot(timepoints, group_centroid_x_coords, label="x-coord", color='b')
     ax.plot(timepoints, group_centroid_y_coords, label="y-coord", color='g')
+    ax.plot(timepoints, average_group_x_velocity*timepoints, label="velocity ({} $\mu$m)".format(average_group_x_velocity), color='r')
+    ax.axvline(x=timepoints[transient_end_index], color='m', label='approximate transient end')
     ax.set_ylabel("group centroid position (micrometers)")
     ax.set_xlabel("time (min.)")
     
@@ -99,13 +136,12 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
     group_x_speeds = np.abs(group_velocities[:, 0])
     group_y_speeds = np.abs(group_velocities[:, 0])
     group_speeds = np.linalg.norm(group_velocities, axis=1)
-    A = np.vstack([timepoints, np.ones(len(timepoints))]).T
-    fit_group_x_velocity, c = np.linalg.lstsq(A, group_centroid_x_coords)[0]
     
     add_to_general_data_structure(general_data_structure, [("group_speeds", group_speeds)])
     add_to_general_data_structure(general_data_structure, [("average_group_x_speed", np.average(group_x_speeds))])
     add_to_general_data_structure(general_data_structure, [("average_group_y_speed", np.average(group_y_speeds))])
-    add_to_general_data_structure(general_data_structure [("fit_group_x_velocity", fit_group_x_velocity)])
+    add_to_general_data_structure(general_data_structure, [("fit_group_x_velocity", average_group_x_velocity)])
+    add_to_general_data_structure(general_data_structure, [("transient_end", timepoints[transient_end_index])])
     
     if save_dir == None or save_name == None:
         plt.show()
@@ -121,7 +157,7 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
         
     return general_data_structure
     
-# ====================================================================
+# =============================================================================
 
 def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True, fontsize=22, general_data_structure=None):    
     # assuming that num_timepoints, T is same for all cells
@@ -1491,30 +1527,131 @@ def graph_confinement_data_persistence_times(sub_experiment_number, test_num_cel
         
 # =============================================================================
 
-def graph_cell_number_change_data(sub_experiment_number, test_num_cells, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, aspect_ratio, save_dir=None):
-    fig, axarr = plt.subplots(nrows=4, sharex=True)
+def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_heights, graph_x_dimension, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, experiment_set_label, save_dir=None):
     
-    ds_dicts = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation"], [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]))
-    ds_y_label_dict = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation"], ["", "min.", "$\mu$m/min.", ""]))
+    if graph_x_dimension == "test_heights":
+        x_axis_stuff = test_heights
+        x_label = "corridor height (NC = {})".format(test_num_cells[0])
+    elif graph_x_dimension == "test_num_cells":
+        x_axis_stuff = test_num_cells
+        x_label = "number of cells in group"
+    else:
+        raise StandardError("Unknown graph_x_dimension given: {}".format(graph_x_dimension))
     
-    last_index = 3
-    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity"]):
+    num_rows = 5
+    fig, axarr = plt.subplots(nrows=num_rows, sharex=True)
+    
+    ds_dicts = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"], [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]))
+    ds_y_label_dict = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"], ["", "min.", "$\mu$m/min.", "", "1/s"]))
+    
+    last_index = num_rows - 1
+    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]):
         ds = ds_dicts[ds_label]
         
-        axarr[i].errorbar(test_num_cells, np.average(ds, axis=1), yerr=np.std(ds, axis=1), fmt='o')
+        #axarr[i].violinplot([d for d in ds], positions=x_axis_stuff, showmedians=True, points=len(ds))
+        #[np.min(ds, axis=1), np.max(ds, axis=1)]
+        axarr[i].boxplot([d for d in ds], showfliers=False)
         axarr[i].set_title(ds_label)
         axarr[i].set_ylabel(ds_y_label_dict[ds_label])
         
         if i == last_index:
-            axarr[i].set_xlabel("number of cells in group")
-            axarr[i].set_xticks(test_num_cells)
-            axarr[i].set_xticklabels([str(j) for j in test_num_cells])
+            axarr[i].set_xlabel(x_label)
+            axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
             
     if save_dir == None:
         plt.show()
     else:
-        fig.set_size_inches(12, 8)
-        save_path = os.path.join(save_dir, "cell_number_change_data_AR={}_{}".format(aspect_ratio, sub_experiment_number) + ".png")
+        fig.set_size_inches(12, 9)
+        if experiment_set_label != "":
+            experiment_set_label = "_" + experiment_set_label
+        save_path = os.path.join(save_dir, "cell_number_change_data{}".format(experiment_set_label) + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+        
+# =============================================================================
+
+def draw_cell_arrangement(ax, origin, draw_space_factor, num_cells, box_height, box_width, corridor_height, box_y_placement_factor):
+    scale_factor = box_width*1.2#num_cells*1.2
+    bh = draw_space_factor*(box_height/scale_factor)
+    ch = draw_space_factor*(corridor_height/scale_factor)
+    bw = draw_space_factor*(box_width/scale_factor)
+    cw = draw_space_factor*(1.2*box_width/scale_factor)
+    
+    origin[0] = origin[0] - cw*0.5
+
+    corridor_boundary_coords = np.array([[cw, 0.], [0., 0.], [0., ch], [cw, ch]], dtype=np.float64) + origin
+    
+    corridor_boundary_patch = mpatch.Polygon(corridor_boundary_coords, closed=False, fill=False, color='r', ls='solid')
+    ax.add_artist(corridor_boundary_patch)
+    
+    box_origin = origin + np.array([0.0, (ch - bh)*box_y_placement_factor])
+    
+    cell_radius = 0.5*draw_space_factor*(1./scale_factor)
+    cell_placement_delta = cell_radius*2
+    y_delta = np.array([0., cell_placement_delta])
+    x_delta = np.array([cell_placement_delta, 0.])
+    
+    cell_origin = box_origin + np.array([cell_radius, cell_radius])
+    y_delta_index = 0
+    x_delta_index = 0
+    
+    for ci in range(num_cells):
+        cell_patch = mpatch.Circle(cell_origin + y_delta_index*y_delta + x_delta_index*x_delta, radius=cell_radius, color='k', fill=False, ls='solid')
+        ax.add_artist(cell_patch)
+        
+        if y_delta_index == box_height - 1:
+            y_delta_index = 0
+            x_delta_index += 1
+        else:
+            y_delta_index += 1
+            
+# =============================================================================
+
+def graph_init_condition_change_data(sub_experiment_number, tests, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, transient_end_times, experiment_set_label, save_dir=None, fontsize=22):
+    placement_label_dict = {0.0: "bottom", 0.5: "center", 1.0: "top"}
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "transient end times"]
+    data_units = ["", "min.", "$\mu$m/min.", "", "1/s", "min."]
+    num_rows = len(data_labels) + 1
+    fig, axarr = plt.subplots(nrows=num_rows, sharex=True)
+    fig.set_size_inches(12, 16)
+    
+    ds_dicts = dict(zip(data_labels, [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40), transient_end_times]))
+    ds_y_label_dict = dict(zip(data_labels, data_units))
+    
+    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity", "transient end times"]):
+        ds = ds_dicts[ds_label]
+        
+        #axarr[i].violinplot([d for d in ds], positions=x_axis_stuff, showmedians=True, points=len(ds))
+        #[np.min(ds, axis=1), np.max(ds, axis=1)]
+        axarr[i].boxplot([d for d in ds], showfliers=False)
+        axarr[i].set_title(ds_label)
+        axarr[i].set_ylabel(ds_y_label_dict[ds_label])
+        
+    axarr[-1].set_xlim([0.0, (len(tests) + 0.8*0.5)*1.2])
+    max_y = (np.max([0.8*(t[3]/(t[2]*1.2)) for t in tests]) + 0.2)*1.2
+    axarr[-1].set_ylim([0.0, max_y])
+    for i, test in enumerate(tests):
+        nc, bh, bw, ch, byp = test
+        o = np.array([1.0 + i*1.0, 0.5*(max_y - 0.8*(ch/(bw*1.2)))])
+        draw_cell_arrangement(axarr[-1], o, 0.8, nc, bh, bw, ch, byp)
+    
+    axarr[-1].set_aspect('equal') # don't squish the circles!
+    
+    axarr[-1].set_xticklabels(["{}x{}\n{}".format(t[1], t[2], placement_label_dict[t[4]]) for t in tests])
+            
+    if save_dir == None:
+        plt.show()
+    else:
+        for ax in axarr:
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+            
+        if experiment_set_label != "":
+            experiment_set_label = "_" + experiment_set_label
+        save_path = os.path.join(save_dir, "init_condition_test_{}".format(experiment_set_label) + ".png")
         print "save_path: ", save_path
         fig.savefig(save_path, forward=True)
         plt.close(fig)

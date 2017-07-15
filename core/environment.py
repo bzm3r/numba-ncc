@@ -404,7 +404,7 @@ class Environment():
             
             data_dict = datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
             
-            data_dict = datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict)
+            data_dict = datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict)
             
             protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
             protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
@@ -424,7 +424,7 @@ class Environment():
             all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
             datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
             
-            datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, t, self.T/60.0, self.storefile_path, save_dir=save_dir)
+            datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir)
         
         if self.environment_dir != None:
             data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
