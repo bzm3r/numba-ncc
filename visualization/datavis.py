@@ -16,6 +16,7 @@ import core.hardio as hardio
 from matplotlib import cm
 import matplotlib.patches as mpatch
 import numba as nb
+from matplotlib import gridspec as mgs
 
 # =============================================================================
 
@@ -1525,55 +1526,91 @@ def graph_confinement_data_persistence_times(sub_experiment_number, test_num_cel
         plt.close(fig)
         plt.close("all")
         
-# =============================================================================
+# ====================================================================
 
-def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_heights, graph_x_dimension, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, experiment_set_label, save_dir=None):
+def show_or_save_fig(fig, figsize, save_dir, base_name, extra_label):
+    if save_dir == None:
+        plt.show()
+    else:
+        fig.set_size_inches(*figsize)
+        save_path = os.path.join(save_dir, "{}_{}".format(base_name, extra_label) + ".png")
+        print "save_path: ", save_path
+        fig.savefig(save_path, forward=True)
+        plt.close(fig)
+        plt.close("all")
+    
+def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_heights, graph_x_dimension, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, experiment_set_label, save_dir=None, fontsize=22):
     
     if graph_x_dimension == "test_heights":
+        x_axis_positions = [i + 1 for i in range(len(test_heights))]
         x_axis_stuff = test_heights
         x_label = "corridor height (NC = {})".format(test_num_cells[0])
     elif graph_x_dimension == "test_num_cells":
+        x_axis_positions = [i + 1 for i in range(len(test_num_cells))]
         x_axis_stuff = test_num_cells
         x_label = "number of cells in group"
     else:
         raise StandardError("Unknown graph_x_dimension given: {}".format(graph_x_dimension))
     
-    num_rows = 5
-    fig, axarr = plt.subplots(nrows=num_rows, sharex=True)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"]
+    data_units = ["", "min.", "$\mu$m/min.", "", "1/s"]
+    ds_dicts = dict(zip(data_labels, data_sets))
+    ds_y_label_dict = dict(zip(data_labels, data_units))
     
-    ds_dicts = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"], [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]))
-    ds_y_label_dict = dict(zip(["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"], ["", "min.", "$\mu$m/min.", "", "1/s"]))
+    data_plot_order = [data_labels[3], data_labels[0], data_labels[1], data_labels[2], data_labels[-1]]
     
-    last_index = num_rows - 1
-    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]):
-        ds = ds_dicts[ds_label]
-        
-        #axarr[i].violinplot([d for d in ds], positions=x_axis_stuff, showmedians=True, points=len(ds))
-        #[np.min(ds, axis=1), np.max(ds, axis=1)]
-        axarr[i].boxplot([d for d in ds], showfliers=False)
-        axarr[i].set_title(ds_label)
-        axarr[i].set_ylabel(ds_y_label_dict[ds_label])
-        
-        if i == last_index:
-            axarr[i].set_xlabel(x_label)
-            axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
+        for i, ds_label in enumerate(data_plot_order):
+            ds = ds_dicts[ds_label]
+            data = [d for d in ds]
             
-    if save_dir == None:
-        plt.show()
-    else:
-        fig.set_size_inches(12, 9)
-        if experiment_set_label != "":
-            experiment_set_label = "_" + experiment_set_label
-        save_path = os.path.join(save_dir, "cell_number_change_data{}".format(experiment_set_label) + ".png")
-        print "save_path: ", save_path
-        fig.savefig(save_path, forward=True)
-        plt.close(fig)
-        plt.close("all")
+            if graph_type == "box":
+                axarr[i].boxplot(data, showfliers=False)
+            else:
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            axarr[i].set_title(ds_label)
+            axarr[i].set_ylabel(ds_y_label_dict[ds_label])
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel(ds_y_label_dict[ds_label])
+            ax.set_xlabel(x_label)
+            ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            show_or_save_fig(fig, (12, 12), save_dir, 'cell_number_change_data', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'cell_number_change_data', experiment_set_label + "_{}".format(graph_type))
+            
         
 # =============================================================================
 
-def draw_cell_arrangement(ax, origin, draw_space_factor, num_cells, box_height, box_width, corridor_height, box_y_placement_factor):
-    scale_factor = box_width*1.2#num_cells*1.2
+def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells, box_height, box_width, corridor_height, box_y_placement_factor):
     bh = draw_space_factor*(box_height/scale_factor)
     ch = draw_space_factor*(corridor_height/scale_factor)
     bw = draw_space_factor*(box_width/scale_factor)
@@ -1583,7 +1620,7 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, num_cells, box_height, 
 
     corridor_boundary_coords = np.array([[cw, 0.], [0., 0.], [0., ch], [cw, ch]], dtype=np.float64) + origin
     
-    corridor_boundary_patch = mpatch.Polygon(corridor_boundary_coords, closed=False, fill=False, color='r', ls='solid')
+    corridor_boundary_patch = mpatch.Polygon(corridor_boundary_coords, closed=False, fill=False, color='r', ls='solid', clip_on=False)
     ax.add_artist(corridor_boundary_patch)
     
     box_origin = origin + np.array([0.0, (ch - bh)*box_y_placement_factor])
@@ -1598,7 +1635,7 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, num_cells, box_height, 
     x_delta_index = 0
     
     for ci in range(num_cells):
-        cell_patch = mpatch.Circle(cell_origin + y_delta_index*y_delta + x_delta_index*x_delta, radius=cell_radius, color='k', fill=False, ls='solid')
+        cell_patch = mpatch.Circle(cell_origin + y_delta_index*y_delta + x_delta_index*x_delta, radius=cell_radius, color='k', fill=False, ls='solid', clip_on=False)
         ax.add_artist(cell_patch)
         
         if y_delta_index == box_height - 1:
@@ -1607,55 +1644,93 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, num_cells, box_height, 
         else:
             y_delta_index += 1
             
-# =============================================================================
+# ===================================================================
 
 def graph_init_condition_change_data(sub_experiment_number, tests, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, transient_end_times, experiment_set_label, save_dir=None, fontsize=22):
     placement_label_dict = {0.0: "bottom", 0.5: "center", 1.0: "top"}
-    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "transient end times"]
-    data_units = ["", "min.", "$\mu$m/min.", "", "1/s", "min."]
-    num_rows = len(data_labels) + 1
-    fig, axarr = plt.subplots(nrows=num_rows, sharex=True)
-    fig.set_size_inches(12, 16)
+        
+    x_axis_stuff = [i + 1 for i in range(len(tests))]
+    x_axis_labels = ["{}x{}\n{}".format(t[1], t[2], placement_label_dict[t[4]]) for t in tests]
     
-    ds_dicts = dict(zip(data_labels, [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40), transient_end_times]))
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"]
+    data_units = ["", "min.", "$\mu$m/min.", "", "1/s"]
+    ds_dicts = dict(zip(data_labels, data_sets))
     ds_y_label_dict = dict(zip(data_labels, data_units))
     
-    for i, ds_label in enumerate(["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity", "transient end times"]):
-        ds = ds_dicts[ds_label]
-        
-        #axarr[i].violinplot([d for d in ds], positions=x_axis_stuff, showmedians=True, points=len(ds))
-        #[np.min(ds, axis=1), np.max(ds, axis=1)]
-        axarr[i].boxplot([d for d in ds], showfliers=False)
-        axarr[i].set_title(ds_label)
-        axarr[i].set_ylabel(ds_y_label_dict[ds_label])
-        
-    axarr[-1].set_xlim([0.0, (len(tests) + 0.8*0.5)*1.2])
-    max_y = (np.max([0.8*(t[3]/(t[2]*1.2)) for t in tests]) + 0.2)*1.2
-    axarr[-1].set_ylim([0.0, max_y])
-    for i, test in enumerate(tests):
-        nc, bh, bw, ch, byp = test
-        o = np.array([1.0 + i*1.0, 0.5*(max_y - 0.8*(ch/(bw*1.2)))])
-        draw_cell_arrangement(axarr[-1], o, 0.8, nc, bh, bw, ch, byp)
-    
-    axarr[-1].set_aspect('equal') # don't squish the circles!
-    
-    axarr[-1].set_xticklabels(["{}x{}\n{}".format(t[1], t[2], placement_label_dict[t[4]]) for t in tests])
+    data_plot_order = [data_labels[3], data_labels[2], data_labels[4]]
+    scale_factor = max([(t[2]*1.2) for t in tests
+])
+    y_size = max([t[3]/scale_factor for t in tests])
+    #max_x_lim = len(tests) + 0.8
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_combined, axarr_combined = plt.subplots(nrows=num_rows, sharex=True)
+        for i, ds_label in enumerate(data_plot_order):
+            ds = ds_dicts[ds_label]
+            data = [d for d in ds]
             
-    if save_dir == None:
-        plt.show()
-    else:
-        for ax in axarr:
+            if graph_type == "box":
+                axarr_combined[i].boxplot(data, showfliers=False)
+            else:
+                axarr_combined[i].errorbar(x_axis_stuff, [np.average(d) for d in ds], yerr=[np.std(d) for d in ds], marker="o", ls="")
+            axarr_combined[i].set_title(ds_label)
+            axarr_combined[i].set_ylabel(ds_y_label_dict[ds_label])
+            
+            for item in ([axarr_combined[i].title, axarr_combined[i].xaxis.label, axarr_combined[i].yaxis.label]  +
+                 axarr_combined[i].get_xticklabels() + axarr_combined[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                '''[[abs(np.min(d) - np.average(d)) for d in ds]'''
+                ax.errorbar(x_axis_stuff, [np.average(d) for d in ds], yerr=[np.std(d) for d in ds], marker="o", ls="")
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel(ds_y_label_dict[ds_label])
+            ax.get_xaxis().set_ticklabels([])
+            #ax.set_xticklabels(x_axis_labels)
+            
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
                  ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(fontsize)
             
-        if experiment_set_label != "":
-            experiment_set_label = "_" + experiment_set_label
-        save_path = os.path.join(save_dir, "init_condition_test_{}".format(experiment_set_label) + ".png")
-        print "save_path: ", save_path
-        fig.savefig(save_path, forward=True)
-        plt.close(fig)
-        plt.close("all")
+#            for i, test in enumerate(tests):
+#                nc, bh, bw, ch, bpy = test
+#                o = np.array([1.0 + i, 1.0])
+#                draw_cell_arrangement(ax, o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
+#            axarr[-1].yaxis.set_visible(False)
+#            axarr[-1].xaxis.set_visible(False)
+#            axarr[-1].set_aspect('equal')
+#            axarr[-1].set_ylim([0.0, max_y_lim])
+#            axarr[-1].set_xlim([0.0, max_x_lim])
+#            for position in ["top", "bottom", "left", "right"]:
+#                axarr[-1].spines[position].set_color('none')
+            
+            show_or_save_fig(fig, (12, 12), save_dir, 'init_conditions', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        
+        #max_inset_y_size = 0.8*scale_factor*tests[0][3]
+        
+        # set ticks where your images will be
+        #axarr_combined[-1].get_xaxis().set_ticks(x_axis_stuff)
+#        # remove tick labels
+        axarr_combined[-1].get_xaxis().set_ticklabels([])
+        for i, test in enumerate(tests):
+            nc, bh, bw, ch, bpy = test
+            o = np.array([1.0 + i, 1.0])
+            draw_cell_arrangement(axarr_combined[-1], o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
+#        axarr_combined[-1].yaxis.set_visible(False)
+#        axarr_combined[-1].xaxis.set_visible(False)
+#        axarr_combined[-1].set_aspect('equal')
+#        axarr_combined[-1].set_ylim([0.0, max_y_lim])
+#        axarr_combined[-1].set_xlim([0.0, max_x_lim])
+#        for position in ["top", "bottom", "left", "right"]:
+#            axarr_combined[-1].spines[position].set_color('none')
+            
+        show_or_save_fig(fig_combined, (12, 9), save_dir, 'init_conditions', experiment_set_label + "_{}_{}".format(experiment_set_label, graph_type))
         
 
     

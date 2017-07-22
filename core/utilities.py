@@ -1305,6 +1305,21 @@ def calculate_edge_lengths(points, edges):
         
     return edge_lengths
 
+def calculate_simple_intercellular_separations(all_cell_centroids):
+    num_cells = all_cell_centroids.shape[0]
+    intercellular_separations = np.zeros(num_cells - 1, dtype=np.float64)
+    relevant_x_centroids = all_cell_centroids[:, 0]
+    sorted_cell_indices = sorted(np.arange(num_cells), key=lambda x: relevant_x_centroids[x])
+    
+    for n in range(num_cells - 1):
+        cia = sorted_cell_indices[n]
+        cib = sorted_cell_indices[n + 1]
+        v = all_cell_centroids[cia] - all_cell_centroids[cib]
+        d = math.sqrt(v[0]*v[0] + v[1]*v[1])
+        intercellular_separations[n] = d
+        
+    return intercellular_separations
+            
 #@nb.jit(nopython=True)
 def calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_per_tstep):
     num_timepoints = all_cell_centroids_per_tstep.shape[0]
@@ -1313,16 +1328,7 @@ def calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_p
     
     for ti in range(num_timepoints):
         relevant_cell_centroids = all_cell_centroids_per_tstep[ti]
-        relevant_x_centroids = relevant_cell_centroids[:, 0]
-        sorted_cell_indices = sorted(np.arange(num_cells), key=lambda x: relevant_x_centroids[x])
-        
-        for n in range(num_cells - 1):
-            cia = sorted_cell_indices[n]
-            cib = sorted_cell_indices[n + 1]
-            v = relevant_cell_centroids[cia] - relevant_cell_centroids[cib]
-            d = math.sqrt(v[0]*v[0] + v[1]*v[1])
-            intercellular_separations_per_timestep[ti][n] = d
-            
+        intercellular_separations_per_timestep[ti] = calculate_simple_intercellular_separations(relevant_cell_centroids)
             
     return intercellular_separations_per_timestep
  
@@ -1381,17 +1387,18 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
         return np.nan*np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps/distance_between_cells_at_all_timesteps[0]
     else:
         delaunay_triangulations_per_tstep = []
-        
+        simple_intercellular_separations_per_tstep = []
         for cell_centroids in all_cell_centroids_per_tstep:
             try:
                 delaunay_triangulations_per_tstep.append(space.Delaunay(cell_centroids))
+                simple_intercellular_separations_per_tstep.append(None)
             except:
                 delaunay_triangulations_per_tstep.append(None)
+                simple_intercellular_separations_per_tstep.append(calculate_simple_intercellular_separations(cell_centroids))
         
         convex_hull_areas_per_tstep = []
         average_cell_separation_per_tstep = []
         min_cell_separation_tstep0 = -1.0
-        do_simple_distance_calculations = False
         for ti, dt_and_all_cell_centroids in enumerate(zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep)):
             dt, all_cell_centroids = dt_and_all_cell_centroids
             if dt != None:
@@ -1406,16 +1413,11 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
                         
                 average_cell_separation_per_tstep.append(np.average(edge_lengths))
             else:
-                do_simple_distance_calculations = True
-                break
-                
-                
-        if do_simple_distance_calculations:
-            intercellular_separations_per_timestep = calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_per_tstep)
-            min_cell_separation_tstep0 = np.min(intercellular_separations_per_timestep)
-            average_cell_separation_per_tstep = np.average(intercellular_separations_per_timestep, axis=1)
-            
-            return np.nan*np.ones_like(average_cell_separation_per_tstep), average_cell_separation_per_tstep/min_cell_separation_tstep0
+                convex_hull_areas_per_tstep.append(np.nan)
+                cell_separations = simple_intercellular_separations_per_tstep[ti]
+                average_cell_separation_per_tstep.append(np.average(cell_separations))
+                if ti == 0:
+                    min_cell_separation_tstep0 = np.min(cell_separations)
         
         return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(average_cell_separation_per_tstep)/min_cell_separation_tstep0
     

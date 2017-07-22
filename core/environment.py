@@ -69,6 +69,8 @@ class Environment():
     """
     def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000): 
         
+        self.simulation_execution_enabled = True
+        
         self.last_timestep_when_animations_made = None
         self.last_timestep_when_environment_hard_saved = None
         self.last_timestep_when_graphs_made = None
@@ -375,13 +377,13 @@ class Environment():
 # -----------------------------------------------------------------
             
     def do_data_analysis_and_make_visuals(self, t, save_dir, animation_settings, animation_obj, produce_animations, produce_graphs, num_polar_graph_bins=20):
-        data_dict = None
         if self.environment_dir != None:
             data_dict = {}
         
         datavis.add_to_general_data_structure(data_dict, [("T", self.T)])
         
         if produce_graphs:
+            data_dict = {}
 #            for cell_index in xrange(self.num_cells):
 #                this_cell = self.cells_in_environment[cell_index]
 #                if this_cell.skip_dynamics == True:
@@ -409,30 +411,30 @@ class Environment():
             protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
             protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
             datavis.add_to_general_data_structure(data_dict, [("all_cell_protrusion_lifetimes_and_directions", protrusion_lifetime_and_direction_data)])
-            protrusion_start_end_cause_data = [x[2] for x in protrusion_data_per_cell]
-            protrusion_lifetime_and_direction_data_compiled = np.zeros((0, 2), dtype=np.float64)
-            for cell_data in protrusion_lifetime_and_direction_data:
-                protrusion_lifetime_and_direction_data_compiled = np.append(protrusion_lifetime_and_direction_data_compiled, np.array(cell_data), axis=0)
+#            protrusion_start_end_cause_data = [x[2] for x in protrusion_data_per_cell]
+#            protrusion_lifetime_and_direction_data_compiled = np.zeros((0, 2), dtype=np.float64)
+#            for cell_data in protrusion_lifetime_and_direction_data:
+#                protrusion_lifetime_and_direction_data_compiled = np.append(protrusion_lifetime_and_direction_data_compiled, np.array(cell_data), axis=0)
                 
-            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data_compiled, num_polar_graph_bins, save_dir=save_dir)
-            datavis.graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=save_dir)
+#            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data_compiled, num_polar_graph_bins, save_dir=save_dir)
+#            datavis.graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=save_dir)
             
-            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
-            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
-            protrusion_node_index_and_tpoint_start_ends = [x[0] for x in protrusion_data_per_cell]
-            datavis.graph_forward_backward_protrusions_per_timestep(t, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, self.T, forward_cones, backward_cones, self.num_nodes, save_dir=save_dir)
-            all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
-            datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
-            
-            datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir)
+#            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
+#            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
+#            protrusion_node_index_and_tpoint_start_ends = [x[0] for x in protrusion_data_per_cell]
+#            datavis.graph_forward_backward_protrusions_per_timestep(t, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, self.T, forward_cones, backward_cones, self.num_nodes, save_dir=save_dir)
+#            all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
+#            datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
+#            
+#            datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir)
         
-        if self.environment_dir != None:
-            data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
-            if os.path.isfile(data_dict_pickle_path):
-                os.remove(data_dict_pickle_path)
-                
-            with open(data_dict_pickle_path, 'wb') as f:
-                dill.dump(data_dict, f)
+            if self.environment_dir != None:
+                data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
+                if os.path.isfile(data_dict_pickle_path):
+                    os.remove(data_dict_pickle_path)
+                    
+                with open(data_dict_pickle_path, 'wb') as f:
+                    dill.dump(data_dict, f)
             
         if produce_animations:
             animation_obj.create_animation_from_data(save_dir, timestep_to_draw_till=t)
@@ -500,15 +502,17 @@ class Environment():
         
 # ----------------------------------------------------------------- 
         
-    def init_from_store(self, tpoint=None):
+    def init_from_store(self, tpoint=None, simulation_execution_enabled=True):
         self.init_random_state(None)
         if tpoint == None:
             tpoint = self.curr_tpoint
         
-        for a_cell in self.cells_in_environment:
-            a_cell.init_from_storefile(tpoint, self.storefile_path)
+        self.simulation_execution_enabled = simulation_execution_enabled
+        if simulation_execution_enabled:
+            for a_cell in self.cells_in_environment:
+                a_cell.init_from_storefile(tpoint, self.storefile_path)
             
-        self.last_timestep_when_environment_hard_saved = tpoint
+            self.last_timestep_when_environment_hard_saved = tpoint
             
 # ----------------------------------------------------------------- 
     
@@ -553,7 +557,7 @@ class Environment():
         
     def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
         self.animation_settings = animation_settings
-        if self.mode == MODE_EXECUTE:
+        if self.mode == MODE_EXECUTE and self.simulation_execution_enabled:
             allowed_drift_before_geometry_recalc = self.allowed_drift_before_geometry_recalc
             
             centroid_drifts = np.zeros(self.num_cells, dtype=np.float64)

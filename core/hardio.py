@@ -90,7 +90,9 @@ def get_storefile_tstep_range(num_cells, storefile_path):
 def get_exec_order_for_tsteps(tsteps, storefile_path):
     with h5py.File(storefile_path, "a") as f:
         dset = f["exec_order"]
-        return np.copy(dset[tsteps])
+        exec_order = np.empty(dset.shape, dtype=dset.dtype)
+        dset.read_direct(exec_order)
+        return exec_order
     
 # ============================================================================== 
     
@@ -165,7 +167,8 @@ def get_node_coords(cell_index, tstep, storefile_path):
     on_ram_dset = np.array([])
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        on_ram_dset = np.copy(dset)
+        on_ram_dset = np.empty(dset.shape, dtype=np.float64)
+        dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
         raise StandardError("on_ram_dset is empty!")
@@ -186,7 +189,8 @@ def get_cell_data_for_tsteps(cell_index, tsteps, data_labels, storefile_path):
     on_ram_dset = np.array([])
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        on_ram_dset = np.copy(dset)
+        on_ram_dset = np.empty(dset.shape, dtype=np.float64)
+        dset.read_direct(on_ram_dset)
 
     if on_ram_dset.shape[0] == 0:
         raise StandardError("on_ram_dset is empty!")
@@ -206,7 +210,8 @@ def get_data_for_tsteps(cell_index, tsteps, data_label, storefile_path):
     on_ram_dset = np.array([])
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        on_ram_dset = np.copy(dset)
+        on_ram_dset = np.empty(dset.shape, dtype=np.float64)
+        dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
         raise StandardError("on_ram_dset is empty!")
@@ -222,7 +227,8 @@ def get_data_until_timestep(cell_index, max_tstep, data_label, storefile_path):
     on_ram_dset = np.array([])
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        on_ram_dset = np.copy(dset)
+        on_ram_dset = np.empty(dset.shape, dtype=np.float64)
+        dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
         raise StandardError("on_ram_dset is empty!")
@@ -238,7 +244,8 @@ def get_multiple_data_until_timestep(cell_index, max_tstep, data_labels, data_ty
     on_ram_dset = np.array([])
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        on_ram_dset = np.copy(dset)
+        on_ram_dset = np.empty(dset.shape, dtype=np.float64)
+        dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
         raise StandardError("on_ram_dset is empty!")
