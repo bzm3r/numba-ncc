@@ -296,115 +296,135 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
     
 # ====================================================================
 
-def run_template_experiments(experiment_directory, template_experiment_name, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
+def remake_graphics(remake_graphs, remake_animation, environment_dir, an_environment, animation_settings):
+    if remake_animation or remake_graphs:
+        print "making graphics..."
+        images_global_dir = os.path.join(environment_dir, "images_global")
+        
+        if remake_animation:
+            if os.path.exists(images_global_dir) and remake_animation:
+                shutil.rmtree(images_global_dir)
+                
+        ani_sets = an_environment.animation_settings
+        ani_sets.update(animation_settings)
+        curr_tpoint = an_environment.curr_tpoint
+        draw_tpoint = curr_tpoint + 1
+        visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
+        
+        if os.path.exists(visuals_save_dir) and remake_animation:
+            visuals_dir_content = os.listdir(visuals_save_dir)
+            for content in visuals_dir_content:
+                content_path = os.path.join(visuals_save_dir, content)
+                if os.path.isdir(content_path):
+                    if content[:8] == "images_n":
+                        shutil.rmtree(content_path)
+                        break
+        
+        cell_group_indices = []
+        cell_Ls = []
+        cell_etas = []
+        cell_skip_dynamics = []
     
-    template_experiment_name_format_string = template_experiment_name + "_RPT={}"
+        for a_cell in an_environment.cells_in_environment:
+            cell_group_indices.append(a_cell.cell_group_index)
+            cell_Ls.append(a_cell.L/1e-6)
+            cell_etas.append(a_cell.eta)
+            cell_skip_dynamics.append(a_cell.skip_dynamics)
+    
+        animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
+        an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
+
+def determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string):
+    environment_name = template_experiment_name_format_string.format(repeat_number)
+    environment_dir = os.path.join(experiment_directory, environment_name)
+    
+    return environment_name, environment_dir
+
+def check_validity_of_new_num_timesteps(new_num_timesteps):
+    type_num_new_timesteps = type(new_num_timesteps)
+    
+    if  type_num_new_timesteps != int:
+        raise StandardError("Type of new_num_timesteps is {}!".format(type_num_new_timesteps))
+    elif new_num_timesteps < 1:
+        raise StandardError("new_num_timesteps < 1, given: {}".format(new_num_timesteps))
+    
+        
+def check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments):
+    if not run_experiments:
+        return "check aborted, no simulation execution expected", None, False
+    
+    if not os.path.exists(environment_dir):
+        return "environment dir does not exist", None, False
+    
+    storefile_path = os.path.join(environment_dir, "store.hdf5")
+    env_pkl_path = os.path.join(environment_dir, "environment.pkl")
+    
+    if not os.path.exists(storefile_path):
+        if delete_and_rerun_experiments_without_stored_env == True:
+            shutil.rmtree(environment_dir)
+            return "storefile does not exist, rerun requested", None,  False
+        else:
+            return "storefile does not exist", None, False
+    
+    if not os.path.exists(env_pkl_path):
+        if delete_and_rerun_experiments_without_stored_env == True:
+            shutil.rmtree(environment_dir)
+            return "pickled environment does not exist, rerun requested", None,  False
+        else:
+            return "pickled environment does not exist", None, False
+
+    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, simulation_execution_enabled=run_experiments)
+    
+    if an_environment.simulation_complete() == True:
+        if extend_simulation != True:
+            return "simulation complete", an_environment, True
+        else:
+            check_validity_of_new_num_timesteps(new_num_timesteps)
+            
+            if new_num_timesteps > an_environment.num_timesteps:
+                an_environment.extend_simulation_runtime(new_num_timesteps)
+                return "simulation incomplete", an_environment, False
+            elif (an_environment.simulation_complete()):
+                return "simulation complete", an_environment, True
+    else:
+        return "simulation incomplete", an_environment, False
+    
+def create_environment(environment_name, environment_dir, experiment_description, parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, external_gradient_fn):
+    os.makedirs(environment_dir)
+    autogenerate_debug_file(environment_dir)
+    make_template_experiment_description_file(experiment_description, environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns)    
+    
+    an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn, justify_parameters=justify_parameters, **environment_wide_variable_defns)
+    
+    return an_environment
+
+def run_template_experiments(experiment_directory, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
+    
+    template_experiment_name_format_string = "RPT={}"
     for repeat_number in xrange(num_experiment_repeats):
         for subexperiment_index, user_cell_group_defns in enumerate(copy.deepcopy(user_cell_group_defns_per_subexperiment)):
-            environment_name = template_experiment_name_format_string.format(repeat_number)
-            environment_dir = os.path.join(experiment_directory, environment_name)
+            environment_name, environment_dir = determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string)
             
-            experiment_string = "{}, RPT {}".format(template_experiment_name, repeat_number)
-            an_environment = None
-            if os.path.exists(environment_dir):
-                print experiment_string + " directory exists."
-                
-                storefile_path = os.path.join(environment_dir, "store.hdf5")
-                env_pkl_path = os.path.join(environment_dir, "environment.pkl")
-                
-                if os.path.exists(storefile_path) and os.path.exists(env_pkl_path):
-                    print experiment_string + ' stored environment exists.'
-                    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, simulation_execution_enabled=run_experiments)
-                    
-                    if run_experiments:
-                        print "Checking to see if simulation has been completed..."
-                        if an_environment.simulation_complete() == True:
-                            
-                            if extend_simulation != True:
-                                print "Simulation has been completed. Continuing..."
-                                del an_environment
-                                continue
-                            else:
-                                print "Extending simulation run time..."
-                                assert(new_num_timesteps != None)
-                                assert(new_num_timesteps >= an_environment.num_timesteps)
-                                an_environment.extend_simulation_runtime(new_num_timesteps)
-                                if (an_environment.simulation_complete()):
-                                    print "Simulation has been completed. Continuing..."      
-                        else:
-                            print "Simulation incomplete. Finishing..."
-                            if extend_simulation == True:
-                                print "Extending simulation run time..."
-                                assert(new_num_timesteps != None)
-                                assert(new_num_timesteps >= an_environment.num_timesteps)
-                                an_environment.extend_simulation_runtime(new_num_timesteps)
-                                assert(an_environment.simulation_complete() == False)
-
-                    if remake_animation or remake_graphs:
-                        print "Making graphics..."
-                        images_global_dir = os.path.join(environment_dir, "images_global")
-                        
-                        if remake_animation:
-                            if os.path.exists(images_global_dir) and remake_animation:
-                                shutil.rmtree(images_global_dir)
-                                
-                        ani_sets = an_environment.animation_settings
-                        ani_sets.update(animation_settings)
-                        curr_tpoint = an_environment.curr_tpoint
-                        draw_tpoint = curr_tpoint + 1
-                        visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
-                        
-                        if os.path.exists(visuals_save_dir) and remake_animation:
-                            visuals_dir_content = os.listdir(visuals_save_dir)
-                            for content in visuals_dir_content:
-                                content_path = os.path.join(visuals_save_dir, content)
-                                if os.path.isdir(content_path):
-                                    if content[:8] == "images_n":
-                                        shutil.rmtree(content_path)
-                                        break
-                        
-                        cell_group_indices = []
-                        cell_Ls = []
-                        cell_etas = []
-                        cell_skip_dynamics = []
-                    
-                        for a_cell in an_environment.cells_in_environment:
-                            cell_group_indices.append(a_cell.cell_group_index)
-                            cell_Ls.append(a_cell.L/1e-6)
-                            cell_etas.append(a_cell.eta)
-                            cell_skip_dynamics.append(a_cell.skip_dynamics)
-                    
-                        animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-                        an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
-                    del an_environment
-                    continue        
-                else:
-                    if delete_and_rerun_experiments_without_stored_env == True:
-                        print experiment_string + " directory exists, but stored environment missing -- deleting and re-running experiment."
-                        shutil.rmtree(environment_dir)
-                    else:
-                        print experiment_string + " directory exists, but stored environment missing. Continuing regardless."
-                        continue
+            experiment_string = "RPT {}".format(repeat_number)
+            message, an_environment, simulation_complete = check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments)
             
-            print "RUNNING " + experiment_string
-            print "environment_dir: {}".format(environment_dir)
+            print "{}: {}".format(environment_name, message)
             
-            if an_environment == None:
-                os.makedirs(environment_dir)
-                autogenerate_debug_file(environment_dir)
-                
-                make_template_experiment_description_file(experiment_descriptions_per_subexperiment[subexperiment_index], environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns)    
+            if message in ["environment dir does not exist", "pickled environment does not exist, rerun requested", "storefile does not exist, rerun requested", "simulation incomplete"]:
+                if run_experiments:
+                    "running simulation..."
+                    if message != "simulation incomplete":
+                        an_environment = create_environment(environment_name, environment_dir, experiment_descriptions_per_subexperiment[subexperiment_index], parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, external_gradient_fn_per_subexperiment[subexperiment_index])
                     
-                print "Creating environment..."
-                
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], justify_parameters=justify_parameters, **environment_wide_variable_defns)
-                
-            an_environment.full_print = full_print
-            
-            if run_experiments:
-                simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
-                
-                print "Simulation run time: {}s".format(simulation_time)
+                    an_environment.full_print = full_print
+                    
+                    simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
+                    print "Simulation run time: {}s".format(simulation_time)
+                    
+            if (message == "simulation incomplete" and run_experiments) or message == "simulation complete":
+                remake_graphics(remake_graphs, remake_animation, environment_dir, an_environment, animation_settings)
+                    
+                    
             
 # =====================================================================
 

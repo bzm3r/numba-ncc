@@ -67,6 +67,12 @@ def calculate_cytoplasmic_force(num_nodes, this_cell_coords, area_resting, stiff
         return geometry.multiply_vectors_by_scalar(num_nodes, unit_inside_pointing_vectors, force_mag)
     else:
         return np.zeros((num_nodes, 2))
+
+
+#    area_strain = (current_area - area_resting)/area_resting
+#    force_mag = area_strain*stiffness_cytoplasmic/num_nodes
+#    
+#    return geometry.multiply_vectors_by_scalar(num_nodes, unit_inside_pointing_vectors, force_mag)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  

@@ -368,27 +368,27 @@ def draw_animation_frame_for_given_timestep(tasks):
         
         for cell_index, anicell in enumerate(animation_cells):
             
-            if rgtpase_line_coords_per_label_per_timepoint_per_cell == None:
+            if type(rgtpase_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
                 rgtpase_data = None
             else:
                 rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
                 
-            if rac_random_spikes_info_per_timepoint_per_cell == None:
+            if type(rac_random_spikes_info_per_timepoint_per_cell) != np.ndarray:
                 rac_random_spikes_info = None
             else:
                 rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
                 
-            if velocity_line_coords_per_label_per_timepoint_per_cell == None:
+            if type(velocity_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
                 velocity_data = None
             else:
                 velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
             
-            if centroid_coords_per_timepoint_per_cell == None:
+            if type(centroid_coords_per_timepoint_per_cell) != np.ndarray:
                 centroid_data = None
             else:
                 centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][unique_timesteps[:timestep_index+1]]
             
-            if coa_line_coords_per_timepoint_per_cell == None:
+            if type(coa_line_coords_per_timepoint_per_cell) != np.ndarray:
                 coa_data = None
             else:
                 coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
@@ -642,7 +642,7 @@ class EnvironmentAnimation():
             
     # ---------------------------------------------------------------------
         
-    def create_animation_from_data(self, animation_save_folder_path, timestep_to_draw_till=None, duration=None, num_threads=8):
+    def create_animation_from_data(self, animation_save_folder_path, timestep_to_draw_till=None, duration=None, num_threads=8, multithread=True):
         
         if timestep_to_draw_till == None:
             timestep_to_draw_till = self.environment.num_timepoints
@@ -695,31 +695,30 @@ class EnvironmentAnimation():
         image_prep_st = time.time()       
         st = time.time()
         print "Drawing undrawn images...."
+
         drawing_tasks = []
         for i, t in enumerate(unique_undrawn_timesteps):
             self.image_drawn_array[t] = 1
             drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, unique_timesteps, global_image_dir, global_image_name_format_str))
-        
-        num_tasks = len(drawing_tasks)
-        chunklen = (num_tasks + num_threads - 1) // num_threads
-        # Create argument tuples for each input chunk
-        chunks = []
-        for i in range(num_threads):
-            chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
-            
-        threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+                
+        if multithread == True:
+            num_tasks = len(drawing_tasks)
+            chunklen = (num_tasks + num_threads - 1) // num_threads
+            # Create argument tuples for each input chunk
+            chunks = []
+            for i in range(num_threads):
+                chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
+                
+            threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        else:
+            draw_animation_frame_for_given_timestep(drawing_tasks)
+                
             
         et = time.time()
-#            progress_str = make_progress_str(float(i)/num_unique_timesteps)
-#            sys.stdout.write("\r")
-#            sys.stdout.write(progress_str)
-#            sys.stdout.flush()
-#            self.image_drawn_array[t] = 1
-#            draw_animation_frame_for_given_timestep(i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, unique_timesteps, global_image_dir, global_image_name_format_str)
         print "Time taken to draw images: {} s".format(np.round(et - st, decimals=3))
         
         st = time.time()

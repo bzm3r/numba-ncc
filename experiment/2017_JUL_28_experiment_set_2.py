@@ -20,12 +20,15 @@ randomization_time_variance_factor_m = 0.1
 max_timepoints_on_ram = 100
 seed = 2836
 allowed_drift_before_geometry_recalc = 20.0
+
 remake_animation = False
 remake_graphs = False
-default_cil = 180.0
+do_final_analysis = True
+
+default_cil = 60.0
+integration_params = {'rtol': 1e-4}
 
 base_output_dir = "A:\\numba-ncc\\output" 
-
 parameter_dict.update([('num_nodes', 16), ('kgtp_rac_multiplier', 12.0),
   ('kgtp_rho_multiplier', 14.0),
   ('kdgtp_rac_multiplier', 4.0),
@@ -41,7 +44,8 @@ parameter_dict.update([('num_nodes', 16), ('kgtp_rac_multiplier', 12.0),
 
 sub_experiment_number = 0
 
-ets.convergence_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, show_randomized_nodes=True)
+test_num_nodes = np.arange(48, dtype=np.int64) + 3
+ets.convergence_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=True, remake_animation=False, test_num_nodes=test_num_nodes, do_final_analysis=False)
 
 
 
