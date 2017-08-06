@@ -26,40 +26,51 @@ class NaNError(Exception):
         
     
 # =============================================
-
-@nb.jit(nopython=True)
-def is_angle_between_range(alpha, beta, angle):
-    range1 = (alpha - beta)%(2*np.pi)
-    range2 = (beta - alpha)%(2*np.pi)
-    
-    min_range = 0
-    max_range = 2*np.pi
-    range_size = 2*np.pi
-    
-    if range1 < range2:
-        min_range = beta
-        max_range = alpha
-        range_size =  range1
-    else:
-        min_range = alpha
-        max_range = beta
-        range_size = range2
         
-    range3 = (angle - min_range)%(2*np.pi) + (max_range - angle)%(2*np.pi)
+@nb.jit(nopython=True)
+def is_angle_between_range(a, b, angle):
+    mod_a, mod_b = a%(2*np.pi), b%(2*np.pi)
+    mod_angle = angle%(2*np.pi)
     
-    if range3 <= range_size:
-        return 1
+    if mod_b < mod_a:
+        if (0 <= mod_angle <= mod_b) or (mod_a <= mod_angle <= 2*np.pi):
+            return 1
+        else:
+            return 0
     else:
-        return 0
+        if mod_a <= mod_angle <= mod_b:
+            return 1
+        else:
+            return 0
+    
+#    min_range = 0
+#    max_range = 2*np.pi
+#    range_size = 2*np.pi
+#    
+#    if range1 < range2:
+#        min_range = beta
+#        max_range = alpha
+#        range_size =  range1
+#    else:
+#        min_range = alpha
+#        max_range = beta
+#        range_size = range2
+#        
+#    range3 = (angle - min_range)%(2*np.pi) + (max_range - angle)%(2*np.pi)
+#    
+#    if range3 <= range_size:
+#        return 1
+#    else:
+#        return 0
 
 # =============================================
    
-def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_type):
-    index_directions = np.linspace(0, 2*np.pi, num=num_nodes)
+def calculate_biased_distrib_factors(num_nodes, bias_range, bias_strength, bias_type, node_directions):
+    #index_directions = np.linspace(0, 2*np.pi, num=num_nodes)
     distrib_factors = np.zeros(num_nodes, dtype=np.float64)
     alpha, beta = bias_range
     
-    biased_nodes = np.array([is_angle_between_range(alpha, beta, index_dirn) for index_dirn in index_directions])
+    biased_nodes = np.array([is_angle_between_range(alpha, beta, angle) for angle in node_directions])
     num_biased_nodes = int(np.sum(biased_nodes))
     num_unbiased_nodes = num_nodes - num_biased_nodes
     
@@ -368,9 +379,9 @@ class Cell():
         self.system_history[access_index, :, [parameterorg.x_index, parameterorg.y_index]] = np.transpose(init_node_coords)
         self.system_history[access_index, :, parameterorg.edge_lengths_index] = self.length_edge_resting*np.ones(self.num_nodes)
         
-        node_coords = init_node_coords
+        cell_centroid = geometry.calculate_cluster_centroid(init_node_coords)
                 
-        self.set_rgtpase_distribution(biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions)
+        self.set_rgtpase_distribution(biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions, np.array([np.arctan2(y, x) for x, y in init_node_coords - cell_centroid]))
         
         # 'rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound'
         #np.set_printoptions(threshold=np.nan)
@@ -489,7 +500,7 @@ class Cell():
         return avg_strain > 0.03 or polarization_score > 0.6
         
 # -----------------------------------------------------------------
-    def set_rgtpase_distribution(self, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions, tpoint=0):
+    def set_rgtpase_distribution(self, biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions, node_directions, tpoint=0):
         
         distrib_type, bias_direction_range, bias_strength = biased_rgtpase_distrib_defn
 
@@ -515,7 +526,7 @@ class Cell():
                             rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
                         elif distrib_type == "biased random":
                             if rgtpase_label == "rac_":
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'random')
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'random', node_directions)
                             elif rgtpase_label == "rho_":
                                 rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
                                 #rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'random')
@@ -523,10 +534,24 @@ class Cell():
                             rgtpase_distrib = frac_factor*np.ones(self.num_nodes)/self.num_nodes
                         elif distrib_type == "biased uniform":
                             if rgtpase_label == "rac_":
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'uniform')
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'uniform', node_directions)
                             elif rgtpase_label == "rho_":
-                                rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
-                                #rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range + np.pi, bias_strength, 'uniform')
+                                #rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, np.array([bias_direction_range[1] + np.pi, bias_direction_range[0] + np.pi]), bias_strength, 'uniform', node_directions)
+                        elif distrib_type == "convergence test":
+                            if rgtpase_label == "rac_":
+                                rgtpase_distrib = 1e-5*np.ones(self.num_nodes, dtype=np.float64)
+                                rgtpase_distrib[0] = 1.0
+                                rgtpase_distrib = frac_factor*rgtpase_distrib/np.sum(rgtpase_distrib)
+                            elif rgtpase_label == "rho_":
+                                #rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
+                                rgtpase_distrib = 1e-5*np.ones(self.num_nodes, dtype=np.float64)
+                                rgtpase_distrib[int(self.num_nodes/2)] = 1.0
+                                if (self.num_nodes%2) == 1:
+                                    rgtpase_distrib[int(self.num_nodes/2) + 1] = 1.0
+                                    if self.num_nodes > 3:
+                                       rgtpase_distrib[int(self.num_nodes/2) - 1] = 1.0 
+                                rgtpase_distrib = frac_factor*rgtpase_distrib/np.sum(rgtpase_distrib)
                         else:
                             raise StandardError("Invalid initial rGTPase distribution type provided! ({})".format(distrib_type))
                             
@@ -563,7 +588,7 @@ class Cell():
         self.insert_state_array_into_system_history(next_state_array, new_tpoint)
         
         node_coords = np.transpose(self.system_history[next_tstep_system_history_access_index, :, [parameterorg.x_index, parameterorg.y_index]])
-
+        
         edge_displacement_vectors_plus = geometry.calculate_edge_vectors(num_nodes, node_coords)
         edge_lengths = geometry.calculate_2D_vector_mags(num_nodes, edge_displacement_vectors_plus)
         
@@ -589,7 +614,7 @@ class Cell():
                 self.next_randomization_event_tpoint = None
                 
                 # run and tumble: cell loses polarity approximately after T seconds
-                self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, None, tpoint=new_tpoint)
+                self.set_rgtpase_distribution(self.biased_rgtpase_distrib_defn_for_randomization, self.init_rgtpase_cytosol_frac, self.init_rgtpase_membrane_inactive_frac, self.init_rgtpase_membrane_active_frac, None, np.array([np.arctan2(y, x) for x, y in node_coords]), tpoint=new_tpoint)
                 
                 self.system_history[next_tstep_system_history_access_index, 0, parameterorg.randomization_event_occurred_index] = 1
                     

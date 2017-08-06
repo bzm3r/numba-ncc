@@ -1305,32 +1305,46 @@ def calculate_edge_lengths(points, edges):
         
     return edge_lengths
 
-def calculate_simple_intercellular_separations(all_cell_centroids):
+def calculate_simple_intercellular_separations_and_subgroups(init_cell_group_separation, all_cell_centroids):
     num_cells = all_cell_centroids.shape[0]
     intercellular_separations = np.zeros(num_cells - 1, dtype=np.float64)
     relevant_x_centroids = all_cell_centroids[:, 0]
     sorted_cell_indices = sorted(np.arange(num_cells), key=lambda x: relevant_x_centroids[x])
     
+    subgroups = []
+    current_subgroup = [0]
     for n in range(num_cells - 1):
         cia = sorted_cell_indices[n]
         cib = sorted_cell_indices[n + 1]
         v = all_cell_centroids[cia] - all_cell_centroids[cib]
         d = math.sqrt(v[0]*v[0] + v[1]*v[1])
-        intercellular_separations[n] = d
         
-    return intercellular_separations
+        if d > 3.0*init_cell_group_separation:
+            if len(current_subgroup) > 0:
+                subgroups.append(copy.deepcopy(current_subgroup))
+                current_subgroup = [n + 1]
+        else:
+            current_subgroup.append(n + 1)
+            
+        intercellular_separations[n] = d
+    subgroups.append(current_subgroup)
+        
+        
+    return intercellular_separations, subgroups
             
 #@nb.jit(nopython=True)
-def calculate_simple_intercellular_separations_per_timestep(all_cell_centroids_per_tstep):
+def calculate_simple_intercellular_separations_and_subgroups_per_timestep(init_cell_group_separation, all_cell_centroids_per_tstep):
     num_timepoints = all_cell_centroids_per_tstep.shape[0]
     num_cells = all_cell_centroids_per_tstep.shape[1]
     intercellular_separations_per_timestep = np.zeros((num_timepoints, num_cells - 1), dtype=np.float64)
     
+    subgroups_per_timestep = []
     for ti in range(num_timepoints):
         relevant_cell_centroids = all_cell_centroids_per_tstep[ti]
-        intercellular_separations_per_timestep[ti] = calculate_simple_intercellular_separations(relevant_cell_centroids)
+        intercellular_separations_per_timestep[ti], subgroups = calculate_simple_intercellular_separations_and_subgroups(init_cell_group_separation, relevant_cell_centroids)
+        subgroups_per_timestep.append(subgroups)
             
-    return intercellular_separations_per_timestep
+    return intercellular_separations_per_timestep, subgroups_per_timestep
  
 @nb.jit(nopython=True)
 def determine_group_aspect_ratio_per_tstep(all_cell_coords_per_tstep):
@@ -1362,7 +1376,7 @@ def calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints,
     return group_aspect_ratio_per_tstep
     
     
-def calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path):
+def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_radius, num_cells, num_timepoints, storefile_path):
     all_cell_centroids_per_tstep = np.zeros((num_timepoints, num_cells, 2), dtype=np.float64)
     
     # ------------------------
@@ -1376,32 +1390,53 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
     # ------------------------
     if num_cells < 0:
         raise StandardError("Negative number of cells given!")
-        
+    
+    cell_subgroups_per_timestep = []
     if num_cells == 0:
-        return np.zeros(num_timepoints, dtype=np.float64), np.zeros(num_timepoints, dtype=np.float64)
+        return np.zeros(num_timepoints, dtype=np.float64), np.zeros(num_timepoints, dtype=np.float64), cell_subgroups_per_timestep
     elif num_cells == 1:
-        return np.ones(num_timepoints, dtype=np.float64), np.ones(num_timepoints, dtype=np.float64)
+        return np.ones(num_timepoints, dtype=np.float64), np.ones(num_timepoints, dtype=np.float64), None
     elif num_cells == 2:
         distance_between_cells_at_all_timesteps = np.linalg.norm(all_cell_centroids_per_tstep[:, 0, :] - all_cell_centroids_per_tstep[:, 1, :], axis=1)
         
-        return np.nan*np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps/distance_between_cells_at_all_timesteps[0]
+        return np.nan*np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps/distance_between_cells_at_all_timesteps[0], cell_subgroups_per_timestep
     else:
         delaunay_triangulations_per_tstep = []
         simple_intercellular_separations_per_tstep = []
-        for cell_centroids in all_cell_centroids_per_tstep:
+        initial_intercellular_separation = 2*cell_radius
+        #simple_separation_calculation = False
+        init_delaunay_success = False
+        for ti, cell_centroids in enumerate(all_cell_centroids_per_tstep):
             try:
                 delaunay_triangulations_per_tstep.append(space.Delaunay(cell_centroids))
                 simple_intercellular_separations_per_tstep.append(None)
+                if ti == 0:
+                    init_delaunay_success = True
             except:
                 delaunay_triangulations_per_tstep.append(None)
-                simple_intercellular_separations_per_tstep.append(calculate_simple_intercellular_separations(cell_centroids))
-        
+                separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(initial_intercellular_separation, cell_centroids)
+                simple_intercellular_separations_per_tstep.append(separations)
+                
+            if not init_delaunay_success:
+                separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(initial_intercellular_separation, cell_centroids)
+                cell_subgroups_per_timestep.append(copy.deepcopy(subgroups))
+                
         convex_hull_areas_per_tstep = []
         average_cell_separation_per_tstep = []
         min_cell_separation_tstep0 = -1.0
-        for ti, dt_and_all_cell_centroids in enumerate(zip(delaunay_triangulations_per_tstep, all_cell_centroids_per_tstep)):
-            dt, all_cell_centroids = dt_and_all_cell_centroids
+        for ti, all_cell_centroids in enumerate(all_cell_centroids_per_tstep):
+            simple_intercellular_separations = simple_intercellular_separations_per_tstep[ti]
+            dt = delaunay_triangulations_per_tstep[ti]
+            
+            if simple_intercellular_separations != None:
+                convex_hull_areas_per_tstep.append(np.nan)
+                cell_separations = simple_intercellular_separations_per_tstep[ti]
+                average_cell_separation_per_tstep.append(np.average(cell_separations))
+                if ti == 0:
+                    min_cell_separation_tstep0 = np.min(cell_separations)
+            
             if dt != None:
+                dt = delaunay_triangulations_per_tstep[ti]
                 simplices = all_cell_centroids[dt.simplices]
                 simplex_areas = np.array([geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
                 convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
@@ -1412,14 +1447,8 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(num_ce
                     min_cell_separation_tstep0 = np.min(edge_lengths)
                         
                 average_cell_separation_per_tstep.append(np.average(edge_lengths))
-            else:
-                convex_hull_areas_per_tstep.append(np.nan)
-                cell_separations = simple_intercellular_separations_per_tstep[ti]
-                average_cell_separation_per_tstep.append(np.average(cell_separations))
-                if ti == 0:
-                    min_cell_separation_tstep0 = np.min(cell_separations)
-        
-        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(average_cell_separation_per_tstep)/min_cell_separation_tstep0
+                
+        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(average_cell_separation_per_tstep)/min_cell_separation_tstep0, cell_subgroups_per_timestep
     
 # =============================================================================
 

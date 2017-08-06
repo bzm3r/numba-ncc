@@ -17,6 +17,7 @@ from matplotlib import cm
 import matplotlib.patches as mpatch
 import numba as nb
 from matplotlib import gridspec as mgs
+plt.ioff()
 
 # =============================================================================
 
@@ -27,10 +28,11 @@ def add_to_general_data_structure(general_data_structure, key_value_tuples):
         else:
             general_data_structure.update(key_value_tuples)
             
+            
 # =============================================================================
 
-def graph_group_area_and_cell_separation_over_time(num_cells, num_nodes, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
-    normalized_areas, normalized_cell_separations = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(num_cells, num_timepoints, storefile_path)
+def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(num_cells, num_nodes, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
+    normalized_areas, normalized_cell_separations, cell_subgroups = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(20, num_cells, num_timepoints, storefile_path)
     group_aspect_ratios = cu.calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints, storefile_path)
    # normalized_areas_new = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
     timepoints = np.arange(normalized_areas.shape[0])*T
@@ -79,6 +81,9 @@ def graph_group_area_and_cell_separation_over_time(num_cells, num_nodes, num_tim
             plt.close(fig)
         
         plt.close("all")
+    
+    if None not in cell_subgroups:
+        add_to_general_data_structure(general_data_structure, [('cell_subgroups', cell_subgroups)])
         
     return general_data_structure
         
@@ -108,7 +113,7 @@ def find_approximate_transient_end(group_x_velocities, average_group_x_velocity,
 
 # =============================================================================
 
-def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, fontsize=22, general_data_structure=None):
+def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, relative_all_cell_centroids_per_tstep, save_dir, save_name, fontsize=22, general_data_structure=None):
     timepoints = np.arange(relative_group_centroid_per_tstep.shape[0])*T
     group_centroid_x_coords = relative_group_centroid_per_tstep[:,0]
     group_centroid_y_coords = relative_group_centroid_per_tstep[:,1]
@@ -133,17 +138,6 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
     ax.legend(loc='best', fontsize=fontsize)
     ax.grid(which=u'both')
     
-    group_velocities = cu.calculate_velocities(relative_group_centroid_per_tstep, T)
-    group_x_speeds = np.abs(group_velocities[:, 0])
-    group_y_speeds = np.abs(group_velocities[:, 0])
-    group_speeds = np.linalg.norm(group_velocities, axis=1)
-    
-    add_to_general_data_structure(general_data_structure, [("group_speeds", group_speeds)])
-    add_to_general_data_structure(general_data_structure, [("average_group_x_speed", np.average(group_x_speeds))])
-    add_to_general_data_structure(general_data_structure, [("average_group_y_speed", np.average(group_y_speeds))])
-    add_to_general_data_structure(general_data_structure, [("fit_group_x_velocity", average_group_x_velocity)])
-    add_to_general_data_structure(general_data_structure, [("transient_end", timepoints[transient_end_index])])
-    
     if save_dir == None or save_name == None:
         plt.show()
     else:
@@ -155,7 +149,99 @@ def graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, 
         fig.savefig(os.path.join(save_dir, "group_" + save_name + '.png'), forward=True)
         plt.close(fig)
         plt.close("all")
-        
+    
+    group_velocities = cu.calculate_velocities(relative_group_centroid_per_tstep, T)
+    group_x_speeds = np.abs(group_velocities[:, 0])
+    group_y_speeds = np.abs(group_velocities[:, 0])
+    group_speeds = np.linalg.norm(group_velocities, axis=1)
+    
+    add_to_general_data_structure(general_data_structure, [("group_speeds", group_speeds)])
+    add_to_general_data_structure(general_data_structure, [("average_group_x_speed", np.average(group_x_speeds))])
+    add_to_general_data_structure(general_data_structure, [("average_group_y_speed", np.average(group_y_speeds))])
+    add_to_general_data_structure(general_data_structure, [("fit_group_x_velocity", average_group_x_velocity)])
+    add_to_general_data_structure(general_data_structure, [("transient_end", timepoints[transient_end_index])])
+    
+    if "cell_subgroups" in general_data_structure.keys():
+        cell_subgroups = general_data_structure["cell_subgroups"]
+        if cell_subgroups != None:
+            fig, ax = plt.subplots()
+            
+            multigroup_timesteps = []
+            multigroup_data = []
+            single_group_data = []
+            group_split_connector_timesteps = []
+            group_split_connector_data = []
+            group_merge_connector_timesteps = []
+            group_merge_connector_data = []
+            last_num_subgroups = -1
+            last_subgroup_centroids = []
+            for ti, subgroups in enumerate(cell_subgroups):
+                num_subgroups = len(subgroups)
+                relevant_all_cell_centroids = relative_all_cell_centroids_per_tstep[ti]
+                
+                if num_subgroups > 1:
+                    single_group_data.append(np.nan)
+                    
+                    subgroup_centroids = []
+                    for cell_indices in subgroups:
+                        relevant_cell_centroids = relevant_all_cell_centroids[cell_indices]
+                        multigroup_timesteps.append(ti)
+                        subgroup_centroid = geometry.calculate_cluster_centroid(relevant_cell_centroids)[0]
+                        multigroup_data.append(subgroup_centroid)
+                        subgroup_centroids.append(subgroup_centroid)
+                        #multigroup_data.append(np.min(relevant_cell_centroids[:,0]))
+                else:
+                    group_centroid = geometry.calculate_cluster_centroid(relevant_all_cell_centroids)[0]
+                    subgroup_centroids = [group_centroid]
+                    single_group_data.append(group_centroid)
+                    #single_group_data.append(np.min(relevant_all_cell_centroids[:,0]))
+                    multigroup_timesteps.append(ti)
+                    multigroup_data.append(np.nan)
+                    
+                if ti > 0:
+                    if last_num_subgroups != num_subgroups:
+                        last_subgroups = cell_subgroups[ti - 1]
+                        connected_subgroups = []
+                        for i, cell_indices in enumerate(subgroups):
+                            for j, last_cell_indices in enumerate(last_subgroups):
+                                in_check = [(x in last_cell_indices) for x in cell_indices]
+                                if np.all(in_check):
+                                    connected_subgroups.append((i, j, 'split'))
+                                elif np.any(in_check):
+                                    connected_subgroups.append((i, j, 'merge'))
+                                    
+                        for p in connected_subgroups:
+                            if p[2] == "split":
+                                group_split_connector_timesteps += [timepoints[ti - 1], timepoints[ti], np.nan]
+                                group_split_connector_data += [last_subgroup_centroids[p[1]], subgroup_centroids[p[0]], np.nan]
+                            else:
+                                group_merge_connector_timesteps += [timepoints[ti - 1], timepoints[ti], np.nan]
+                                group_merge_connector_data += [last_subgroup_centroids[p[1]], subgroup_centroids[p[0]], np.nan]
+                                
+                                
+                last_num_subgroups = num_subgroups
+                last_subgroup_centroids = subgroup_centroids
+            
+            ax.plot(timepoints, single_group_data, color='b')
+            ax.plot(timepoints[multigroup_timesteps], multigroup_data, color='b', ls='', marker='.', markersize=1)
+            ax.plot(group_split_connector_timesteps, group_split_connector_data, color='r')
+            ax.plot(group_merge_connector_timesteps, group_merge_connector_data, color='g')
+            ax.set_ylabel("group centroid position (micrometers)")
+            ax.set_xlabel("time (min.)")
+            ax.grid(which=u'both')
+            
+            if save_dir == None or save_name == None:
+                plt.show()
+            else:
+                for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                     ax.get_xticklabels() + ax.get_yticklabels()):
+                    item.set_fontsize(fontsize)
+                
+                fig.set_size_inches(12, 8)
+                fig.savefig(os.path.join(save_dir, "group_split_conn_" + save_name + '.png'), forward=True)
+                plt.close(fig)
+                plt.close("all")
+    
     return general_data_structure
     
 # =============================================================================
@@ -290,8 +376,6 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
     average_cell_persistence_time = np.round(np.average(all_cell_persistence_times), decimals=2)
     std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
     ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio, group_persistence_time, time_unit, average_cell_persistence_time, time_unit, std_cell_persistence_time, time_unit))
-    #ax.set_title("group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {})".format(group_persistence_ratio, average_cell_persistence_ratio, std_cell_persistence_ratio))
-    #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax.grid(which=u'both')
 
     # ------------------------
@@ -310,18 +394,19 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
         plt.close("all")
         
     if make_group_centroid_drift_graph == True:
-        general_data_structure = graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, save_dir, save_name, general_data_structure=general_data_structure)
+        general_data_structure = graph_group_centroid_drift(T, time_unit, relative_group_centroid_per_tstep, relative_all_cell_centroids_per_tstep, save_dir, save_name, general_data_structure=general_data_structure)
+                    
         
     return general_data_structure
         
 # ==============================================================================
 
-def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0, fontsize=22, general_data_structure=None):
+def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, time_to_average_over_in_minutes=1.0, fontsize=22, general_data_structure=None, convergence_test=False):
     fig_time, ax_time = plt.subplots()
     fig_box, ax_box = plt.subplots()
 
     average_speeds = []
-    average_latter_half_speeds = []
+    cell_full_speeds = []
     for ci in xrange(num_cells):
         L = cell_Ls[ci]
 #        num_timesteps_to_average_over = int(60.0*time_to_average_over_in_minutes/T)
@@ -334,21 +419,19 @@ def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=N
         
 #        resized_timepoints = np.arange(num_timesteps_to_average_over*chunky_timepoints.shape[0])
 #        corresponding_cell_speeds = np.repeat(averaged_cell_speeds, num_timesteps_to_average_over)
-        num_cell_speeds = timepoints.shape[0]
-        latter_half = int(num_cell_speeds/2)
         ax_time.plot(timepoints, cell_speeds, color=colors.color_list20[ci%20])
         average_speeds.append(np.average(cell_speeds))
-        average_latter_half_speeds.append(np.average(cell_speeds[latter_half:]))
+        if convergence_test:
+            cell_full_speeds.append(cell_speeds)
         
     add_to_general_data_structure(general_data_structure, [("all_cell_speeds", average_speeds)])
-    add_to_general_data_structure(general_data_structure, [("all_cell_latter_half_speeds", average_latter_half_speeds)])
+    if convergence_test:
+        add_to_general_data_structure(general_data_structure, [("cell_full_speeds", cell_full_speeds)])
 
     # Shrink current axis by 20%
     #box = ax_time.get_position()
     #ax_time.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    
-    # Put a legend to the right of the current axis
-    #ax_time.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
     ax_time.grid(which=u'both')
     
     ax_time.set_xlabel("time (min.)")
@@ -390,7 +473,7 @@ def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=N
         
 # ==============================================================================
 
-def graph_important_cell_variables_over_time(T, cell_index, storefile_path, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None, fontsize=22, general_data_structure=None):
+def graph_important_cell_variables_over_time(T, L, cell_index, storefile_path, polarity_scores=None, save_dir=None, save_name=None, max_tstep=None, fontsize=22, general_data_structure=None, convergence_test=False):
     fig, ax = plt.subplots()
     
     #randomization_kicks = hardio.get_data_until_timestep(a_cell, max_tstep, 'randomization_event_occurred')
@@ -399,20 +482,38 @@ def graph_important_cell_variables_over_time(T, cell_index, storefile_path, pola
     # cell_index, max_tstep, data_label, storefile_path
     rac_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_active', storefile_path)
     sum_rac_act_over_nodes = np.sum(rac_mem_active, axis=1)
-    add_to_general_data_structure(general_data_structure, [("average_rac_membrane_active_{}".format(cell_index), np.average(sum_rac_act_over_nodes))])
     
     rac_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_inactive', storefile_path)
     sum_rac_inact_over_nodes = np.sum(rac_mem_inactive, axis=1)
-    add_to_general_data_structure(general_data_structure, [("average_rac_membrane_inactive_{}".format(cell_index), np.average(sum_rac_inact_over_nodes))])
-    
+
     rho_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_active', storefile_path)
     sum_rho_act_over_nodes = np.sum(rho_mem_active, axis=1)
-    add_to_general_data_structure(general_data_structure, [("average_rho_membrane_active_{}".format(cell_index), np.average(sum_rho_act_over_nodes))])
     
     rho_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_inactive', storefile_path)
     sum_rho_inact_over_nodes = np.sum(rho_mem_inactive, axis=1)
-    add_to_general_data_structure(general_data_structure, [("average_rho_membrane_inactive_{}".format(cell_index), np.average(rho_mem_inactive))])
     
+    if convergence_test:
+        node_coords = hardio.get_node_coords_for_all_tsteps(cell_index, storefile_path)
+        edgeplus = np.array([geometry.calculate_edgeplus_lengths(node_coords[0].shape[0], nc) for nc in node_coords])
+        edgeminus = np.array([geometry.calculate_edgeplus_lengths(node_coords[0].shape[0], nc) for nc in node_coords])
+        average_edge_lengths = np.array([[(ep + em)/2. for ep, em in zip(eps, ems)] for eps, ems in zip(edgeplus, edgeminus)])*L
+        
+        conc_rac_mem_active = rac_mem_active/average_edge_lengths
+        #add_to_general_data_structure(general_data_structure, [("rac_membrane_active_{}".format(cell_index), sum_rac_act_over_nodes)])
+        add_to_general_data_structure(general_data_structure, [("avg_max_conc_rac_membrane_active_{}".format(cell_index), np.max(conc_rac_mem_active, axis=1))])
+        
+        conc_rac_mem_inactive = rac_mem_inactive/average_edge_lengths
+        #add_to_general_data_structure(general_data_structure, [("rac_membrane_inactive_{}".format(cell_index), sum_rac_inact_over_nodes)])
+        add_to_general_data_structure(general_data_structure, [("avg_max_conc_rac_membrane_inactive_{}".format(cell_index), np.max(conc_rac_mem_inactive, axis=1))])
+        
+        conc_rho_membrane_active = rho_mem_active/average_edge_lengths
+        add_to_general_data_structure(general_data_structure, [("avg_max_conc_rho_membrane_active_{}".format(cell_index), np.max(conc_rho_membrane_active, axis=1))])
+        #add_to_general_data_structure(general_data_structure, [("rho_membrane_active_{}".format(cell_index), sum_rho_act_over_nodes)])
+        
+        conc_rho_membrane_inactive = rho_mem_inactive/average_edge_lengths
+        add_to_general_data_structure(general_data_structure, [("avg_max_conc_rho_membrane_inactive_{}".format(cell_index), np.max(conc_rho_membrane_inactive, axis=1))])
+        #add_to_general_data_structure(general_data_structure, [("rho_membrane_inactive_{}".format(cell_index), sum_rho_inact_over_nodes)])
+                
     rac_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_cytosolic_gdi_bound', storefile_path)[:, 0]
     rho_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_cytosolic_gdi_bound', storefile_path)[:, 0]
     
@@ -774,10 +875,7 @@ def graph_pre_post_contact_cell_kinematics(T, L, cell_index, storefile_path, sav
         
         ax1.plot([0, post_acceleration[0]], [0, post_acceleration[1]], 'k', linewidth=2)
         ax1.plot([post_acceleration[0]], [post_acceleration[1]], color=color, markeredgecolor='k', markerfacecolor=color, ls='', marker="o", markersize=7.5, label="post-c, {}min.".format(np.round(end_time, decimals=1)))
-    
-    #ax0.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    #ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    
+        
     if save_dir == None or save_name == None:
         plt.show()
     else:
@@ -931,8 +1029,6 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_time.set_ylim(-1*y_lim, y_lim)    
     ax_time.set_aspect(u'equal')
 
-    
-    #ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     ax_time.grid(which=u'both')
     
     fig_box, ax_box = plt.subplots()
@@ -1547,7 +1643,7 @@ def show_or_save_fig(fig, figsize, save_dir, base_name, extra_label):
         fig.set_size_inches(*figsize)
         save_path = os.path.join(save_dir, "{}_{}".format(base_name, extra_label) + ".png")
         print "save_path: ", save_path
-        fig.savefig(save_path, forward=True)
+        fig.savefig(save_path, forward=True, bbox_inches='tight')
         plt.close(fig)
         plt.close("all")
     
@@ -1571,7 +1667,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
     ds_dicts = dict(zip(data_labels, data_sets))
     ds_y_label_dict = dict(zip(data_labels, data_units))
     
-    data_plot_order = ["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration number"]
+    data_plot_order = ["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
     
     num_rows = len(data_plot_order)
     for graph_type in ["box", "dot"]:
@@ -1769,43 +1865,195 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
 #            axarr_combined[-1].spines[position].set_color('none')
             
         show_or_save_fig(fig_combined, (12, 9), save_dir, 'init_conditions', experiment_set_label + "_{}_{}".format(experiment_set_label, graph_type))
-        
-        
-def graph_convergence_test_data(sub_experiment_number, test_num_nodes, average_cell_speeds, average_active_racs, average_active_rhos, average_inactive_racs, average_inactive_rhos, special_num_nodes=16, save_dir=None, fontsize=22):
-    fig_speed, ax_speed = plt.subplots()
-    fig_rgtp, ax_rgtp = plt.subplots()
+
+def plot_errorbar_graph(ax, x_data, y_data, marker, color, label, scheme):
+    #avg_ys = np.average(y_data, axis=1)
+    #avg_ys = np.average(y_data, axis=1)
+    #min_ys = np.min(y_data, axis=1)
+    #max_ys = np.max(y_data, axis=1)
     
-    ax_speed.plot(test_num_nodes, average_cell_speeds, marker='o', ls='')
+    if scheme == "maximum":
+        ax.plot(x_data, np.max(y_data, axis=1), marker=marker, color=color, label=label, ls='')
+        if marker == 'o':
+            average_marker = '*'
+        else:
+            average_marker = '+'
+        ax.plot(x_data, np.average(y_data, axis=1), marker=average_marker, color=color, label=label, ls='')
+    elif scheme == "minimum":
+        ax.plot(x_data, np.min(y_data, axis=1), marker=marker, color=color, label=label, ls='')
+    elif scheme == "average":
+        ax.plot(x_data, np.average(y_data, axis=1), marker=marker, color=color, label=label, ls='')
+    else:
+        raise StandardError("Unknown scheme gotten: {}".format(scheme))
+
+    #ax.errorbar(x_data, avg_ys, yerr=[np.abs(min_ys - avg_ys), np.abs(max_ys - avg_ys)], marker=marker, color=color, label=label)
+    #ax.errorbar(x_data, avg_ys, yerr=np.std(y_data, axis=1), marker=marker, color=color, label=label, ls='')
+    
+    return ax
+        
+def graph_convergence_test_data(sub_experiment_number, test_num_nodes, cell_speeds, active_racs, active_rhos, inactive_racs, inactive_rhos, special_num_nodes=16, save_dir=None, fontsize=22):
+    for scheme in ["maximum", "minimum", "average"]:
+        fig_speed, ax_speed = plt.subplots()
+        fig_rgtp, ax_rgtp = plt.subplots()
+    
+        scheme_label = ""
+        if scheme != "average":
+            scheme_label = scheme[:3] + " "
+            
+        ax_speed = plot_errorbar_graph(ax_speed, test_num_nodes, cell_speeds, 'o', 'g', None, scheme)
+        ax_speed.set_ylabel("{}average cell speed ($\mu$m/min.)".format(scheme_label[:3]))
+        ax_speed.set_xlabel("number of nodes")
+        #ax_speed.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
+        ax_speed.grid(which=u'both')
+        ax_speed.minorticks_on()
+        
+        ax_rgtp = plot_errorbar_graph(ax_rgtp, test_num_nodes, active_racs, 'o', 'b', "Rac1: active", scheme)
+        ax_rgtp = plot_errorbar_graph(ax_rgtp, test_num_nodes, inactive_racs, 'x', 'b', "Rac1: inactive", scheme)
+        ax_rgtp = plot_errorbar_graph(ax_rgtp, test_num_nodes, active_rhos, 'o', 'r', "RhoA: active", scheme)
+        ax_rgtp = plot_errorbar_graph(ax_rgtp, test_num_nodes, inactive_rhos, 'x', 'r', "RhoA: inactive", scheme)
+        ax_rgtp.set_ylabel("{}node/time averaged Rho GTPase fraction".format(scheme_label))
+        ax_rgtp.set_xlabel("number of nodes")
+        #ax_rgtp.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
+        ax_rgtp.grid(which=u'both')
+        ax_rgtp.minorticks_on()
+        
+        
+        for ax in [ax_speed, ax_rgtp]:
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                         ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+            ax.legend(loc='best', fontsize=fontsize)
+            
+    
+        show_or_save_fig(fig_speed, (12, 8), save_dir, "convergence_test", "speeds_{}".format(scheme))
+        show_or_save_fig(fig_rgtp, (12, 8), save_dir, "convergence_test", "rgtp_fractions_{}".format(scheme))
+        
+
+def get_text_positions(text, x_data, y_data, txt_width, txt_height):
+    a = zip(y_data, x_data)
+    text_positions = list(y_data)
+    for index, (y, x) in enumerate(a):
+        local_text_positions = [i for i in a if i[0] > (y - txt_height) 
+                            and (abs(i[1] - x) < txt_width * 2) and i != (y,x)]
+        if local_text_positions:
+            sorted_ltp = sorted(local_text_positions)
+            if abs(sorted_ltp[0][0] - y) < txt_height: #True == collision
+                differ = np.diff(sorted_ltp, axis=0)
+                a[index] = (sorted_ltp[-1][0] + txt_height, a[index][1])
+                text_positions[index] = sorted_ltp[-1][0] + txt_height*1.01
+                for k, (j, m) in enumerate(differ):
+                    #j is the vertical distance between words
+                    if j > txt_height * 2: #if True then room to fit a word in
+                        a[index] = (sorted_ltp[k][0] + txt_height, a[index][1])
+                        text_positions[index] = sorted_ltp[k][0] + txt_height
+                        break
+                    
+    return text_positions
+
+def text_plotter(ax, text, x_data, y_data, text_positions, txt_width, txt_height):
+    for z,x,y,t in zip(text, x_data, y_data, text_positions):
+        ax.annotate(str(z), xy=(x-txt_width/2, t), size=12)
+        if y != t:
+            ax.arrow(x, t,0,y-t, color='red',alpha=0.3, width=txt_width*0.1, 
+                head_width=txt_width, head_length=txt_height*0.5, 
+                zorder=0,length_includes_head=True)
+            
+def graph_specific_convergence_test_data(num_timepoints, T, test_num_nodes, data_per_test_per_repeat_per_timepoint, fontsize, save_dir, data_name_and_unit):
+    fig, ax = plt.subplots()
+    timepoints = np.arange(num_timepoints)*T/60.0
+    text = []
+    for i, nn in enumerate(test_num_nodes):
+        data_per_cell_per_timepoint = data_per_test_per_repeat_per_timepoint[i][0]
+        for j, marker in enumerate(['.', 'x']):
+            num_data_points = data_per_cell_per_timepoint[j].shape[0]
+            ax.plot(timepoints[:num_data_points], data_per_cell_per_timepoint[j], marker=marker, ls='', color=colors.color_list300[i%300])
+            ax.annotate("NN={}".format(nn), xy=(timepoints[:num_data_points][-1], data_per_cell_per_timepoint[j][-1]), )
+    
+    #txt_height = 0.0037*(ax.get_ylim()[1] - ax.get_ylim()[0])
+    #txt_width = 0.018*(ax.get_xlim()[1] - ax.get_xlim()[0])
+
+    #text_positions = get_text_positions(text, text_x, text_y, txt_width, txt_height)
+    #text_plotter(ax, text, text_x, text_y, text_positions, txt_width, txt_height)
+    
+    name = ""
+    if data_name_and_unit[1] != "":
+        name, unit = data_name_and_unit
+        ax.set_ylabel("{} ({})".format(name, unit))
+    else:
+        name, _ = data_name_and_unit
+        ax.set_ylabel("{}".format(name))
+        
+    ax.set_xlabel("time (min.)")
+    ax.grid(which=u'both')
+    ax.minorticks_on()
+    #ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), fontsize=fontsize)
+
+    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(fontsize)
+    
+    show_or_save_fig(fig, (14, 14), save_dir, "convergence_corridor_test", name)
+                
+#def graph_corridor_convergence_test_data(sub_experiment_number, num_timepoints, T, test_num_nodes, cell_positions_per_test_per_repeat_per_timepoint, cell_speeds_per_test_per_repeat_per_timepoint, active_racs_per_test_per_repeat_per_timepoint, active_rhos_per_test_per_repeat_per_timepoint, inactive_racs_per_test_per_repeat_per_timepoint, inactive_rhos_per_test_per_repeat_per_timepoint, special_num_nodes=16, save_dir=None, fontsize=22):
+#    
+#    data_sets = [cell_positions_per_test_per_repeat_per_timepoint, cell_speeds_per_test_per_repeat_per_timepoint, active_racs_per_test_per_repeat_per_timepoint, active_rhos_per_test_per_repeat_per_timepoint, inactive_racs_per_test_per_repeat_per_timepoint, inactive_rhos_per_test_per_repeat_per_timepoint]
+#    data_names_and_units = [("centroid positions", "$\mu$m"), ("speeds", "$\mu$m/min."), ("active Rac1 fraction", ""), ("active RhoA fraction", ""), ("inactive Rac1 fraction", ""), ("inactive RhoA fraction", "")]
+#    
+##    for i, data_set in enumerate(data_sets):
+##        data_name_and_unit = data_names_and_units[i]
+##        graph_specific_convergence_test_data(num_timepoints, T, test_num_nodes, data_set, fontsize, save_dir, data_name_and_unit)
+##        
+#    fig_speed, ax_speed = plt.subplots()
+##    fig_rgtp, ax_rgtp = plt.subplots()
+#        
+#    #(ax_speed, test_num_nodes, [np.average(cell_speeds_per_test_per_repeat_per_timepoint[:,0,k,:]) for k in range(2)], 'o', 'g', None, "average")
+#    a = [np.average(cell_speeds_per_test_per_repeat_per_timepoint[n][0][0]) for n in range(len(test_num_nodes))]
+#    b = [np.average(cell_speeds_per_test_per_repeat_per_timepoint[n][0][1]) for n in range(len(test_num_nodes))]
+#    ax_speed.plot(test_num_nodes, [np.average([xa, xb]) for xa, xb in zip(a, b)], ls='', marker='.')
+#    ax_speed.set_ylabel("average cell speed ($\mu$m/min.)")
+#    ax_speed.set_xlabel("number of nodes")
+#    #ax_speed.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
+#    ax_speed.grid(which=u'both')
+#    ax_speed.minorticks_on()
+#    
+#    show_or_save_fig(fig_speed, (12, 8), save_dir, "convergence_test", "speeds_{}".format("average"))
+    
+def graph_corridor_convergence_test_data(sub_experiment_number, test_num_nodes, cell_full_speeds, active_racs, active_rhos, inactive_racs, inactive_rhos, special_num_nodes=16, save_dir=None, fontsize=22):
+    fig_speed, ax_speed = plt.subplots()
+    markers = ['o', 'x']
+    for n in range(2):
+        ax_speed.plot(test_num_nodes, [cf[n] for cf in cell_full_speeds], color='g', marker=markers[n], label="cell {}".format(n), ls='')
     ax_speed.set_ylabel("average cell speed ($\mu$m/min.)")
     ax_speed.set_xlabel("number of nodes")
-    ax_speed.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
+    #ax_speed.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
     ax_speed.grid(which=u'both')
     ax_speed.minorticks_on()
     
-    ax_rgtp.plot(test_num_nodes, average_active_racs, marker='o', ls='', label="Rac1: active", color='b')
-    ax_rgtp.plot(test_num_nodes, average_inactive_racs, marker='x', ls='', label="Rac1: membrane-inactive", color='b')
-    ax_rgtp.plot(test_num_nodes, average_active_rhos, marker='o', ls='', label="RhoA: active", color='r')
-    ax_rgtp.plot(test_num_nodes, average_inactive_rhos, marker='x', ls='', label="RhoA: membrane-inactive", color='r')
-    ax_rgtp.set_ylabel("average Rho GTPase fraction")
-    ax_rgtp.set_xlabel("number of nodes")
-    ax_rgtp.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
-    ax_rgtp.grid(which=u'both')
-    ax_rgtp.minorticks_on()
+    fig_rgtpase, ax_rgtpase = plt.subplots()
+    markers = ['o', 'x']
+    for n in range(2):
+        ax_rgtpase.plot(test_num_nodes, [cf[n] for cf in active_racs], color='b', marker=markers[n], label="active Rac1: cell {}".format(n), ls='')
+        ax_rgtpase.plot(test_num_nodes, [cf[n] for cf in active_rhos], color='r', marker=markers[n], label="active RhoA: cell {}".format(n), ls='')
+        ax_rgtpase.plot(test_num_nodes, [cf[n] for cf in inactive_racs], color='c', marker=markers[n], label="inactive Rac1: cell {}".format(n), ls='')
+        ax_rgtpase.plot(test_num_nodes, [cf[n] for cf in inactive_rhos], color='m', marker=markers[n], label="inactive RhoA: cell {}".format(n), ls='')
+        
+    ax_rgtpase.set_ylabel("Rho GTPase concentration (1/$\mu$m)")
+    ax_rgtpase.set_xlabel("number of nodes")
+    #ax_speed.axvline(x=special_num_nodes, color='m', label='number of nodes = {}'.format(special_num_nodes))
+    ax_rgtpase.grid(which=u'both')
+    ax_rgtpase.minorticks_on()
     
-    
-    for ax in [ax_speed, ax_rgtp]:
+    for ax in [ax_speed, ax_rgtpase]:
         for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
                      ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(fontsize)
-        ax.legend(loc='best', fontsize=fontsize)
         
-
-    show_or_save_fig(fig_speed, (12, 8), save_dir, "convergence_test", "speeds")
-    show_or_save_fig(fig_rgtp, (12, 8), save_dir, "convergence_test", "rgtp_fractions")
-    
-    
+    show_or_save_fig(fig_speed, (12, 8), save_dir, "corridor_convergence", "speed")
+    show_or_save_fig(fig_rgtpase, (12, 8), save_dir, "corridor_convergence", "rgtpase")
+        
+        
 def graph_Tr_vs_Tp_test_data(sub_experiment_number, test_Trs, average_cell_persistence_times, save_dir=None, fontsize=22):
-    fig, ax = plt.subplots
+    fig, ax = plt.subplots()
     ax.plot(test_Trs, average_cell_persistence_times, marker='o', ls='')
     ax.set_xlabel("$T_r$")
     ax.set_ylabel("$T_p$")

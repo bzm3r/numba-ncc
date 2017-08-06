@@ -138,7 +138,7 @@ class AnimationCell():
     def draw_rgtpase(self, context, polygon_coords, rgtpase_line_coords_per_gtpase):        
         context.set_line_width(self.rgtpase_line_width)
         offset_coords = rgtpase_line_coords_per_gtpase[-1]
-        offset_directions = [1, -1, 1, -1]
+        offset_directions = [0, -1, 0, -1]
         
         for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
             offset_direction = offset_directions[i]
@@ -147,14 +147,15 @@ class AnimationCell():
             
             
             for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
-                x0, y0 = polygon_coord + offset_direction*offset_coord
-                x1, y1 = rgtpase_line_coord
-                
-                context.new_path()
-                context.move_to(x0, y0)
-                context.line_to(x1, y1)
-                context.stroke()
-        
+                if offset_direction != - 1:
+                    x0, y0 = polygon_coord + offset_direction*offset_coord
+                    x1, y1 = rgtpase_line_coord
+                    
+                    context.new_path()
+                    context.move_to(x0, y0)
+                    context.line_to(x1, y1)
+                    context.stroke()
+            
     # -------------------------------------
         
     def draw_rgtpase_showing_rac_random_spikes(self, context, polygon_coords, rgtpase_line_coords_per_gtpase, rac_random_spikes_info, rac_random_spike_color=(0, 153, 0)):        
@@ -487,7 +488,7 @@ class EnvironmentAnimation():
         self.centroid_line_width = centroid_line_width
         self.coa_line_width = coa_line_width
         
-        self.space_physical_bdry_polygon = space_physical_bdry_polygon
+        self.space_physical_bdry_polygon = np.array([])#space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
         self.chemoattractant_source_location = chemoattractant_source_location
         
@@ -642,7 +643,7 @@ class EnvironmentAnimation():
             
     # ---------------------------------------------------------------------
         
-    def create_animation_from_data(self, animation_save_folder_path, timestep_to_draw_till=None, duration=None, num_threads=8, multithread=True):
+    def create_animation_from_data(self, animation_save_folder_path, animation_file_name, timestep_to_draw_till=None, duration=None, num_threads=8, multithread=True):
         
         if timestep_to_draw_till == None:
             timestep_to_draw_till = self.environment.num_timepoints
@@ -747,7 +748,7 @@ class EnvironmentAnimation():
         
         print "Done preparing images. Total time taken: {}s".format(np.round(image_prep_et - image_prep_st, decimals=3))
         
-        animation_output_path = os.path.join(animation_save_folder_path, self.animation_name)
+        animation_output_path = os.path.join(animation_save_folder_path, animation_file_name)
         
         if self.string_together_into_animation == True:
             print "Stringing together pictures..."

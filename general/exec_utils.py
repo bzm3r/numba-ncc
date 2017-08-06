@@ -7,11 +7,11 @@ Created on Fri Nov 06 16:53:39 2015
 
 from __future__ import division
 import core.parameterorg as parameterorg
+import core.environment as environment
 import numpy as np
 import visualization.datavis as datavis
 import visualization.animator as animator
 import os
-import time
 import copy
 import multiprocessing as mp
 import shutil
@@ -472,10 +472,8 @@ def get_date_and_experiment_number(scriptname):
 
 
 def load_empty_env(empty_env_pickle_path):
-    env = None
-    
-    with open(empty_env_pickle_path, 'rb') as f:
-        env = dill.load(f)
+    env = environment.Environment(shell_environment=True)
+    env.load_from_pickle(empty_env_pickle_path)
         
     return env
 

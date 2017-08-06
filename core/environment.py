@@ -221,7 +221,9 @@ def generate_bounding_boxes_from_centers(radius, centers):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, shell_environment=False): 
+        
+        self.convergence_test = convergence_test
         
         self.simulation_execution_enabled = True
         
@@ -274,17 +276,32 @@ class Environment():
         
         self.micrometer = 1e-6
         
-        self.num_cell_groups = len(self.cell_group_defns)
-        self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns], dtype=np.int64)
+        if not shell_environment:
+            self.num_cell_groups = len(self.cell_group_defns)
+            self.num_cells = np.sum([cell_group_defn['num_cells'] for cell_group_defn in self.cell_group_defns], dtype=np.int64)
+        else:
+            self.num_cell_groups = 0
+            self.num_cells = 0
+            
         self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc
         self.max_geometry_recalc_skips = max_geometry_recalc_skips
-        self.cells_in_environment = self.make_cells()
-        num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment], dtype=np.int64)
-        self.num_nodes= num_nodes_per_cell[0]
-        for n in num_nodes_per_cell[1:]:
-            if n != self.num_nodes:
-                raise StandardError("There exists a cell with number of nodes different from other cells!")
-        self.full_output_dicts = [[] for cell in self.cells_in_environment]
+        if not shell_environment:
+            self.cells_in_environment = self.make_cells()
+            num_nodes_per_cell = np.array([x.num_nodes for x in self.cells_in_environment], dtype=np.int64)
+            self.num_nodes= num_nodes_per_cell[0]
+            for n in num_nodes_per_cell[1:]:
+                if n != self.num_nodes:
+                    raise StandardError("There exists a cell with number of nodes different from other cells!")
+        else:
+            self.cells_in_environment = None
+            self.num_nodes = 0
+            
+        
+        
+        if not shell_environment:
+            self.full_output_dicts = [[] for cell in self.cells_in_environment]
+        else:
+            self.full_output_dicts = None
         
         self.cell_indices = np.arange(self.num_cells)
         self.exec_orders = np.zeros((self.num_timepoints, self.num_cells), dtype=np.int64)
@@ -299,7 +316,18 @@ class Environment():
         
         self.mode = MODE_EXECUTE
         self.animation_settings = None
+
+# -----------------------------------------------------------------
+    def load_from_pickle(self, pickle_fp):
+        env = None
+        with open(pickle_fp, 'rb') as f:
+            env = dill.load(f)
         
+        if env == None:
+            raise StandardError("Couldn't open pickled environment at: {}".format(pickle_fp))
+        else:
+            self.__dict__.update(copy.deepcopy(env.__dict__))
+        del env
 
 # -----------------------------------------------------------------
     def write_random_state_file(self, random_state_fp):
@@ -549,18 +577,18 @@ class Environment():
                     os.makedirs(save_dir_for_cell)
                 
                 averaged_score, scores_per_tstep = cu.calculate_rgtpase_polarity_score(cell_index, self.storefile_path, significant_difference=0.2, max_tstep=t)
-        
-                data_dict = datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path,  polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t, general_data_structure=data_dict)
+                
+                cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
+                
+                data_dict = datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_Ls[cell_index], cell_index, self.storefile_path, polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 datavis.graph_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
             
-            cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
+            data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
             
-            data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
+            data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict)
             
             data_dict = datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
-            
-            data_dict = datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict)
             
             protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
             protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
@@ -579,8 +607,6 @@ class Environment():
             datavis.graph_forward_backward_protrusions_per_timestep(t, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, self.T, forward_cones, backward_cones, self.num_nodes, save_dir=save_dir)
             all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
             datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
-            
-            datavis.graph_group_area_and_cell_separation_over_time(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir)
         
             if self.environment_dir != None:
                 data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
@@ -591,8 +617,8 @@ class Environment():
                     dill.dump(data_dict, f)
             
         if produce_animations:
-            animation_obj.create_animation_from_data(save_dir, timestep_to_draw_till=t)
-            
+            animation_obj.create_animation_from_data(save_dir, "animation.mp4", timestep_to_draw_till=t)
+
 # -----------------------------------------------------------------
     def get_empty_cell(self, cell_index):
         empty_cell = copy.deepcopy(self.cells_in_environment[cell_index])

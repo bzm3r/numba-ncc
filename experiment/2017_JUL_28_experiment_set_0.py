@@ -44,9 +44,9 @@ parameter_dict.update([('kgtp_rac_multiplier', 12.0),
   ('stiffness_edge', 8000.0), ('randomization_time_mean', 10.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
 
 sub_experiment_number = 0
-
-test_Trs = [10., 20., 30., 40., 50., 60.]
-ets.Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=remake_graphs, remake_animation=remake_animation, test_Trs=test_Trs, num_experiment_repeats=50)
+##
+test_Trs = [5., 10., 15., 20., 25., 30., 35., 40., 45., 50., 55., 60.]
+ets.Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir=base_output_dir, total_time_in_hours=4., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, remake_graphs=False, remake_animation=False, test_Trs=test_Trs, num_experiment_repeats=50, do_final_analysis=False)
 
 
 #parameter_dict.update([('kgtp_rac_multiplier', 12.0),
