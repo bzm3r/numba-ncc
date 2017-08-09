@@ -379,6 +379,7 @@ class Cell():
         self.system_history[access_index, :, [parameterorg.x_index, parameterorg.y_index]] = np.transpose(init_node_coords)
         self.system_history[access_index, :, parameterorg.edge_lengths_index] = self.length_edge_resting*np.ones(self.num_nodes)
         
+        node_coords = init_node_coords
         cell_centroid = geometry.calculate_cluster_centroid(init_node_coords)
                 
         self.set_rgtpase_distribution(biased_rgtpase_distrib_defn, init_rgtpase_cytosol_frac, init_rgtpase_membrane_inactive_frac, init_rgtpase_membrane_active_frac, init_rho_gtpase_conditions, np.array([np.arctan2(y, x) for x, y in init_node_coords - cell_centroid]))

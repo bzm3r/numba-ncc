@@ -31,8 +31,8 @@ def add_to_general_data_structure(general_data_structure, key_value_tuples):
             
 # =============================================================================
 
-def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(num_cells, num_nodes, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None):
-    normalized_areas, normalized_cell_separations, cell_subgroups = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(20, num_cells, num_timepoints, storefile_path)
+def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(num_cells, num_nodes, num_timepoints, T, storefile_path, save_dir=None, fontsize=22, general_data_structure=None, graph_group_centroid_splits=False):
+    normalized_areas, normalized_cell_separations, cell_subgroups = cu.calculate_normalized_group_area_and_average_cell_separation_over_time(20, num_cells, num_timepoints, storefile_path, get_subgroups=graph_group_centroid_splits)
     group_aspect_ratios = cu.calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints, storefile_path)
    # normalized_areas_new = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
     timepoints = np.arange(normalized_areas.shape[0])*T
@@ -82,7 +82,7 @@ def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(num_c
         
         plt.close("all")
     
-    if None not in cell_subgroups:
+    if None not in cell_subgroups and len(cell_subgroups) != 0:
         add_to_general_data_structure(general_data_structure, [('cell_subgroups', cell_subgroups)])
         
     return general_data_structure
@@ -1652,7 +1652,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
     if graph_x_dimension == "test_heights":
         x_axis_positions = [i + 1 for i in range(len(test_heights))]
         x_axis_stuff = test_heights
-        x_label = "corridor height (NC = {})".format(test_num_cells[0])
+        x_label = "corridor width (NC = {})".format(test_num_cells[0])
     elif graph_x_dimension == "test_num_cells":
         x_axis_positions = [i + 1 for i in range(len(test_num_cells))]
         x_axis_stuff = test_num_cells
@@ -1781,21 +1781,20 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells
 # ===================================================================
 
 def graph_init_condition_change_data(sub_experiment_number, tests, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, transient_end_times, experiment_set_label, save_dir=None, fontsize=22):
-    placement_label_dict = {0.0: "bottom", 0.5: "center", 1.0: "top"}
+    #placement_label_dict = {0.0: "bottom", 0.5: "center", 1.0: "top"}
         
     x_axis_stuff = [i + 1 for i in range(len(tests))]
-    x_axis_labels = ["{}x{}\n{}".format(t[1], t[2], placement_label_dict[t[4]]) for t in tests]
+    x_axis_labels = ["{}x{}".format(t[1], t[2]) for t in tests]
     
     data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]
     data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity"]
-    data_units = ["", "min.", "$\mu$m/min.", "", "1/s"]
+    data_units = ["", "min.", "$\mu$m/min.", "", "1/min."]
     ds_dicts = dict(zip(data_labels, data_sets))
     ds_y_label_dict = dict(zip(data_labels, data_units))
     
     data_plot_order = [data_labels[3], data_labels[2], data_labels[4]]
-    scale_factor = max([(t[2]*1.2) for t in tests
-])
-    y_size = max([t[3]/scale_factor for t in tests])
+    #scale_factor = max([(t[2]*1.2) for t in tests])
+    #y_size = max([t[3]/scale_factor for t in tests])
     #max_x_lim = len(tests) + 0.8
     num_rows = len(data_plot_order)
     for graph_type in ["box", "dot"]:
@@ -1823,9 +1822,7 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
                 ax.errorbar(x_axis_stuff, [np.average(d) for d in ds], yerr=[np.std(d) for d in ds], marker="o", ls="")
                 
             ax.set_title(ds_label)
-            ax.set_ylabel(ds_y_label_dict[ds_label])
-            ax.get_xaxis().set_ticklabels([])
-            #ax.set_xticklabels(x_axis_labels)
+            ax.set_xticklabels(x_axis_labels)
             
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
                  ax.get_xticklabels() + ax.get_yticklabels()):
@@ -1847,15 +1844,12 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
         
         
         #max_inset_y_size = 0.8*scale_factor*tests[0][3]
-        
-        # set ticks where your images will be
-        #axarr_combined[-1].get_xaxis().set_ticks(x_axis_stuff)
-#        # remove tick labels
-        axarr_combined[-1].get_xaxis().set_ticklabels([])
-        for i, test in enumerate(tests):
-            nc, bh, bw, ch, bpy = test
-            o = np.array([1.0 + i, 1.0])
-            draw_cell_arrangement(axarr_combined[-1], o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
+        #axarr_combined[-1].get_xaxis().set_ticks(x_axis_labels)
+        axarr_combined[-1].set_xticklabels(x_axis_labels)
+#        for i, test in enumerate(tests):
+#            nc, bh, bw, ch, bpy = test
+#            o = np.array([1.0 + i, 1.0])
+#            draw_cell_arrangement(axarr_combined[-1], o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
 #        axarr_combined[-1].yaxis.set_visible(False)
 #        axarr_combined[-1].xaxis.set_visible(False)
 #        axarr_combined[-1].set_aspect('equal')

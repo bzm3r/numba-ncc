@@ -1376,7 +1376,7 @@ def calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints,
     return group_aspect_ratio_per_tstep
     
     
-def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_radius, num_cells, num_timepoints, storefile_path):
+def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_radius, num_cells, num_timepoints, storefile_path, get_subgroups=False):
     all_cell_centroids_per_tstep = np.zeros((num_timepoints, num_cells, 2), dtype=np.float64)
     
     # ------------------------
@@ -1417,7 +1417,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
                 separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(initial_intercellular_separation, cell_centroids)
                 simple_intercellular_separations_per_tstep.append(separations)
                 
-            if not init_delaunay_success:
+            if not init_delaunay_success and get_subgroups:
                 separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(initial_intercellular_separation, cell_centroids)
                 cell_subgroups_per_timestep.append(copy.deepcopy(subgroups))
                 

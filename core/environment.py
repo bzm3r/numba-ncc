@@ -221,8 +221,9 @@ def generate_bounding_boxes_from_centers(radius, centers):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, shell_environment=False): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, shell_environment=False, graph_group_centroid_splits=False): 
         
+        self.graph_group_centroid_splits = graph_group_centroid_splits
         self.convergence_test = convergence_test
         
         self.simulation_execution_enabled = True
@@ -586,7 +587,7 @@ class Environment():
             
             data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
             
-            data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict)
+            data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict, graph_group_centroid_splits=self.graph_group_centroid_splits)
             
             data_dict = datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
             
