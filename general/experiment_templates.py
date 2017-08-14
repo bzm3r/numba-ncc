@@ -163,12 +163,24 @@ def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timeste
 
 # ===========================================================================
 
-def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, base_output_dir="A:\\numba-ncc\\output\\", no_randomization=False, total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, justify_parameters=True, run_experiments=True, remake_graphs=False, remake_animation=False, show_centroid_trail=False, show_randomized_nodes=False, plate_width=1000, plate_height=1000, global_scale=1, convergence_test=False, Tr_vs_Tp_test=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}):
+def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, base_output_dir="A:\\numba-ncc\\output\\", no_randomization=False, total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, justify_parameters=True, run_experiments=True, remake_graphs=False, remake_animation=False, show_centroid_trail=False, show_randomized_nodes=False, convergence_test=False, Tr_vs_Tp_test=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, zoomed_in=False):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
+    
+    if zoomed_in == True:
+        plate_width = 250
+        plate_height = 250
+        global_scale = 4
+    else:
+        plate_width = 1000
+        plate_height = 1000
+        global_scale = 1
+        
     if convergence_test:
         experiment_name_format_string = "convergence_{}_NN={}_".format(sub_experiment_number, parameter_dict['num_nodes']) +"{}"
     elif Tr_vs_Tp_test:
         experiment_name_format_string = "Tr_vs_Tp_{}_Tr={}_".format(sub_experiment_number, int(parameter_dict["randomization_time_mean"])) +"{}"
+    elif zoomed_in:
+        experiment_name_format_string = "single_cell_{}_zi_".format(sub_experiment_number) +"{}"
     else:
         experiment_name_format_string = "single_cell_{}_".format(sub_experiment_number) +"{}"
     
@@ -191,6 +203,8 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     x_space_between_boxes = []
 
     #num_boxes, num_cells_in_boxes, box_heights, box_widths,x_space_between_boxes, plate_width, plate_height, "CENTER", "CENTER"
+    
+        
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["CENTER"], ["CENTER"])
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
@@ -356,7 +370,9 @@ def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_
     
 # ============================================================================
 
-def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8, run_experiments=True, remake_graphs=False, remake_animation=False):    
+def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8, run_experiments=True, remake_graphs=False, remake_animation=False):
+    global_scale = 4
+    
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     experiment_name_format_string = "cil_test_{}_CIL={}_COA={}".format(sub_experiment_number, default_cil, default_coa) + "_{}"
     
@@ -376,11 +392,11 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     box_heights = [1*cell_diameter]*num_boxes
     box_widths = [1*cell_diameter]*num_boxes
 
-    x_space_between_boxes = [2*cell_diameter]
+    x_space_between_boxes = [0*cell_diameter]
     plate_width, plate_height = 10*cell_diameter*1.2, 3*cell_diameter
 
     # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["OVERRIDE", "OVERRIDE"], ["ORIGIN", "ORIGIN"], physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 2)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["OVERRIDE", "OVERRIDE"], ["ORIGIN", "ORIGIN"], physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -412,9 +428,9 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
         
     user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
 
-    global_scale = 1
+    global_scale = 4
         
-    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', global_scale*62.5*5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_rac_random_spikes', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*timestep_length), ('short_video_duration', 5.0), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
+    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', 0.75*np.sqrt(global_scale)*312.5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_rac_random_spikes', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*timestep_length), ('short_video_duration', 5.0), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
@@ -514,7 +530,7 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
 
 # =============================================================================
 
-def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_rac_random_spikes=False):
+def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, remake_graphs=False, run_experiments=True, remake_animation=False, show_centroid_trail=True, show_rac_random_spikes=False, cell_placement_method=""):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if auto_calculate_num_cells:
@@ -548,7 +564,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
     
-    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
+    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc, "cell_placement_method": cell_placement_method}
     
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
@@ -583,7 +599,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments)
     
     experiment_name_format_string = experiment_name + "_RPT={}"
     cell_centroids_persistences_speeds_per_repeat = []
@@ -945,7 +961,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         #time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22, general_data_structure=None
         time_unit = "min."
         datavis.present_collated_cell_motion_data(time_unit, np.array(all_cell_centroids_per_repeat), np.array(all_cell_persistence_ratios_per_repeat), np.array(all_cell_persistence_times_per_repeat), np.array(all_cell_speeds_per_repeat), all_cell_protrusion_lifetimes_and_directions_per_repeat, np.array(group_centroid_per_timestep_per_repeat), np.array(group_persistence_ratio_per_repeat), np.array(group_persistence_time_per_repeat), experiment_dir, total_time_in_hours)
-        datavis.present_collated_group_centroid_drift_data(timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
+        datavis.present_collated_group_centroid_drift_data(timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
 
     print "Done."
     
@@ -1071,7 +1087,7 @@ def chemoattractant_test(date_str, experiment_number, sub_experiment_number, par
             # ================================================================
         
         datavis.present_collated_cell_motion_data(time_unit, cell_centroids_persistences_speeds_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours)
-        datavis.present_collated_group_centroid_drift_data(timestep_length, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, experiment_dir, total_time_in_hours)
+        datavis.present_collated_group_centroid_drift_data(timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, experiment_dir, total_time_in_hours)
 
     print "Done."
     

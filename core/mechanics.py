@@ -17,6 +17,11 @@ def capped_linear_function(max_x, x):
         return 1.0
     else:
         return (x/max_x)
+    
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)  
+def linear_function(max_x, x):
+    return (x/max_x)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)         
@@ -155,7 +160,7 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
             force_mag = max_force_rac*capped_linear_function(2*threshold_force_rac_activity, rac_activity - rho_activity)
         else:
             force_mag = -1*max_force_rho*capped_linear_function(2*threshold_force_rho_activity, rho_activity - rac_activity)
-        
+            
         rgtpase_mediated_force_mags[ni] = -1*force_mag
             
     result = np.empty((num_nodes, 2), dtype=np.float64)

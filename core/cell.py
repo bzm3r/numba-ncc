@@ -412,7 +412,7 @@ class Cell():
         
         self.system_history[access_index, :, parameterorg.local_strains_index] = local_strains
         
-        local_tension_strains = np.where(local_strains < 0, 0, local_strains)
+        #local_tension_strains = np.where(local_strains < 0, 0, local_strains)
         
         # update chemistry parameters
         self.system_history[access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64)
@@ -431,7 +431,7 @@ class Cell():
         
         self.system_history[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
-        self.system_history[access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, local_tension_strains)
+        self.system_history[access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, np.array([ls if ls > 0 else 0.0 for ls in local_strains]))
         
         self.system_history[access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, conc_rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
         
@@ -538,7 +538,7 @@ class Cell():
                                 rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, bias_direction_range, bias_strength, 'uniform', node_directions)
                             elif rgtpase_label == "rho_":
                                 #rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
-                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, np.array([bias_direction_range[1] + np.pi, bias_direction_range[0] + np.pi]), bias_strength, 'uniform', node_directions)
+                                rgtpase_distrib = frac_factor*calculate_biased_distrib_factors(self.num_nodes, np.array([bias_direction_range[0] + np.pi, bias_direction_range[1] + np.pi]), bias_strength, 'uniform', node_directions)
                         elif distrib_type == "convergence test":
                             if rgtpase_label == "rac_":
                                 rgtpase_distrib = 1e-5*np.ones(self.num_nodes, dtype=np.float64)
@@ -715,7 +715,7 @@ class Cell():
         if self.verbose == True:
             print "global strain: ", np.sum(local_strains)/num_nodes
             
-        local_tension_strains = np.where(local_strains < 0, 0, local_strains)
+        #local_tension_strains = np.where(local_strains < 0, 0, local_strains)
         
         edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.num_nodes, node_coords)        
         avg_edge_lengths = geometry.calculate_average_edge_length_around_nodes(self.num_nodes, edgeplus_lengths)
@@ -733,7 +733,7 @@ class Cell():
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.kgtp_rac_index] = kgtp_rac_per_node
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.kgtp_rho_index] = kgtp_rho_per_node
 
-        self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, local_tension_strains)
+        self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgtp_rac_index] = chemistry.calculate_kdgtp_rac(self.num_nodes, conc_rho_membrane_actives, self.exponent_rho_mediated_rac_inhib, self.threshold_rho_mediated_rac_inhib, self.kdgtp_rac_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, np.array([ls if ls > 0 else 0.0 for ls in local_strains]))
 
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgtp_rho_index] = chemistry.calculate_kdgtp_rho(self.num_nodes, conc_rac_membrane_actives, self.exponent_rac_mediated_rho_inhib, self.threshold_rac_mediated_rho_inhib, self.kdgtp_rho_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline)
         

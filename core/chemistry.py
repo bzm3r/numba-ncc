@@ -170,6 +170,8 @@ def calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_media
     result = np.empty(num_nodes, dtype=np.float64)
     
     global_tension = np.sum(local_strains)/num_nodes
+    if global_tension < 0.0:
+        global_tension = 0.0
     
     strain_inhibition = tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_tension)
     

@@ -142,12 +142,11 @@ class AnimationCell():
         
         for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
             offset_direction = offset_directions[i]
-            r, g, b = self.rgtpase_colors[i]
-            context.set_source_rgb(r, g, b)
             
-            
-            for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
-                if offset_direction != - 1:
+            if offset_direction != - 1:
+                r, g, b = self.rgtpase_colors[i]
+                context.set_source_rgb(r, g, b)
+                for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
                     x0, y0 = polygon_coord + offset_direction*offset_coord
                     x1, y1 = rgtpase_line_coord
                     
@@ -161,29 +160,30 @@ class AnimationCell():
     def draw_rgtpase_showing_rac_random_spikes(self, context, polygon_coords, rgtpase_line_coords_per_gtpase, rac_random_spikes_info, rac_random_spike_color=(0, 153, 0)):        
         context.set_line_width(self.rgtpase_line_width)
         offset_coords = rgtpase_line_coords_per_gtpase[-1]
-        offset_directions = [1, -1, 1, -1]
+        offset_directions = [0, -1, 0, -1]
         
         for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
             offset_direction = offset_directions[i]
-            default_rgb = self.rgtpase_colors[i]
-            context.set_source_rgb(*default_rgb)
-            
-            
-            for n, drawing_data in enumerate(zip(polygon_coords, rgtpase_line_coords, offset_coords)):
-                polygon_coord, rgtpase_line_coord, offset_coord = drawing_data
-                if i == 0:
-                    if rac_random_spikes_info[n] > 1:
-                        context.set_source_rgb(*rac_random_spike_color)
-                    else:
-                        context.set_source_rgb(*default_rgb)
-                    
-                x0, y0 = polygon_coord + offset_direction*offset_coord
-                x1, y1 = rgtpase_line_coord
+            if offset_direction != -1:
+                default_rgb = self.rgtpase_colors[i]
+                context.set_source_rgb(*default_rgb)
                 
-                context.new_path()
-                context.move_to(x0, y0)
-                context.line_to(x1, y1)
-                context.stroke()
+                
+                for n, drawing_data in enumerate(zip(polygon_coords, rgtpase_line_coords, offset_coords)):
+                    polygon_coord, rgtpase_line_coord, offset_coord = drawing_data
+                    if i == 0:
+                        if rac_random_spikes_info[n] > 1:
+                            context.set_source_rgb(*rac_random_spike_color)
+                        else:
+                            context.set_source_rgb(*default_rgb)
+                        
+                    x0, y0 = polygon_coord + offset_direction*offset_coord
+                    x1, y1 = rgtpase_line_coord
+                    
+                    context.new_path()
+                    context.move_to(x0, y0)
+                    context.line_to(x1, y1)
+                    context.stroke()
                 
     # -------------------------------------
         
@@ -306,7 +306,7 @@ def prepare_rgtpase_data(rgtpase_scale, cell_index, unique_undrawn_timesteps, po
     normal_to_uivs = normal_to_uivs.reshape((num_timesteps, num_nodes, 2))
     unit_inside_pointing_vecs = unit_inside_pointing_vecs.reshape((num_timesteps, num_nodes, 2))
         
-    offset_vecs = offset_magnitude*normal_to_uivs
+    offset_vecs = 0*normal_to_uivs #offest_magnitude*normal_to_uivs
     
     positive_offset = offset_vecs + polygon_coords_per_timestep
     negative_offset = -1*offset_vecs + polygon_coords_per_timestep
@@ -342,7 +342,7 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
     context.select_font_face("Consolas", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
     context.set_font_size(font_size*global_scale)
 
-    timestamp_string = "T = {} min".format(int(np.round(timestep*timestep_length/60.0)))
+    timestamp_string = "t = {} min".format(int(np.round(timestep*timestep_length/60.0)))
     #timestamp_string = "NT = {} ".format(np.round(timestep))
     text_x_bearing, text_y_bearing, text_width, text_height = context.text_extents(timestamp_string)[:4]
     context.move_to((img_width - 1.2*text_width), (img_height - 1.2*text_height))

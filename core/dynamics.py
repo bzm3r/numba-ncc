@@ -123,7 +123,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     conc_rho_membrane_actives = chemistry.calculate_concentrations(num_nodes, rho_membrane_actives, avg_edge_lengths)
     
-    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_half_strain, tension_mediated_rac_inhibition_magnitude, strain_calculation_type, local_strains)
+    kdgtps_rac = chemistry.calculate_kdgtp_rac(num_nodes, conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_half_strain, tension_mediated_rac_inhibition_magnitude, strain_calculation_type, only_tensile_local_strains)
 
     kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64)
     
