@@ -876,6 +876,9 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
     centroids_persistences_speeds_protrusionlifetimes = []
     for n in range(num_cells):
         print "    Analyzing cell {}...".format(n)
+        if n == 48:
+            pass
+        
         cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*relevant_environment.cells_in_environment[n].L/1e-6
         num_tsteps = cell_centroids.shape[0]
         

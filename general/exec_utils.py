@@ -349,7 +349,7 @@ def check_validity_of_new_num_timesteps(new_num_timesteps):
         raise StandardError("new_num_timesteps < 1, given: {}".format(new_num_timesteps))
     
         
-def check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments):
+def check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments):
     if not run_experiments:
         return "check aborted, no simulation execution expected", None, False
     
@@ -373,7 +373,7 @@ def check_if_simulation_exists_and_is_complete(environment_dir, experiment_strin
         else:
             return "pickled environment does not exist", None, False
 
-    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, simulation_execution_enabled=run_experiments)
+    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, environment_wide_variable_defns, simulation_execution_enabled=run_experiments)
     
     if an_environment.simulation_complete() == True:
         if extend_simulation != True:
@@ -406,7 +406,7 @@ def run_template_experiments(experiment_directory, parameter_dict, environment_w
             environment_name, environment_dir = determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string)
             
             experiment_string = "RPT {}".format(repeat_number)
-            message, an_environment, simulation_complete = check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments)
+            message, an_environment, simulation_complete = check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments)
             
             print "{}: {}".format(environment_name, message)
             
@@ -479,11 +479,11 @@ def load_empty_env(empty_env_pickle_path):
 
 # ================================================================
 
-def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, simulation_execution_enabled=False):
+def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False):
     env = load_empty_env(empty_env_pickle_path)
     
     if env != None:
-        env.init_from_store(simulation_execution_enabled=simulation_execution_enabled)
+        env.init_from_store(environment_wide_variable_defns, simulation_execution_enabled=simulation_execution_enabled)
         env.produce_intermediate_visuals = produce_intermediate_visuals
         env.produce_final_visuals = produce_final_visuals
     else:
