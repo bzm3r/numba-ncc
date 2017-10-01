@@ -408,7 +408,7 @@ class Cell():
         all_cells_centres = np.zeros((self.num_cells_in_environment, 2), dtype=np.float64)
         all_cells_node_forces = np.zeros((self.num_cells_in_environment, self.num_nodes, 2), dtype=np.float64)
         
-        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors  = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
+        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors  = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
         
         self.system_history[access_index, :, parameterorg.local_strains_index] = local_strains
         
@@ -441,14 +441,14 @@ class Cell():
         self.system_history[access_index, :, [parameterorg.EFminus_x_index, parameterorg.EFminus_y_index]] = np.transpose(EFminus)
         self.system_history[access_index, :, [parameterorg.F_rgtpase_x_index, parameterorg.F_rgtpase_y_index]] = np.transpose(F_rgtpase)
         self.system_history[access_index, :, [parameterorg.F_cytoplasmic_x_index, parameterorg.F_cytoplasmic_y_index]] = np.transpose(F_cytoplasmic)
-        self.system_history[access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
+        #self.system_history[access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
         self.system_history[access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vectors)
         
         self.system_history[access_index, :, parameterorg.interaction_factors_intercellular_contact_per_celltype_index] = intercellular_contact_factors
         self.system_history[access_index, :, parameterorg.migr_bdry_contact_index] = migr_bdry_contact_factors
         
         self.curr_node_coords = node_coords
-        self.curr_node_forces = F - F_adhesion
+        self.curr_node_forces = F #- F_adhesion
 
 # -----------------------------------------------------------------
     def initialize_nodal_phase_var_indices(self):
@@ -682,7 +682,7 @@ class Cell():
 #        print "stiffness_cytoplasmic: ", self.stiffness_cytoplasmic
         
         
-        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
+        F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(self.num_nodes, self.num_cells_in_environment, self.cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, self.length_edge_resting, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.area_resting, self.stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, self.closeness_dist_criteria)
                         
 #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
 #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
@@ -743,7 +743,7 @@ class Cell():
         self.system_history[next_tstep_system_history_access_index, :, [parameterorg.EFminus_x_index, parameterorg.EFminus_y_index]] = np.transpose(EFminus)
         self.system_history[next_tstep_system_history_access_index, :, [parameterorg.F_rgtpase_x_index, parameterorg.F_rgtpase_y_index]] = np.transpose(F_rgtpase)
         self.system_history[next_tstep_system_history_access_index, :, [parameterorg.F_cytoplasmic_x_index, parameterorg.F_cytoplasmic_y_index]] = np.transpose(F_cytoplasmic)
-        self.system_history[next_tstep_system_history_access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
+        #self.system_history[next_tstep_system_history_access_index, :, [parameterorg.F_adhesion_x_index, parameterorg.F_adhesion_y_index]] = np.transpose(F_adhesion)
         self.system_history[next_tstep_system_history_access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]] = np.transpose(unit_inside_pointing_vecs)
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.interaction_factors_intercellular_contact_per_celltype_index] = intercellular_contact_factors
@@ -751,7 +751,7 @@ class Cell():
         
         self.curr_tpoint = new_tpoint
         self.curr_node_coords = node_coords
-        self.curr_node_forces = F - F_adhesion
+        self.curr_node_forces = F #- F_adhesion
 
 # -----------------------------------------------------------------
     def pack_rhs_arguments(self, t, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, external_gradient_on_nodes):
@@ -796,7 +796,7 @@ class Cell():
         self.system_history = np.zeros((self.max_timepoints_on_ram + 1, self.num_nodes,  len(parameterorg.output_info_labels)))
         fetched_cell_data = hardio.get_cell_data_for_tsteps(self.cell_index, environment_tpoint, parameterorg.output_info_labels, storefile_path)
         for info_label, fetched_data in zip(parameterorg.output_info_labels, fetched_cell_data):
-            self.system_history[0,:,parameterorg.info_indices_dict[info_label]] = fetched_data
+            self.system_history[0, :, parameterorg.info_indices_dict[info_label]] = fetched_data
         
 # -----------------------------------------------------------------
     def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, external_gradient_fn, be_talkative=False):

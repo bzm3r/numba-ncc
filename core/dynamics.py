@@ -91,7 +91,7 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     rho_cytosolic_gdi_bound = 1 - calculate_sum(num_nodes, rho_membrane_actives) - calculate_sum(num_nodes, rho_membrane_inactives)                            
 
     
-    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, F_adhesion, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, num_cells, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, threshold_force_rac_activity, threshold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria)
+    F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(num_nodes, num_cells, this_cell_index, node_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, threshold_force_rac_activity, threshold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria)
     
 #    print "rac_membrane_actives: ", rac_membrane_actives
 #    print "F: ", F

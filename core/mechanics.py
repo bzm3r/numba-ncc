@@ -178,7 +178,9 @@ def capped_linear_function_adhesion(x, normalizer):
         return 0.0
     else:
         return result
-    
+
+# -----------------------------------------------------------------------
+        
 @nb.jit(nopython=True)
 def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, this_cell_forces, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors, max_force_adh):
     F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
@@ -222,7 +224,48 @@ def calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, t
         F_adh[ni] = this_node_F_adh
         
     return F_adh
+
+# -----------------------------------------------------------------------
+        
+@nb.jit(nopython=True)
+def calculate_external_forces(num_nodes, num_cells, this_ci, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors):
+    F_external = np.zeros((num_nodes, 2), dtype=np.float64)
     
+    for ni in range(num_nodes):
+        close_point_force = np.zeros(2, dtype=np.float64)
+        uiv = unit_inside_pointing_vectors[ni]
+        
+        for ci in range(num_cells):
+            if ci != this_ci:
+                if close_point_on_other_cells_to_each_node_exists[ni][ci] == 1:
+                    close_ni_a, close_ni_b = close_point_on_other_cells_to_each_node_indices[ni][ci]
+                    
+                    if close_ni_a == close_ni_b:
+                        # closest point is another single node
+                        close_point_force = all_cells_node_forces[ci][close_ni_a]
+                        force_proj_mag = geometry.calculate_projection_of_a_on_b(close_point_force, uiv)
+                        
+                        if force_proj_mag < 0.0:
+                            force_proj_mag = 0.0
+                            
+                        F_external[ni] += force_proj_mag*uiv
+                    else:
+                        # closest point is on a line segment between two nodes
+                        close_ni_a_force = all_cells_node_forces[ci][close_ni_a]
+                        close_ni_b_force = all_cells_node_forces[ci][close_ni_b]
+                        
+                        a_proj_mag = geometry.calculate_projection_of_a_on_b(close_ni_a_force, uiv)
+                        b_proj_mag = geometry.calculate_projection_of_a_on_b(close_ni_b_force, uiv)
+                        
+                        if a_proj_mag < 0.0:
+                            a_proj_mag = 0.0
+                        if b_proj_mag < 0.0:
+                            b_proj_mag = 0.0
+                        
+                        F_external[ni] += (a_proj_mag + b_proj_mag)*uiv
+                    
+    return F_external
+
 # ----------------------------------------------------------------------------
 @nb.jit(nopython=True)  
 def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, threhsold_force_rac_activity, threhsold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria):
@@ -235,15 +278,12 @@ def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membra
     
     local_strains, EFplus, EFminus = calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, length_edge_resting) 
     
-    F_non_adh = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
+    F_internal = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
     
-    if force_adh_constant > 1e-6:
-        F_adh = calculate_adhesion_forces(num_nodes, num_cells, this_ci, this_cell_coords, F_non_adh, force_adh_constant, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors, 1.25*max_force_rho)
-    else:
-        F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
+    F_external = calculate_external_forces(num_nodes, num_cells, this_ci, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
     
-    F = F_non_adh + F_adh
+    F = F_internal + F_external
     
-    return F, EFplus, EFminus, rgtpase_mediated_forces, F_cytoplasmic, F_adh, local_strains, unit_inside_pointing_vectors
+    return F, EFplus, EFminus, rgtpase_mediated_forces, F_cytoplasmic, local_strains, unit_inside_pointing_vectors
     
 # =============================================================================

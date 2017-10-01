@@ -688,18 +688,22 @@ class Environment():
         if tpoint == None:
             tpoint = self.curr_tpoint
         
+        old_num_timesteps = self.num_timesteps
+        self.__dict__.update(environment_wide_variable_defns)
+        new_num_timesteps = environment_wide_variable_defns['num_timesteps']
+        
+        if old_num_timesteps > new_num_timesteps:
+            self.num_timesteps = old_num_timesteps
+        
+        if old_num_timesteps < new_num_timesteps:
+            self.extend_simulation_runtime(new_num_timesteps)
+        
         self.simulation_execution_enabled = simulation_execution_enabled
         if simulation_execution_enabled:
             for a_cell in self.cells_in_environment:
                 a_cell.init_from_storefile(tpoint, self.storefile_path)
             
             self.last_timestep_when_environment_hard_saved = tpoint
-        
-        old_num_timesteps = self.num_timesteps
-        self.__dict__.update(environment_wide_variable_defns)
-        
-        if old_num_timesteps > environment_wide_variable_defns['num_timesteps']:
-            self.num_timesteps = old_num_timesteps
             
 # ----------------------------------------------------------------- 
     
