@@ -280,9 +280,9 @@ def calculate_forces(num_nodes, num_cells, this_ci, this_cell_coords, rac_membra
     
     F_internal = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
     
-    F_external = calculate_external_forces(num_nodes, num_cells, this_ci, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
+    #F_external = calculate_external_forces(num_nodes, num_cells, this_ci, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria, unit_inside_pointing_vectors)
     
-    F = F_internal + F_external
+    F = F_internal #+ F_external
     
     return F, EFplus, EFminus, rgtpase_mediated_forces, F_cytoplasmic, local_strains, unit_inside_pointing_vectors
     
