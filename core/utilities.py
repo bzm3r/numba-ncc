@@ -1431,7 +1431,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
             simple_intercellular_separations = simple_intercellular_separations_per_tstep[ti]
             dt = delaunay_triangulations_per_tstep[ti]
             
-            if simple_intercellular_separations != None:
+            if type(simple_intercellular_separations) != type(None):
                 convex_hull_areas_per_tstep.append(np.nan)
                 cell_separations = simple_intercellular_separations_per_tstep[ti]
                 average_cell_separation_per_tstep.append(np.average(cell_separations))

@@ -16,10 +16,10 @@ import dill
 
 global_randomization_scheme_dict = {'m': 'kgtp_rac_multipliers', 'w': 'wipeout'}
 
-def define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None):
-    test_lists = [num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options]
-    test_list_labels = ['num_cells_in_boxes', 'box_heights', 'box_widths', 'x_space_between_boxes', 'initial_x_placement_options', 'initial_y_placement_options']
-    allowed_placement_options = ["CENTER", "ORIGIN", "OVERRIDE"]
+def define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None):
+    test_lists = [num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes]
+    test_list_labels = ['num_cells_in_boxes', 'box_heights', 'box_widths', 'x_space_between_boxes']
+    allowed_placement_options = ["CENTER", "CENTRE", "ORIGIN", "OVERRIDE"]
     
     if len(box_x_offsets) == 0:
         box_x_offsets = [0.0 for x in range(num_boxes)]
@@ -38,26 +38,32 @@ def define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, p
             
         if len(test_list) != required_len:
             raise StandardError("{} length is not the required length (should be {}, got {}).".format(test_list_label, required_len, len(test_list)))
-            
-        if test_list_label in ["initial_x_placement_options", "initial_y_placement_options"]:
-            for placement_option in test_list:
-                if placement_option not in allowed_placement_options:
-                    raise StandardError("Given placement option not an allowed placement option!")
-            
-    for box_index, placement_option in enumerate(initial_x_placement_options):
-        if placement_option == "ORIGIN":
-            box_x_offsets[box_index] = origin_x_offset
-        elif placement_option == "CENTER":
-            box_x_offsets[box_index] = 0.5*(plate_width - 0.5*box_widths[0])
 
+  
+    for axis, placement_option in zip(["x", "y"], [x_placement_option, y_placement_option]):
+        if placement_option not in allowed_placement_options:
+            raise StandardError("Given {} placement option not an allowed placement option!\nGiven: {},\nAllowed: {}".format(axis, placement_option, allowed_placement_options))
             
-    for box_index, placement_option in enumerate(initial_y_placement_options):
-        if placement_option == "ORIGIN":
-            box_y_offsets[box_index] = origin_y_offset
-        elif placement_option == "CENTER":
-            box_y_offsets[box_index] = 0.5*(plate_height - 0.5*box_heights[0])
+    if x_placement_option != "OVERRIDE":    
+        first_box_offset = 0.0
+        if x_placement_option == "ORIGIN":
+            first_box_offset = origin_x_offset
+        else:
+            first_box_offset = 0.5*plate_width - 0.5*(np.sum(box_widths) + np.sum(x_space_between_boxes))
             
-
+        for box_index in xrange(num_boxes):
+            if box_index > 0:
+                box_x_offsets[box_index] = first_box_offset + x_space_between_boxes[box_index - 1] + np.sum(box_widths[:box_index]) + np.sum(x_space_between_boxes[:(box_index - 1)])
+            else:
+                box_x_offsets[box_index] = first_box_offset
+                
+    if y_placement_option != "OVERRIDE":
+        for box_index in xrange(num_boxes):
+            if y_placement_option == "ORIGIN":
+                box_y_offsets[box_index] = origin_y_offset
+            else:
+                box_y_offsets[box_index] = 0.5*plate_height - 0.5*np.max(box_heights)
+                
     make_migr_poly, make_phys_poly = False, False  
     if make_only_migratory_corridor:
         make_migr_poly = True
@@ -205,7 +211,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     #num_boxes, num_cells_in_boxes, box_heights, box_widths,x_space_between_boxes, plate_width, plate_height, "CENTER", "CENTER"
     
         
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["CENTER"], ["CENTER"])
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "CENTER", "CENTER")
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -374,7 +380,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     global_scale = 4
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
-    experiment_name_format_string = "cil_test_{}_CIL={}_COA={}".format(sub_experiment_number, default_cil, default_coa) + "_{}"
+    experiment_name_format_string = "ciltest_{}_CIL={}_COA={}_W={}".format(sub_experiment_number, default_cil, default_coa, migr_bdry_height_factor) + "_{}"
     
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -396,7 +402,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     plate_width, plate_height = 10*cell_diameter*1.2, 3*cell_diameter
 
     # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["OVERRIDE", "OVERRIDE"], ["ORIGIN", "ORIGIN"], physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "OVERRIDE", "ORIGIN", physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -439,6 +445,90 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     print "Done."
     
 # ============================================================================
+
+def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True):
+    global_scale = 4
+    
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
+    experiment_name_format_string = "cil_symm_{}_CIL={}_COA={}".format(sub_experiment_number, default_cil, default_coa) + "_{}"
+    
+    if no_randomization:
+        parameter_dict.update([('randomization_scheme', None)])
+        
+    randomization_scheme = parameter_dict['randomization_scheme']
+    experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
+    
+    experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+    
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
+    
+    num_boxes = 2
+    num_cells_in_boxes = [1, 1]
+    box_heights = [1*cell_diameter]*num_boxes
+    box_widths = [1*cell_diameter]*num_boxes
+
+    x_space_between_boxes = [1*cell_diameter]
+    plate_width, plate_height = 20*cell_diameter*1.2, 3*cell_diameter
+
+    # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "CENTRE", "ORIGIN", physical_bdry_polygon_extra=20,  migratory_corridor_size=[100*cell_diameter, cell_diameter], migratory_bdry_x_offset=-1*50*cell_diameter, make_only_migratory_corridor=True, origin_y_offset=25)
+    
+    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
+    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
+    
+    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc, "cell_placement_method": ""}
+    
+    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
+    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
+    
+    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}, {'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 1.0]}]]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
+    experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
+    external_gradient_fn_per_subexperiment = [lambda x: 0.0]
+    
+    user_cell_group_defns_per_subexperiment = []
+    user_cell_group_defns = []
+    
+    si = 0
+    
+    for bi in boxes:
+        this_box_x_offset = box_x_offsets[bi]
+        this_box_y_offset = box_y_offsets[bi]
+        this_box_width = box_widths[bi]
+        this_box_height = box_heights[bi]
+        
+        cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi], 'cell_group_bounding_box': np.array([this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset, this_box_height + this_box_y_offset])*1e-6, 'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi], 'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[si][bi], 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dicts[si][bi], 'parameter_dict': parameter_dict_per_sub_experiment[si][bi]} 
+        
+        user_cell_group_defns.append(cell_group_dict)
+        
+    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
+
+    global_scale = 2
+        
+    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', 0.75*np.sqrt(global_scale)*312.5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_rac_random_spikes', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*timestep_length), ('short_video_duration', 5.0), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
+    
+    produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
+    
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments)
+    
+    if do_final_analysis:
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
+            # ================================================================
+        
+        #time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22, general_data_structure=None
+        time_unit = "min."
+        datavis.present_collated_cell_motion_data(time_unit, np.array(all_cell_centroids_per_repeat), np.array(all_cell_persistence_ratios_per_repeat), np.array(all_cell_persistence_times_per_repeat), np.array(all_cell_speeds_per_repeat), all_cell_protrusion_lifetimes_and_directions_per_repeat, np.array(group_centroid_per_timestep_per_repeat), np.array(group_persistence_ratio_per_repeat), np.array(group_persistence_time_per_repeat), experiment_dir, total_time_in_hours)
+        
+        drift_args = (timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
+        
+        datavis.present_collated_group_centroid_drift_data(*drift_args, min_ylim=-1500.0, max_ylim=1500.0)
+        
+
+    print "Done."
+    
+    
+# ============================================================================
 def make_no_rgtpase_parameter_dict(parameter_dict):
     no_rgtpase_parameter_dict = copy.deepcopy(parameter_dict)
     no_rgtpase_parameter_dict.update([('C_total', 1.), ('H_total', 1.),('max_force_rac', 1.0)])
@@ -472,7 +562,7 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
     plate_width, plate_height = 10*cell_diameter*1.2, 3*cell_diameter
 
     # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["OVERRIDE", "OVERRIDE"], ["ORIGIN", "ORIGIN"], physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "OVERRIDE", "ORIGIN", physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -635,7 +725,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     x_space_between_boxes = []
     plate_width, plate_height = 1000, 1000
 
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, ["CENTER"], ["CENTER"])
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "CENTER", "CENTER")
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -957,8 +1047,8 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     origin_y_offset = 55
     physical_bdry_polygon_extra = 20
     
-    initial_x_placement_options = ["ORIGIN" for x in range(num_boxes)]
-    initial_y_placement_options = ["OVERRIDE" for x in range(num_boxes)]
+    initial_x_placement_options = "ORIGIN"
+    initial_y_placement_options = "OVERRIDE"
     
     box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
 
@@ -1024,6 +1114,127 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     print "Done."
     
     return experiment_name, drift_args
+
+# ============================================================================
+
+def corridor_migration_symmetric_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="A:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1):
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
+    
+    if num_cells == 0:
+        raise StandardError("No cells!")
+    
+    if corridor_height == None:
+        corridor_height = box_height
+        
+    if corridor_height < box_height:
+        raise StandardError("Corridor height is less than box height!")
+        
+    if corridor_height == box_height:
+        box_y_placement_factor = 0.0
+        
+    accepted_cell_placement_methods = ["", "r"]
+    if cell_placement_method not in accepted_cell_placement_methods:
+        raise StandardError("Unknown placement method given: {}, expected one of {}".format(cell_placement_method, accepted_cell_placement_methods))
+    
+    convergence_test = False
+    
+    if cell_placement_method == "":
+        experiment_name_format_string = "cmsym_{}_{}_NC=({}, {}, {}, {}, {}){}_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3))
+    else:
+        experiment_name_format_string = "cmsym_{}_{}_NC=({}, {}, {}, {}, {})({}, {}, {})_COA={}_CIL={}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3))
+        
+    if no_randomization:
+        parameter_dict.update([('randomization_scheme', None)])
+        
+    randomization_scheme = parameter_dict['randomization_scheme']
+    experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
+    
+    experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+    
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
+    
+    num_boxes = 1
+    num_cells_in_boxes = [num_cells]
+    box_heights = [box_height*cell_diameter]
+    box_widths = [box_width*cell_diameter]
+
+    x_space_between_boxes = []
+
+    if max_animation_corridor_length == None:
+        plate_width, plate_height = min(2000, max(1000, box_widths[0]*8)), (corridor_height*cell_diameter + 40 + 100)
+    else:
+        plate_width, plate_height = max_animation_corridor_length, (corridor_height*cell_diameter + 40 + 100)
+
+    origin_y_offset = 55
+    physical_bdry_polygon_extra = 20
+    
+    initial_x_placement_options = "CENTER"
+    initial_y_placement_options = "OVERRIDE"
+    
+    box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
+
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon  = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, box_y_offsets=box_y_offsets, physical_bdry_polygon_extra=physical_bdry_polygon_extra, origin_y_offset=origin_y_offset, migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter], make_only_migratory_corridor=convergence_test, migratory_bdry_x_offset=-1*0.5*box_widths[0]*100)
+
+    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
+    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
+    
+    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc, "cell_placement_method": cell_placement_method, "max_placement_distance_factor": max_placement_distance_factor, "init_random_cell_placement_x_factor": init_random_cell_placement_x_factor, "convergence_test": convergence_test, "graph_group_centroid_splits": graph_group_centroid_splits}
+    
+    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
+    # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
+    cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
+    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [dict([(n, cil_dict) for n in range(num_boxes)])]
+    
+    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]*num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
+    experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
+    external_gradient_fn_per_subexperiment = [lambda x: 0.0]
+    
+    user_cell_group_defns_per_subexperiment = []
+    user_cell_group_defns = []
+    
+    si = 0
+    
+    for bi in boxes:
+        this_box_x_offset = box_x_offsets[bi]
+        this_box_y_offset = box_y_offsets[bi]
+        this_box_width = box_widths[bi]
+        this_box_height = box_heights[bi]
+        
+        cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi], 'cell_group_bounding_box': np.array([this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset, this_box_height + this_box_y_offset])*1e-6, 'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi], 'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[si][bi], 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dicts[si][bi], 'parameter_dict': parameter_dict_per_sub_experiment[si][bi]} 
+        
+        user_cell_group_defns.append(cell_group_dict)
+        
+    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
+
+
+    global_scale = 2
+        
+    animation_settings = dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height), ('plate_width_in_micrometers', plate_width), ('velocity_scale', 1), ('rgtpase_scale', np.sqrt(global_scale)*312.5), ('coa_scale', global_scale*62.5), ('show_velocities', False), ('show_rgtpase', True), ('show_centroid_trail', False), ('show_rac_random_spikes', False), ('show_coa', False), ('color_each_group_differently', False), ('only_show_cells', []), ('polygon_line_width', 1),  ('space_physical_bdry_polygon', space_physical_bdry_polygon), ('space_migratory_bdry_polygon', space_migratory_bdry_polygon), ('short_video_length_definition', 1000.0*timestep_length), ('short_video_duration', 5.0), ('timestep_length', timestep_length), ('fps', 30), ('string_together_pictures_into_animation', True)])
+    
+    produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
+    
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
+    
+    drift_args = None
+    if do_final_analysis:
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
+            # ================================================================
+        
+        #time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22, general_data_structure=None
+        time_unit = "min."
+        datavis.present_collated_cell_motion_data(time_unit, np.array(all_cell_centroids_per_repeat), np.array(all_cell_persistence_ratios_per_repeat), np.array(all_cell_persistence_times_per_repeat), np.array(all_cell_speeds_per_repeat), all_cell_protrusion_lifetimes_and_directions_per_repeat, np.array(group_centroid_per_timestep_per_repeat), np.array(group_persistence_ratio_per_repeat), np.array(group_persistence_time_per_repeat), experiment_dir, total_time_in_hours)
+        
+        drift_args = (timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
+        
+        datavis.present_collated_group_centroid_drift_data(*drift_args)
+        
+
+    print "Done."
+    
+    return experiment_name, drift_args
+
 
 
 # ============================================================================

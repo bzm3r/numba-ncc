@@ -954,14 +954,14 @@ if __name__ == '__main__':
     #moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0), ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),('kdgtp_rac_multiplier', 1.0, 40.0, 1.0), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
     
     scale = 1.0
-    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0),
-  ('kgtp_rho_multiplier', 1.0, 40.0, 1.0),
-  ('kdgtp_rac_multiplier', 1.0, 40.0, 1.0),
-  ('kdgtp_rho_multiplier', 1.0, 40.0, 10.0),
-  ('kgtp_rac_autoact_multiplier', 50.0, 500.0, 5.0),
-  ('kgtp_rho_autoact_multiplier', 50.0, 500.0, 5.0),
-  ('kdgtp_rac_mediated_rho_inhib_multiplier', 100.0, 2000.0, 50.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 100.0, 2000.0, 50.0), ('tension_mediated_rac_inhibition_magnitude', 1.0, 100.0, 1.0), ('max_force_rac', 0.1*10e3, 1*10e3, 0.1*10e3)]
+    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 100.0, 1.0),
+  ('kgtp_rho_multiplier', 1.0, 100.0, 1.0),
+  ('kdgtp_rac_multiplier', 1.0, 100.0, 1.0),
+  ('kdgtp_rho_multiplier', 1.0, 100.0, 10.0),
+  ('kgtp_rac_autoact_multiplier', 1.0, 1000.0, 5.0),
+  ('kgtp_rho_autoact_multiplier', 1.0, 1000.0, 5.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1.0, 2000.0, 50.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1.0, 2000.0, 50.0)]
     
 #    initial_update = [('kgtp_rac_multiplier', 10.5),
 # ('kgtp_rho_multiplier', 6.25),

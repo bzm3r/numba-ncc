@@ -266,7 +266,7 @@ def get_multiple_data_until_timestep(cell_index, max_tstep, data_labels, data_ty
                 else:
                     data_for_this_basis = on_ram_dset[:max_tstep,:,parameterorg.info_indices_dict[data_label + basis_string]]
                 
-                if data == None:
+                if type(data) == type(None):
                     data = np.zeros((data_for_this_basis.shape[0], data_for_this_basis.shape[1], 2), dtype=data_for_this_basis.dtype)
                 
                 data[:, :, i] = data_for_this_basis

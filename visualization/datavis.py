@@ -765,7 +765,7 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     
 # =============================================================================
 
-def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_per_tstep_per_repeat, max_x_centroid_per_tstep_per_repeat, group_x_centroid_per_tstep_per_repeat, fit_group_x_velocity_per_repeat, save_dir, total_time_in_hours, fontsize=22, general_data_structure=None, ax_simple_normalized=None, ax_full_normalized=None, ax_simple=None, ax_full=None, plot_speedbox=True, plot_if_no_axis_given=True):
+def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_per_tstep_per_repeat, max_x_centroid_per_tstep_per_repeat, group_x_centroid_per_tstep_per_repeat, fit_group_x_velocity_per_repeat, save_dir, total_time_in_hours, fontsize=22, general_data_structure=None, ax_simple_normalized=None, ax_full_normalized=None, ax_simple=None, ax_full=None, plot_speedbox=True, plot_if_no_axis_given=True, min_ylim=0.0, max_ylim=1500.0):
     set_fontsize(fontsize)
     timepoints = np.arange(group_x_centroid_per_tstep_per_repeat[0].shape[0])*T/60.0
     max_timepoint = int(((total_time_in_hours*3600.0)/T) + 1)
@@ -814,7 +814,7 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
             
         if ax_simple != None:
             ax_simple.plot(timepoints[:max_timepoint], relative_group_x_centroid_per_tstep[:max_timepoint], color=colors.color_list300[repeat_number%300])
-            ax_simple.set_ylim([0, 1500])
+            ax_simple.set_ylim([min_ylim, max_ylim])
         
         if ax_full_normalized != None:
             ax_full_normalized.plot(timepoints[:max_timepoint], normalized_relative_group_centroid_x_coords[:max_timepoint], color=colors.color_list300[repeat_number%300])
@@ -833,7 +833,7 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
             lower_bounds = np.abs(bar_points - bar_min_points)
             upper_bounds = np.abs(bar_points - bar_max_points)
             ax_full.errorbar(bar_timepoints, bar_points, yerr=[lower_bounds, upper_bounds], ls='', capsize=5, color=colors.color_list300[repeat_number%300])
-            ax_full.set_ylim([0, 1500])
+            ax_full.set_ylim([min_ylim, max_ylim])
         
     if plot_if_no_axis_given:  
         ax_simple_normalized.set_ylabel("$X_c/r$")
