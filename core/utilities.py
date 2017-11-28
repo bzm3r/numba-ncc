@@ -86,7 +86,7 @@ def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, 
 # ==============================================================================
         
 @nb.jit(nopython=True)   
-def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes):
+def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, num_nodes):
     
     max_rac = 0.0
     sum_rac = 0.0
@@ -195,6 +195,146 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score#combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
         
     return 0.0
+
+# ==============================================================================
+@nb.jit(nopython=True)
+def polarization_score_pwl_fn(x):
+    defining_xs = [0.0, 0.2, 0.33, 0.7, 0.9, 1.0]
+    defining_ys = [0.0, 0.2, 1.0, 1.0, 0.2, 0.0]
+    
+    num_points = len(defining_xs)
+    
+    if x < defining_xs[0]:
+        return 0.0
+    elif x > defining_xs[-1]:
+        return 0.0
+    else:
+        for j in range(1, num_points):
+            x2 = defining_xs[j]
+            
+            if x <= x2:
+                x1 = defining_xs[j - 1]
+                y1 = defining_ys[j - 1]
+                y2 = defining_ys[j]
+                
+                return ((y2 - y1)/(x2 - x1))*(x - x1) + y1
+                
+                
+@nb.jit(nopython=True)
+def scaled_and_translated_bump_function(offset, width, x):
+    if offset - np.sqrt(width) < x < offset + np.sqrt(width):
+        return np.exp(-1.0*(1/(1.0 - ((x - offset)**2.0)/width)))
+    else:
+        return 0.0
+    
+@nb.jit(nopython=True)   
+def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes):
+    
+    max_rac = 0.0
+    sum_rac = 0.0
+    
+    for i in range(num_nodes):
+        this_node_rac_active = rac_membrane_active[i]
+        sum_rac = sum_rac + this_node_rac_active
+        if this_node_rac_active > max_rac:
+            max_rac = this_node_rac_active
+        
+        
+    sum_rho = 0.0
+    for i in range(num_nodes):
+        sum_rho = sum_rho + rho_membrane_active[i]
+        
+
+    significant_rac = np.zeros(num_nodes, dtype=np.int64)
+    normalized_rac = rac_membrane_active/max_rac
+    for i in range(num_nodes):
+        if normalized_rac[i] > 0.2:
+            significant_rac[i] = 1
+
+    num_rac_fronts = 0
+    front_starts = np.zeros(num_nodes, dtype=np.int64)
+    for ni in range(num_nodes):
+        ni_plus1 = (ni + 1)%num_nodes
+        if significant_rac[ni] == 0 and significant_rac[ni_plus1] == 1:
+            front_starts[num_rac_fronts] = ni_plus1
+            num_rac_fronts += 1
+    
+    if num_rac_fronts == 0:
+        return 0.0
+      
+    front_strengths = np.zeros(num_rac_fronts, dtype=np.float64)
+    front_widths = np.zeros(num_rac_fronts, dtype=np.float64)
+    for fi in range(num_rac_fronts):
+        front_strength = 0.0
+        front_width = 0.0
+        i = front_starts[fi]
+        
+        while significant_rac[i] != 0:
+            front_strength += normalized_rac[i]
+            front_width += 1.0
+            i = (i + 1)%num_nodes
+            
+        front_strengths[fi] = front_strength/front_width
+        front_widths[fi] = front_width
+            
+    max_front_strength = np.max(front_strengths)
+    normalized_front_strengths = front_strengths/max_front_strength
+    
+    rac_amount_score = 1.0
+    if sum_rac > 0.4:
+        rac_amount_score = np.exp((sum_rac - 0.4)*np.log(0.1)/0.1)
+        
+    rho_amount_score = 1.0
+    if sum_rho > 0.4:
+        rho_amount_score = np.exp((sum_rho - 0.4)*np.log(0.1)/0.1)
+    
+    if num_rac_fronts == 1:
+        single_front_width = (1.0*front_widths[0])/num_nodes
+        
+        front_width_rating = polarization_score_pwl_fn(single_front_width)
+            
+        return front_width_rating*rac_amount_score*rho_amount_score#(front_width_rating)*rac_amount_score*rho_amount_score
+    
+    elif num_rac_fronts > 1:
+        worst_distance_between_fronts = (num_nodes -np.sum(front_widths))/float(num_rac_fronts)
+        distance_between_fronts_score = np.zeros(num_rac_fronts, dtype=np.float64)
+        
+        for fi in range(num_rac_fronts):
+            this_si = front_starts[fi]
+            this_width = front_widths[fi]
+            fi_plus1 = (fi + 1)%(num_rac_fronts)
+            next_si = front_starts[fi_plus1]
+            if next_si < this_si:
+                next_si = num_nodes + next_si
+            dist_bw_fronts = next_si - (this_si + this_width)
+            
+            this_fs = normalized_front_strengths[fi]
+            next_fs = normalized_front_strengths[fi_plus1]
+            relevant_fs = 1.0
+            if this_fs < next_fs:
+                relevant_fs = this_fs
+            else:
+                relevant_fs = next_fs
+                
+            score = dist_bw_fronts*relevant_fs/worst_distance_between_fronts
+            if score > 1.0:
+                distance_between_fronts_score[fi] = 1.0
+            else:
+                distance_between_fronts_score[fi] = score
+        
+        combined_dist_bw_fronts_score = 1.0
+        if num_rac_fronts == 2:
+            combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
+        else:
+            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_rac_fronts
+            
+        total_front_width = (np.sum(front_widths) + 0.0)/num_nodes
+        front_width_rating = polarization_score_pwl_fn(total_front_width)
+            
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score#combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
+       
+    return 0.0
+
 # ==============================================================================
 
 def calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, significant_difference=0.1, weigh_by_timepoint=False):
@@ -265,7 +405,7 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
     
     return polarity_score, persistence_score, velocity_score, strain_score
 
-def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_cell, should_be_polarized_by_in_hours=0.5):
+def calculate_parameter_exploration_score_from_cell_no_randomization_variant_old(a_cell, should_be_polarized_by_in_hours=0.5):
     T = a_cell.T
     should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours*3600.)/T)
        
@@ -303,6 +443,16 @@ def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_c
         strain_score = 1.0 - score_function(0.1, 0.2, avg_strain)
     
     return polarity_score_global, polarity_score_at_SBPBP_tstep, speed_score, strain_score
+
+def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_cell, should_be_polarized_by_in_hours=0.5):
+    T = a_cell.T
+    should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours*3600.)/T)
+       
+    rac_membrane_active_per_tstep = a_cell.system_history[(should_be_polarized_by_tstep + 1):, :, parameterorg.rac_membrane_active_index]
+    rho_membrane_active_per_tstep = a_cell.system_history[(should_be_polarized_by_tstep + 1):, :, parameterorg.rho_membrane_active_index]
+    polarity_score_global = calculate_rgtpase_polarity_score_from_rgtpase_data(rac_membrane_active_per_tstep, rho_membrane_active_per_tstep)[0]
+    
+    return polarity_score_global, 0.0, 0.0, 0.0
     
 def calculate_rgtpase_polarity_score(cell_index, storefile_path, significant_difference=0.1, max_tstep=None, weigh_by_timepoint=False):
     rac_membrane_active_per_tstep = hardio.get_data_until_timestep(cell_index, max_tstep, "rac_membrane_active", storefile_path)

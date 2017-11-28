@@ -13,20 +13,21 @@ import copy
 BEST_UPDATES = []
 closeness_dist_squared_criteria = (0.5e-6)**2
 
-STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.6), ('init_rgtpase_membrane_active_frac', 0.2), ('init_rgtpase_membrane_inactive_frac', 0.2), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 1.0), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 30.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e5), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 10.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0), ('strain_calculation_type', 0)])
+STANDARD_PARAMETER_DICT = dict([('num_nodes', 16), ('init_cell_radius', 20e-6), ('C_total', 2.5e6), ('H_total', 1e6), ('init_rgtpase_cytosol_frac', 0.8), ('init_rgtpase_membrane_active_frac', 0.1), ('init_rgtpase_membrane_inactive_frac', 0.1), ('diffusion_const', 0.1e-12), ('kgdi_multiplier', 1), ('kdgdi_multiplier', 1), ('kgtp_rac_multiplier', 1.0), ('kgtp_rac_autoact_multiplier', 200), ('kdgtp_rac_multiplier', 5.0), ('kdgtp_rho_mediated_rac_inhib_multiplier', 1000), ('threshold_rac_activity_multiplier', 0.4), ('kgtp_rho_multiplier', 10.0), ('kgtp_rho_autoact_multiplier', 100), ('kdgtp_rho_multiplier', 2.5), ('kdgtp_rac_mediated_rho_inhib_multiplier', 1000.0), ('threshold_rho_activity_multiplier', 0.4), ('hill_exponent', 3), ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 1.0), ('max_coa_signal', -1.0), ('coa_sensing_dist_at_value', 110e-6), ('coa_sensing_value_at_dist', 0.5), ('interaction_factor_migr_bdry_contact', 30.), ('closeness_dist_squared_criteria', closeness_dist_squared_criteria), ('length_3D_dimension', 10e-6), ('stiffness_edge', 5000), ('stiffness_cytoplasmic', 1e-5), ('eta', 1e5), ('max_force_rac', 10e3), ('force_rho_multiplier', 0.2), ('force_adh_const', 0.0), ('skip_dynamics', False), ('randomization_scheme', 'm'), ('randomization_time_mean', 40.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 10.0), ('randomization_node_percentage', 0.25), ('randomization_type', 'r'), ('coa_intersection_exponent', 2.0), ('strain_calculation_type', 0)])
 
 
-STANDARD_PARAMETER_DICT.update([('kgtp_rac_multiplier', 1.8*10.0),
-  ('kgtp_rho_multiplier', 0.75*10.0),
-  ('kdgtp_rac_multiplier', 1.5*10.),
-  ('kdgtp_rho_multiplier', 3.5*10.0),
-  ('threshold_rac_activity_multiplier', 0.2),
-  ('threshold_rho_activity_multiplier', 0.2),
-  ('kgtp_rac_autoact_multiplier', 0.85*250.0),
-  ('kgtp_rho_autoact_multiplier', 0.5*250.0),
+STANDARD_PARAMETER_DICT.update([('kgtp_rac_multiplier', 12.0),
+  ('kgtp_rho_multiplier', 14.0),
+  ('kdgtp_rac_multiplier', 4.0),
+  ('kdgtp_rho_multiplier', 30.0),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 195.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0),
-  ('tension_mediated_rac_inhibition_half_strain', 0.05), ('tension_mediated_rac_inhibition_magnitude', 6.5), ('max_force_rac', 0.1*10e3), ('eta', 1e5), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 4.0), ('randomization_node_percentage', 0.25), ('stiffness_edge', 1.)])
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
+  ('tension_mediated_rac_inhibition_magnitude', 40.0),
+  ('max_force_rac', 3000.0),
+  ('eta', 2.9*10000.0),
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
 
 
 
@@ -327,11 +328,11 @@ def run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict
         scores = []
         for rc in result_cells_chunk:
             if rc != None:
-                scores.append(cu.calculate_parameter_exploration_score_from_cell_no_randomization_variant(rc, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours))
+                scores.append(cu.calculate_parameter_exploration_score_from_cell_no_randomization_variant(rc, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours)[0])
             else:
-                scores.append([0.001, 0.001, 0.001, 0.001])
+                scores.append(0.001)
         
-        scores = np.average(scores, axis=0)
+        scores = np.average(scores)
         scores_and_updates.append((scores, u))
         
     return scores_and_updates
@@ -383,7 +384,7 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
     for n in range(len(scores_and_updates_no_randomization)):
         u = scores_and_updates_no_randomization[n][1]
         
-        polarization_score_global, polarization_score_at_SBPBT, speed_score, strain_score = scores_and_updates_no_randomization[n][0]
+        polarization_score_global= scores_and_updates_no_randomization[n][0]
  
         #difference_between_pg_and_pat = polarization_score_global - polarization_score_at_SBPBT
         
@@ -954,14 +955,14 @@ if __name__ == '__main__':
     #moddable_parameters = [('kgtp_rac_multiplier', 1.0, 40.0, 1.0), ('kgtp_rac_autoact_multiplier', 1.0, 300.0, 5.0),('kdgtp_rac_multiplier', 1.0, 40.0, 1.0), ('tension_mediated_rac_inhibition_half_strain', 0.01, 0.1, 0.005), ('stiffness_edge', 1000.0, 8000.0, 500.0)]
     
     scale = 1.0
-    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 100.0, 1.0),
-  ('kgtp_rho_multiplier', 1.0, 100.0, 1.0),
-  ('kdgtp_rac_multiplier', 1.0, 100.0, 1.0),
-  ('kdgtp_rho_multiplier', 1.0, 100.0, 10.0),
-  ('kgtp_rac_autoact_multiplier', 1.0, 1000.0, 5.0),
-  ('kgtp_rho_autoact_multiplier', 1.0, 1000.0, 5.0),
-  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1.0, 2000.0, 50.0),
-  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1.0, 2000.0, 50.0)]
+    moddable_parameters = [('kgtp_rac_multiplier', 1.0, 500.0, 10.0),
+  ('kgtp_rho_multiplier', 1.0, 500.0, 10.0),
+  ('kdgtp_rac_multiplier', 1.0, 500.0, 10.0),
+  ('kdgtp_rho_multiplier', 1.0, 500.0, 10.0),
+  ('kgtp_rac_autoact_multiplier', 1.0, 1000.0, 25.0),
+  ('kgtp_rho_autoact_multiplier', 1.0, 1000.0, 25.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 1.0, 2000.0, 25.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 1.0, 2000.0, 25.0)]
     
 #    initial_update = [('kgtp_rac_multiplier', 10.5),
 # ('kgtp_rho_multiplier', 6.25),
@@ -1001,6 +1002,6 @@ if __name__ == '__main__':
     
     #BEST_UPDATES = parameter_explorer_polarization_multiwanderer(moddable_parameters, 0.8, max_population_size=3, task_chunk_size=4, num_processes=4, num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, total_time_in_hours=3., seed=2836, init_population=None)
     
-    BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.8, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=2, num_processes=4, total_time_in_hours=1.5, seed=[1486, 5866], sequential=False, should_be_polarized_by_in_hours=0.5)
+    BEST_UPDATES = parameter_explorer_polarization_wanderer_no_randomization_variant(moddable_parameters, 0.5, num_new_dicts_to_generate=int(len(moddable_parameters)), num_experiment_repeats=2, num_processes=4, total_time_in_hours=1.5, seed=[1486, 5866], sequential=False, should_be_polarized_by_in_hours=0.5)
     
     #BEST_UPDATES = parameter_explorer_polarization_conservative_wanderer(moddable_parameters, 0.8, num_new_dicts_to_generate=len(moddable_parameters), num_experiment_repeats=1, num_experiment_repeats_no_randomization=1, num_processes=4, total_time_in_hours=3., seed=2836, sequential=False)

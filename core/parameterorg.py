@@ -88,8 +88,7 @@ def verify_user_parameters(justify_parameters, user_parameter_dict):
                     raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
             elif value != justification:
                 raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
-                    
-
+    
 #-----------------------------------------------------------------
 
 
@@ -251,7 +250,7 @@ def find_undefined_labels(cell_group_parameter_dict):
     
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="A:\\cncell\\experiment-storage\\", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
+def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
     
     num_cell_groups = len(user_cell_group_defns)
         

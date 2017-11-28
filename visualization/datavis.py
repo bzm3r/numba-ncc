@@ -1782,6 +1782,27 @@ def graph_combined_group_drifts(experiment_drift_args, base_name, experiment_set
         
     show_or_save_fig(fig, (0.9*8.5, 8), save_dir, base_name, experiment_set_label + "_drifts")
     
+# =============================================================================
+    
+def graph_nonlin_to_lin_parameter_comparison(kgtp_rac_multipliers, kgtp_rho_multipliers, kgtp_rac_autoact_multipliers, kgtp_rho_autoact_multipliers, kdgtp_rac_multipliers, kdgtp_rho_multipliers, kdgtp_rho_mediated_rac_inhib_multipliers, kdgtp_rac_mediated_rho_inhib_multipliers, save_dir=None):
+    
+    num_sets = len(kgtp_rac_multipliers)
+    fig, ax = plt.subplots()
+    
+    rac_rate_comparisons = []
+    rho_rate_comparisons = []
+    
+    for kgtp_rac, kgtp_rho, kgtp_rac_auto, kgtp_rho_auto, kdgtp_rac, kdgtp_rho, kdgtp_rho_on_rac, kdgtp_rac_on_rho in zip(kgtp_rac_multipliers, kgtp_rho_multipliers, kgtp_rac_autoact_multipliers, kgtp_rho_autoact_multipliers, kdgtp_rac_multipliers, kdgtp_rho_multipliers, kdgtp_rho_mediated_rac_inhib_multipliers, kdgtp_rac_mediated_rho_inhib_multipliers):
+        rac_rate_comparison = (kgtp_rac_auto)/(kgtp_rac)
+        rho_rate_comparison = (kgtp_rho_auto)/(kgtp_rho)
+        
+        rac_rate_comparisons.append(rac_rate_comparison)
+        rho_rate_comparisons.append(rho_rate_comparison)
+        
+    ax.plot(np.arange(num_sets), rac_rate_comparisons, color='b', ls='', marker='.')
+    ax.plot(np.arange(num_sets), rho_rate_comparisons, color='r', ls='', marker='.')
+    ax.set_ylim([0, 20])    
+    show_or_save_fig(fig, (6, 6), save_dir, "nonlin_vs_lin", "")
     
     
 

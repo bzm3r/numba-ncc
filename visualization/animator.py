@@ -235,7 +235,7 @@ class AnimationCell():
                 self.draw_velocities(context, polygon_coords, velocity_line_coords_per_label)
                 
             if (self.show_rgtpase == True):
-                if rac_random_spikes_info != None:
+                if type(rac_random_spikes_info) != type(None):
                     self.draw_rgtpase_showing_rac_random_spikes(context, polygon_coords, rgtpase_line_coords_per_label, rac_random_spikes_info)
                 else:
                     self.draw_rgtpase(context, polygon_coords, rgtpase_line_coords_per_label)
@@ -644,6 +644,7 @@ class EnvironmentAnimation():
     # ---------------------------------------------------------------------
         
     def create_animation_from_data(self, animation_save_folder_path, animation_file_name, timestep_to_draw_till=None, duration=None, num_threads=8, multithread=True):
+        multithread=False
         
         if timestep_to_draw_till == None:
             timestep_to_draw_till = self.environment.num_timepoints
