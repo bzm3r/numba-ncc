@@ -685,6 +685,9 @@ class Environment():
         
     def init_from_store(self, environment_wide_variable_defns, tpoint=None, simulation_execution_enabled=True):
         self.init_random_state(None)
+        self.storefile_path = os.path.join(self.environment_dir, "store.hdf5")
+        self.empty_self_pickle_path = os.path.join(self.environment_dir, "environment.pkl")
+            
         if tpoint == None:
             tpoint = self.curr_tpoint
         

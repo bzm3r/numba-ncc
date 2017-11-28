@@ -1229,7 +1229,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
         
         drift_args = (timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
         
-        datavis.present_collated_group_centroid_drift_data(*drift_args)
+        datavis.present_collated_group_centroid_drift_data(*drift_args, min_ylim=-1500., max_ylim=1500.)
         
 
     print "Done."

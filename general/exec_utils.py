@@ -483,6 +483,7 @@ def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, pr
     env = load_empty_env(empty_env_pickle_path)
     
     if env != None:
+        env.environment_dir = os.path.split(empty_env_pickle_path)[0]
         env.init_from_store(environment_wide_variable_defns, simulation_execution_enabled=simulation_execution_enabled)
         env.produce_intermediate_visuals = produce_intermediate_visuals
         env.produce_final_visuals = produce_final_visuals
