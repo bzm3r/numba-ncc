@@ -1279,7 +1279,8 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_c
 
 # -----------------------------------------------------------------
 
-@nb.jit('void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
+#@nb.jit('void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, task_addresses):
     """
     Function under test.
@@ -1417,7 +1418,7 @@ def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_
                             
     return distance_squared_matrix, line_segment_intersection_matrix
 
-def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
+def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, sequential=False):
 
     num_tasks = given_tasks.shape[0]
     
@@ -1430,12 +1431,16 @@ def update_line_segment_intersection_and_dist_squared_matrices(num_threads, give
             chunks.append((distance_squared_matrix, line_segment_intersection_matrix, cells_bounding_box_array, all_cells_node_coords, relevant_tasks))
             
         # Spawn one thread per chunk
-        threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
-        
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        if not sequential:
+            threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
+            
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        else:
+            for chunk in chunks:
+                dist_squared_and_line_segment_calculation_worker(*chunk)
         
     return distance_squared_matrix, line_segment_intersection_matrix
     

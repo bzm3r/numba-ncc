@@ -31,26 +31,28 @@ integration_params = {'rtol': 1e-4}
 base_output_dir = "B:\\numba-ncc\\output" 
 parameter_dicts = [] 
 
-#parameter_dict.update([('kgtp_rac_multiplier', 12.0),
-#  ('kgtp_rho_multiplier', 14.0),
-#  ('kdgtp_rac_multiplier', 4.0),
-#  ('kdgtp_rho_multiplier', 30.0),
-#  ('kgtp_rac_autoact_multiplier', 250.0),
-#  ('kgtp_rho_autoact_multiplier', 195.0),
-#  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
-#  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
-#  ('tension_mediated_rac_inhibition_magnitude', 40.0),
-#  ('max_force_rac', 3000.0),
-#  ('eta', 2.9*10000.0),
-#  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
-#
-#sub_experiment_number = 0
-#parameter_dicts.append(copy.deepcopy(parameter_dict))
-#coa_dict = {49: 8.0, 36: 9.0, 25: 12.0, 16: 14.0, 9: 16.0, 4: 24.0, 2: 24.0, 1: 24.0}
+parameter_dict.update([('kgtp_rac_multiplier', 12.0),
+  ('kgtp_rho_multiplier', 14.0),
+  ('kdgtp_rac_multiplier', 4.0),
+  ('kdgtp_rho_multiplier', 30.0),
+  ('kgtp_rac_autoact_multiplier', 250.0),
+  ('kgtp_rho_autoact_multiplier', 195.0),
+  ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
+  ('kdgtp_rho_mediated_rac_inhib_multiplier', 2000.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
+  ('tension_mediated_rac_inhibition_magnitude', 40.0),
+  ('max_force_rac', 3000.0),
+  ('eta', 2.9*10000.0),
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
+
+sub_experiment_number = 0
+parameter_dicts.append(copy.deepcopy(parameter_dict))
+coa_dict = {49: 8.0, 36: 9.0, 25: 12.0, 16: 14.0, 9: 16.0, 4: 24.0, 2: 24.0, 1: 24.0}
 #
 #ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True)
 #
 #ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir=base_output_dir, total_time_in_hours=2., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True)
+
+ets.corridor_migration_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=20.0, default_coa=coa_dict[2], default_cil=60.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=1, num_cells=4, corridor_height=1, box_y_placement_factor=0.0, remake_graphs=False, remake_animation=False, do_final_analysis=do_final_analysis, justify_parameters=False)
 
 parameter_dict.update([('kgtp_rac_multiplier', 12.0*10),
   ('kgtp_rho_multiplier', 14.0*10),

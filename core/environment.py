@@ -567,6 +567,7 @@ class Environment():
         
         if produce_graphs:
             data_dict = {}
+            
             for cell_index in xrange(self.num_cells):
                 this_cell = self.cells_in_environment[cell_index]
                 if this_cell.skip_dynamics == True:
@@ -589,7 +590,7 @@ class Environment():
             
             data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict, graph_group_centroid_splits=self.graph_group_centroid_splits)
             
-            data_dict = datavis.graph_centroid_related_data(self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
+            data_dict = datavis.graph_centroid_related_data([c.skip_dynamics for c in self.cells_in_environment], self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
             
             protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
             protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]

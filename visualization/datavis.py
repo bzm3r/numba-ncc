@@ -256,8 +256,10 @@ def graph_group_centroid_drift(T, time_unit, group_centroid_per_tstep, relative_
                 last_num_subgroups = num_subgroups
                 last_subgroup_centroids = subgroup_centroids
             
-            ax.plot(timepoints, single_group_data, color='b', rasterized=True)
-            ax.plot(timepoints[multigroup_timesteps], multigroup_data, color='b', ls='', marker='.', markersize=1, rasterized=True)
+#            ax.plot(timepoints, single_group_data, color='r', rasterized=True)
+#            ax.plot(timepoints[multigroup_timesteps], multigroup_data, color='b', ls='', marker='.', markersize=1, rasterized=True)
+            ax.plot(timepoints, single_group_data, color='r')
+            ax.plot(timepoints[multigroup_timesteps], multigroup_data, color='b', ls='', marker='.', markersize=1)
 #            ax.plot(group_split_connector_timesteps, group_split_connector_data, color='r')
 #            ax.plot(group_merge_connector_timesteps, group_merge_connector_data, color='g')
             ax.set_ylabel("$X_c$ ($\mu m$)")
@@ -267,13 +269,14 @@ def graph_group_centroid_drift(T, time_unit, group_centroid_per_tstep, relative_
             if save_dir == None or save_name == None:
                 plt.show()
             else:
-                show_or_save_fig(fig, (6, 4), save_dir, "group_split_conn_" + save_name, "")
+                show_or_save_fig(fig, (6, 4), save_dir, "group_split_" + save_name, "")
+                show_or_save_fig(fig, (6, 4), save_dir, "group_split_" + save_name, "", figtype="png")
     
     return general_data_structure
     
 # =============================================================================
 
-def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True, fontsize=22, general_data_structure=None):    
+def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, T, time_unit, cell_Ls, storefile_path, save_dir=None, save_name=None, max_tstep=None, make_group_centroid_drift_graph=True, fontsize=22, general_data_structure=None):    
     # assuming that num_timepoints, T is same for all cells
     set_fontsize(fontsize)
     if max_tstep == None:
@@ -326,9 +329,9 @@ def graph_centroid_related_data(num_cells, num_timepoints, T, time_unit, cell_Ls
         positive_das_per_cell.append(this_cell_positive_das)
         all_cell_persistence_times.append(this_cell_persistence_time)
         
-        
-        if save_dir != None:
+        if save_dir != None and skip_dynamics_flags[ci] == False:
             fig, ax = plt.subplots()
+            
             graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
             ax.set_title(graph_title)
             ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
@@ -646,7 +649,7 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
 
     
     if experiment_dir != None:
-        write_lines_to_file(os.path.join(experiment_dir, "single_cell_persistence_data.txt"), ["$P_R$ over {} hours (mean: {}, std: {}) \n $P_T$ mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit)])
+        write_lines_to_file(os.path.join(experiment_dir, "single_cell_persistence_data.txt"), ["P_R over {} hours (mean: {}, std: {})\nP_T mean: {} {}, (std {} {})\ncell x:P_R, P_T".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit)] + ["cell {}: {}, {}\n".format(ci, pr, pt) for ci, pr, pt in zip(np.arange(len(persistence_times)), persistence_ratios, persistence_times)])
     else:
         ax.set_title("$P_R$ over {} hours (mean: {}, std: {}) \n $P_T$ mean: {} {}, (std {} {})".format(total_time_in_hours, mean_persistence_ratio, std_persistence_ratio, mean_persistence_time, time_unit, std_persistence_time, time_unit))
         
@@ -682,7 +685,6 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     fig_time, ax_time = plt.subplots()
     for rpti, all_cell_centroids in enumerate(all_cell_centroids_per_repeat):
         for ci, ccs in enumerate(all_cell_centroids):
-            ccs = all_cell_centroids[ci,:,:]
             relative_ccs = ccs - ccs[0]
                 
             this_max_x_data_lim = np.max(relative_ccs[:,0])
@@ -698,10 +700,10 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
                 min_x_data_lim = this_min_x_data_lim
             if this_min_y_data_lim < min_y_data_lim:
                 min_y_data_lim = this_min_y_data_lim
-            
-            #print "ci: {}", ci
+
+
             all_protrusion_lifetimes_and_average_directions = np.append(all_protrusion_lifetimes_and_average_directions, np.array(all_cell_protrusion_lifetimes_and_directions_per_repeat[rpti][ci]), axis=0)
-            
+
             print "Plotting centroids for cell {}...".format(ci)    
             ax_time.plot(relative_ccs[:,0], relative_ccs[:,1], marker=None, color=colors.color_list300[ci%300], alpha=0.5)
             
@@ -1159,7 +1161,7 @@ def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_dir
         
 # =============================================================================
 
-def graph_coa_variation_test_data(sub_experiment_number, num_timepoints, T, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, general_data_structure=None):
+def graph_coa_variation_test_data_simple(sub_experiment_number, num_timepoints, T, num_cells_to_test, test_coas, average_cell_group_area_data, save_dir=None, general_data_structure=None):
     set_fontsize(fontsize)
     fig, ax = plt.subplots()
     timepoints = np.arange(num_timepoints)*T/60.0
@@ -1172,7 +1174,8 @@ def graph_coa_variation_test_data(sub_experiment_number, num_timepoints, T, num_
     
     show_or_save_fig(fig, (6, 2), save_dir, "coa_variation_results_{}".format(sub_experiment_number), "")
         
-        
+# =========================================================================
+    
 def graph_confinement_data_persistence_ratios(sub_experiment_number, test_num_cells, test_heights, average_cell_persistence, save_dir=None, general_data_structure=None):
     set_fontsize(fontsize)
     fig, ax = plt.subplots()
@@ -1243,7 +1246,36 @@ def calculate_statistics_and_write_into_text_file(sub_experiment_number, test_nu
     
     with open(fp, "w+") as f:
         f.writelines(lines)
+        
+# ====================================================================
+
+def calculate_statistics_and_write_into_general_file(text_file_name, labels, group_persistence_ratios, group_x_velocities, areal_strains, save_dir):
+    lines = []
     
+    lines.append("labels: {}".format(labels))
+    lines.append("\n")
+    
+    lines.append("(average, median) group persistence ratios:\n")
+    for i, gprs in enumerate(group_persistence_ratios):
+        avg_pr = np.round(np.average(gprs), decimals=3)
+        med_pr = np.round(np.median(gprs), decimals=3)
+        lines.append("\tlabel={}: {}, {}\n".format(labels[i], avg_pr, med_pr))
+    lines.append("\n")
+        
+    lines.append("(average, median) group velocities\n")
+    for i, gvs in enumerate(group_x_velocities):
+        avg_v = np.round(np.average(gvs), decimals=3)
+        med_v = np.round(np.median(gvs), decimals=3)
+        lines.append("\tlabel={}: {}, {}\n".format(labels[i], avg_v, med_v))
+    lines.append("\n")
+    
+    fp = os.path.join(save_dir, "{}.txt".text_file_name)
+    
+    with open(fp, "w+") as f:
+        f.writelines(lines)
+
+#=======================================================================
+        
 def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_heights, graph_x_dimension, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
     set_fontsize(2*fontsize)
     calculate_statistics_and_write_into_text_file(sub_experiment_number, test_num_cells, test_heights, group_persistence_ratios, fit_group_x_velocities, areal_strains, save_dir)
@@ -1349,6 +1381,407 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
         
         show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'cell_number_change_data', experiment_set_label + "_{}".format(graph_type))
             
+#=======================================================================
+        
+def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
+    set_fontsize(2*fontsize)
+    #calculate_statistics_and_write_into_text_file(sub_experiment_number, test_num_cells, test_heights, group_persistence_ratios, fit_group_x_velocities, areal_strains, save_dir)
+    
+    x_axis_positions = [i + 1 for i in range(len(labels))]
+    x_axis_stuff = labels
+    #x_label = "corridor width (in cell diameters, N = {})".format(test_num_cells[0])
+    
+    #fit_group_x_velocities/(cell_separations*40)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "migration characteristic distance", "migration number"]
+    data_symbols = ["$R_p$", "$T_p$", "$V_c$", "$S$", "$m_I$", "$m_D$", "$m$"]
+    data_units = ["", "min.", "$\mu m$/min.", "", "1/min.", "$\mu m$", ""]
+    ds_dicts = dict(zip(data_labels, data_sets))
+    ds_unit_dict = dict(zip(data_labels, data_units))
+    ds_symbol_dict = dict(zip(data_labels, data_symbols))
+    
+    data_plot_order = ["average cell separation", "group persistence times", "group X velocity", "migration intensity"]#["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
+    
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
+        for i, ds_label in enumerate(data_plot_order):
+            data = []
+            if ds_label == "migration intensity":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                for v, a in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat):
+                    data.append(v/a)
+            elif ds_label == "migration characteristic distance":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for j, v_t in enumerate(zip(group_velocities_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat)):
+                    v, t = v_t
+                    if x_axis_stuff[j] == 1:
+                        hide = np.nan
+                    else:
+                        hide = 1.0
+                    data.append(hide*v*t)
+            elif ds_label == "migration number":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for v, a, t in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat):
+                    data.append(v*t/a)
+            else:
+                ds = ds_dicts[ds_label]
+                data = [d for d in ds]
+            
+            if graph_type == "box":
+                axarr[i].boxplot(data, showfliers=False)
+                max_yticks = 3
+                yloc = plt.MaxNLocator(max_yticks)
+                axarr[i].yaxis.set_major_locator(yloc)
+            else:
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            #axarr[i].set_title(ds_label)
+            y_unit = ds_unit_dict[ds_label]
+            if y_unit != "":
+                axarr[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
+            else:
+                axarr[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                #axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], ds_unit_dict[ds_label]))
+            #ax.set_xlabel(x_label)
+            #ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            show_or_save_fig(fig, (6, 6), save_dir, 'parameter_test_data', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'parameter_test_data', experiment_set_label + "_{}".format(graph_type))
+            
+
+#=======================================================================
+        
+def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil, corridor_height, num_cells, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
+    
+    set_fontsize(2*fontsize)
+
+    x_axis_positions = [i + 1 for i in range(len(test_coas))]
+    x_axis_stuff = test_coas
+    x_label = "$M_{COA}$\n($M_{CIL}$" + "={}, corridor height = {} cell diam., {} cells)".format(default_cil, corridor_height, num_cells)
+    
+    #fit_group_x_velocities/(cell_separations*40)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "migration characteristic distance", "migration number"]
+    data_symbols = ["$R_p$", "$T_p$", "$V_c$", "$S$", "$m_I$", "$m_D$", "$m$"]
+    data_units = ["", "min.", "$\mu m$/min.", "", "1/min.", "$\mu m$", ""]
+    ds_dicts = dict(zip(data_labels, data_sets))
+    ds_unit_dict = dict(zip(data_labels, data_units))
+    ds_symbol_dict = dict(zip(data_labels, data_symbols))
+    
+    data_plot_order = ["average cell separation", "group persistence times", "group X velocity", "migration intensity"]#["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
+    
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
+        for i, ds_label in enumerate(data_plot_order):
+            data = []
+            if ds_label == "migration intensity":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                for v, a in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat):
+                    data.append(v/a)
+            elif ds_label == "migration characteristic distance":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for j, v_t in enumerate(zip(group_velocities_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat)):
+                    v, t = v_t
+                    if x_axis_stuff[j] == 1:
+                        hide = np.nan
+                    else:
+                        hide = 1.0
+                    data.append(hide*v*t)
+            elif ds_label == "migration number":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for v, a, t in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat):
+                    data.append(v*t/a)
+            else:
+                ds = ds_dicts[ds_label]
+                data = [d for d in ds]
+            
+            if graph_type == "box":
+                axarr[i].boxplot(data, showfliers=False)
+                max_yticks = 3
+                yloc = plt.MaxNLocator(max_yticks)
+                axarr[i].yaxis.set_major_locator(yloc)
+            else:
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            #axarr[i].set_title(ds_label)
+            y_unit = ds_unit_dict[ds_label]
+            if y_unit != "":
+                axarr[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
+            else:
+                axarr[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], ds_unit_dict[ds_label]))
+            ax.set_xlabel(x_label)
+            ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            show_or_save_fig(fig, (6, 6), save_dir, 'coa_variation_test', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'coa_variation_test', experiment_set_label + "_{}".format(graph_type))
+        
+
+#=======================================================================
+        
+def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa, corridor_height, num_cells, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
+    
+    set_fontsize(2*fontsize)
+
+    x_axis_positions = [i + 1 for i in range(len(test_cils))]
+    x_axis_stuff = test_cils
+    x_label = "$M_{CIL}$\n($M_{COA}$" + "={}, corridor height = {} cell diam., {} cells)".format(default_coa, corridor_height, num_cells)
+    
+    #fit_group_x_velocities/(cell_separations*40)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "migration characteristic distance", "migration number"]
+    data_symbols = ["$R_p$", "$T_p$", "$V_c$", "$S$", "$m_I$", "$m_D$", "$m$"]
+    data_units = ["", "min.", "$\mu m$/min.", "", "1/min.", "$\mu m$", ""]
+    ds_dicts = dict(zip(data_labels, data_sets))
+    ds_unit_dict = dict(zip(data_labels, data_units))
+    ds_symbol_dict = dict(zip(data_labels, data_symbols))
+    
+    data_plot_order = ["average cell separation", "group persistence times", "group X velocity", "migration intensity"]#["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
+    
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
+        for i, ds_label in enumerate(data_plot_order):
+            data = []
+            if ds_label == "migration intensity":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                for v, a in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat):
+                    data.append(v/a)
+            elif ds_label == "migration characteristic distance":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for j, v_t in enumerate(zip(group_velocities_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat)):
+                    v, t = v_t
+                    if x_axis_stuff[j] == 1:
+                        hide = np.nan
+                    else:
+                        hide = 1.0
+                    data.append(hide*v*t)
+            elif ds_label == "migration number":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for v, a, t in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat):
+                    data.append(v*t/a)
+            else:
+                ds = ds_dicts[ds_label]
+                data = [d for d in ds]
+            
+            if graph_type == "box":
+                axarr[i].boxplot(data, showfliers=False)
+                max_yticks = 3
+                yloc = plt.MaxNLocator(max_yticks)
+                axarr[i].yaxis.set_major_locator(yloc)
+            else:
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            #axarr[i].set_title(ds_label)
+            y_unit = ds_unit_dict[ds_label]
+            if y_unit != "":
+                axarr[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
+            else:
+                axarr[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], ds_unit_dict[ds_label]))
+            ax.set_xlabel(x_label)
+            ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            show_or_save_fig(fig, (6, 6), save_dir, 'cil_variation_test', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'cil_variation_test', experiment_set_label + "_{}".format(graph_type))
+        
+#=======================================================================
+        
+def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_randomization_magnitudes, default_cil, default_coa, corridor_height, num_cells, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
+    
+    set_fontsize(2*fontsize)
+
+    x_axis_positions = [i + 1 for i in range(len(test_vertex_choice_ratios_and_randomization_magnitudes))]
+    x_axis_stuff = ["{}".format(tvr) + "\n$x_r$={}".format(trm) for tvr, trm in test_vertex_choice_ratios_and_randomization_magnitudes]
+    x_label = "ratio of randomly selected vertices to total vertices\n$M_{CIL}$"+"={}".format(default_cil) + ",($M_{COA}$" + "={}, corridor height = {} cell diam., {} cells)".format(default_coa, corridor_height, num_cells)
+    
+    #fit_group_x_velocities/(cell_separations*40)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]
+    data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "migration characteristic distance", "migration number"]
+    data_symbols = ["$R_p$", "$T_p$", "$V_c$", "$S$", "$m_I$", "$m_D$", "$m$"]
+    data_units = ["", "min.", "$\mu m$/min.", "", "1/min.", "$\mu m$", ""]
+    ds_dicts = dict(zip(data_labels, data_sets))
+    ds_unit_dict = dict(zip(data_labels, data_units))
+    ds_symbol_dict = dict(zip(data_labels, data_symbols))
+    
+    data_plot_order = ["average cell separation", "group persistence times", "group X velocity", "migration intensity"]#["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
+    
+    num_rows = len(data_plot_order)
+    for graph_type in ["box", "dot"]:
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
+        for i, ds_label in enumerate(data_plot_order):
+            data = []
+            if ds_label == "migration intensity":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                for v, a in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat):
+                    data.append(v/a)
+            elif ds_label == "migration characteristic distance":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for j, v_t in enumerate(zip(group_velocities_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat)):
+                    v, t = v_t
+                    if x_axis_stuff[j] == 1:
+                        hide = np.nan
+                    else:
+                        hide = 1.0
+                    data.append(hide*v*t)
+            elif ds_label == "migration number":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for v, a, t in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat):
+                    data.append(v*t/a)
+            else:
+                ds = ds_dicts[ds_label]
+                data = [d for d in ds]
+            
+            if graph_type == "box":
+                axarr[i].boxplot(data, showfliers=False)
+                max_yticks = 3
+                yloc = plt.MaxNLocator(max_yticks)
+                axarr[i].yaxis.set_major_locator(yloc)
+            else:
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            #axarr[i].set_title(ds_label)
+            y_unit = ds_unit_dict[ds_label]
+            if y_unit != "":
+                axarr[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
+            else:
+                axarr[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            fig, ax = plt.subplots()
+            if graph_type == "box":
+                ax.boxplot(data, showfliers=False)
+            else:
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
+                
+            ax.set_title(ds_label)
+            ax.set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], ds_unit_dict[ds_label]))
+            ax.set_xlabel(x_label)
+            ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
+                 ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(fontsize)
+                
+            show_or_save_fig(fig, (6, 6), save_dir, 'vertex_choice_variation', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+        
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'vertex_choice_variation', experiment_set_label + "_{}".format(graph_type))
         
 # =============================================================================
 
@@ -1389,13 +1822,23 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells
 # ===================================================================
 
 def graph_init_condition_change_data(sub_experiment_number, tests, group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, transient_end_times, experiment_set_label, save_dir=None, fontsize=22):
-    #placement_label_dict = {0.0: "bottom", 0.5: "center", 1.0: "top"}
-    set_fontsize(fontsize)
-    x_axis_stuff = [i + 1 for i in range(len(tests))]
-    x_axis_labels = ["{}".format(t[1]) if t[1] != "r" else "random" for t in tests]
     
-    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations, fit_group_x_velocities/(cell_separations*40)]
+    set_fontsize(2*fontsize)
+
+    x_axis_positions = [i + 1 for i in range(len(tests))]
+    x_axis_stuff = []
+    for nc_th_tw_ch_bpy_mpdf_ircpx in tests:
+        nc, th, tw, ch, bpy, mpdf, ircpx = nc_th_tw_ch_bpy_mpdf_ircpx
+        
+        if th != "r":
+            x_axis_stuff.append("regular: {}x{}".format(tw, th))
+        else:
+            x_axis_stuff.append("random: {} c.d.".format(mpdf))
+            
+    x_label = ""
     
+    #fit_group_x_velocities/(cell_separations*40)
+    data_sets = [group_persistence_ratios, group_persistence_times, fit_group_x_velocities, cell_separations]
     data_labels = ["group persistence ratios", "group persistence times", "group X velocity", "average cell separation", "migration intensity", "migration characteristic distance", "migration number"]
     data_symbols = ["$R_p$", "$T_p$", "$V_c$", "$S$", "$m_I$", "$m_D$", "$m$"]
     data_units = ["", "min.", "$\mu m$/min.", "", "1/min.", "$\mu m$", ""]
@@ -1403,77 +1846,88 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
     ds_unit_dict = dict(zip(data_labels, data_units))
     ds_symbol_dict = dict(zip(data_labels, data_symbols))
     
-    data_plot_order = [data_labels[3], data_labels[2], data_labels[4]]
-    #scale_factor = max([(t[2]*1.2) for t in tests])
-    #y_size = max([t[3]/scale_factor for t in tests])
-    #max_x_lim = len(tests) + 0.8
+    data_plot_order = ["average cell separation", "group persistence times", "group X velocity", "migration intensity"]#["average cell separation", "group persistence ratios", "group persistence times", "group X velocity", "migration intensity"]
+    
     num_rows = len(data_plot_order)
     for graph_type in ["box", "dot"]:
-        fig_combined, axarr_combined = plt.subplots(nrows=num_rows, sharex=True)
+        fig_rows, axarr = plt.subplots(nrows=num_rows, sharex=True)
+        last_index = num_rows - 1
         for i, ds_label in enumerate(data_plot_order):
-            ds = ds_dicts[ds_label]
-            data = [d for d in ds]
+            data = []
+            if ds_label == "migration intensity":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                for v, a in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat):
+                    data.append(v/a)
+            elif ds_label == "migration characteristic distance":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for j, v_t in enumerate(zip(group_velocities_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat)):
+                    v, t = v_t
+                    if x_axis_stuff[j] == 1:
+                        hide = np.nan
+                    else:
+                        hide = 1.0
+                    data.append(hide*v*t)
+            elif ds_label == "migration number":
+                group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
+                average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
+                group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
+                
+                for v, a, t in zip(group_velocities_per_experiment_per_repeat, average_cell_separation_per_experiment_per_repeat, group_persistence_times_per_experiment_per_repeat):
+                    data.append(v*t/a)
+            else:
+                ds = ds_dicts[ds_label]
+                data = [d for d in ds]
             
             if graph_type == "box":
-                axarr_combined[i].boxplot(data, showfliers=False)
+                axarr[i].boxplot(data, showfliers=False)
                 max_yticks = 3
                 yloc = plt.MaxNLocator(max_yticks)
-                axarr_combined[i].yaxis.set_major_locator(yloc)
+                axarr[i].yaxis.set_major_locator(yloc)
             else:
-                axarr_combined[i].errorbar(x_axis_stuff, [np.average(d) for d in ds], yerr=[np.std(d) for d in ds], marker="o", ls="")
-                
+                axarr[i].errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                    
+            #axarr[i].set_title(ds_label)
             y_unit = ds_unit_dict[ds_label]
-                
             if y_unit != "":
-                axarr_combined[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
+                axarr[i].set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], y_unit))
             else:
-                axarr_combined[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+                axarr[i].set_ylabel("{}".format(ds_symbol_dict[ds_label]))
+            
+            if i == last_index:
+                if graph_type == "dot":
+                    axarr[i].set_xticks(x_axis_positions)
+                axarr[i].set_xlabel(x_label)
+                axarr[i].set_xticklabels([str(j) for j in x_axis_stuff])
+            
+            for item in ([axarr[i].title, axarr[i].xaxis.label, axarr[i].yaxis.label]  +
+                 axarr[i].get_xticklabels() + axarr[i].get_yticklabels()):
+                item.set_fontsize(fontsize)
                 
             fig, ax = plt.subplots()
             if graph_type == "box":
                 ax.boxplot(data, showfliers=False)
             else:
-                '''[[abs(np.min(d) - np.average(d)) for d in ds]'''
-                ax.errorbar(x_axis_stuff, [np.average(d) for d in ds], yerr=[np.std(d) for d in ds], marker="o", ls="")
+                ax.errorbar(x_axis_positions, [np.average(d) for d in data], yerr=[[abs(np.min(d) - np.average(d)) for d in data], [abs(np.max(d) - np.average(d)) for d in data]], marker="o", ls="")
+                ax.set_xticks(x_axis_positions)
                 
             ax.set_title(ds_label)
-            ax.set_xticklabels(x_axis_labels)
+            ax.set_ylabel("{} ({})".format(ds_symbol_dict[ds_label], ds_unit_dict[ds_label]))
+            ax.set_xlabel(x_label)
+            ax.set_xlabel(x_label)
+            ax.set_xticklabels([str(j) for j in x_axis_stuff])
             
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]  +
                  ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(fontsize)
-            
-#            for i, test in enumerate(tests):
-#                nc, bh, bw, ch, bpy = test
-#                o = np.array([1.0 + i, 1.0])
-#                draw_cell_arrangement(ax, o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
-#            axarr[-1].yaxis.set_visible(False)
-#            axarr[-1].xaxis.set_visible(False)
-#            axarr[-1].set_aspect('equal')
-#            axarr[-1].set_ylim([0.0, max_y_lim])
-#            axarr[-1].set_xlim([0.0, max_x_lim])
-#            for position in ["top", "bottom", "left", "right"]:
-#                axarr[-1].spines[position].set_color('none')
-            
-            show_or_save_fig(fig, (6, 6), save_dir, 'init_conditions', experiment_set_label + "_{}_{}".format(ds_label, graph_type))
+                
+            show_or_save_fig(fig, (6, 6), save_dir, "init_conditions", experiment_set_label + "_{}_{}".format(ds_label, graph_type))
         
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'init_conditions_', experiment_set_label + "_{}".format(graph_type))
         
-        #max_inset_y_size = 0.8*scale_factor*tests[0][3]
-        #axarr_combined[-1].get_xaxis().set_ticks(x_axis_labels)
-        axarr_combined[-1].set_xticklabels(x_axis_labels)
-#        for i, test in enumerate(tests):
-#            nc, bh, bw, ch, bpy = test
-#            o = np.array([1.0 + i, 1.0])
-#            draw_cell_arrangement(axarr_combined[-1], o, 0.8, scale_factor, nc, bh, bw, ch, bpy)
-#        axarr_combined[-1].yaxis.set_visible(False)
-#        axarr_combined[-1].xaxis.set_visible(False)
-#        axarr_combined[-1].set_aspect('equal')
-#        axarr_combined[-1].set_ylim([0.0, max_y_lim])
-#        axarr_combined[-1].set_xlim([0.0, max_x_lim])
-#        for position in ["top", "bottom", "left", "right"]:
-#            axarr_combined[-1].spines[position].set_color('none')
-            
-        show_or_save_fig(fig_combined, (0.9*8.5, 0.75*11), save_dir, 'init_conditions', experiment_set_label + "_{}_{}".format(experiment_set_label, graph_type))
+# ==============================================================================
 
 def plot_errorbar_graph(ax, x_data, y_data, marker, color, label, scheme):
     #avg_ys = np.average(y_data, axis=1)
