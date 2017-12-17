@@ -991,10 +991,9 @@ def check_if_line_segment_intersects_polygon(a, b, normal_to_line_segment, polyg
         
         this_coords = polygon[vi]
         next_coords = polygon[next_index]
-        
+
         is_left_a = is_left(this_coords, next_coords, a)
         is_left_b = is_left(this_coords, next_coords, b)
-        
         
         if is_left_a < 0 and is_left_b < 0:
             continue
@@ -1170,8 +1169,8 @@ def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y)
     return 0
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)      
-def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords):
+nb.jit(nopython=True)      
+def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon):
     coords_a = all_polygon_coords[pi_a, vi_a]
     coords_b = all_polygon_coords[pi_b, vi_b]
     
@@ -1181,6 +1180,13 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
         return 100000
     elif check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b) == 1:
         return 100000
+    else:
+        if space_migratory_bdry_polygon.shape[0] != 0:
+            if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
+                    return 100000
+        if space_physical_bdry_polygon.shape[0] != 0:
+            if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
+                    return 100000
     
     num_intersections = 0    
     num_polygons = all_polygon_coords.shape[0]
@@ -1281,7 +1287,7 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_c
 
 #@nb.jit('void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
 #@nb.jit(nopython=True, nogil=True)
-def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, task_addresses):
+def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, task_addresses):
     """
     Function under test.
     """
@@ -1289,12 +1295,13 @@ def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_s
     for n in range(task_addresses.shape[0]):
         a_ci, a_ni, b_ci, b_ni = task_addresses[n][0], task_addresses[n][1], task_addresses[n][2], task_addresses[n][3]
         dist_squared = calculate_squared_dist(polygons[a_ci][a_ni], polygons[b_ci][b_ni])
-        num_intersects = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(a_ci, a_ni, b_ci, b_ni, polygons, polygon_bounding_boxes)
+        num_intersects = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(a_ci, a_ni, b_ci, b_ni, polygons, polygon_bounding_boxes, space_migratory_bdry_polygon, space_physical_bdry_polygon)
         
         dist_squared_matrix[a_ci][a_ni][b_ci][b_ni] = dist_squared
         dist_squared_matrix[b_ci][b_ni][a_ci][a_ni] = dist_squared
         line_segment_intersect_matrix[a_ci][a_ni][b_ci][b_ni] = num_intersects
         line_segment_intersect_matrix[b_ci][b_ni][a_ci][a_ni] = num_intersects
+
         
 @nb.jit('void(float64[:,:,:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
 def dist_squared_calculation_worker(dist_squared_matrix, polygons, task_addresses):
@@ -1340,7 +1347,7 @@ def create_dist_and_line_segment_interesection_test_args(num_cells, num_nodes_pe
                             
     return tasks
 
-def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threads, tasks, num_cells, num_nodes, polygon_bounding_boxes, polygons):
+def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threads, tasks, num_cells, num_nodes, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=False):
     num_tasks = tasks.shape[0]
     
     dist_squared_matrix = -1*np.ones((num_cells, num_nodes, num_cells, num_nodes), dtype=np.float64)
@@ -1352,15 +1359,19 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threa
         chunks = []
         for i in range(num_threads):
             relevant_tasks = tasks[i*chunklen:(i+1)*chunklen]
-            chunks.append((dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, relevant_tasks))
-            
-        # Spawn one thread per chunk
-        threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
+            chunks.append((dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, relevant_tasks))
         
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        # Spawn one thread per chunk
+        if not sequential:
+            threads = [threading.Thread(target=dist_squared_and_line_segment_calculation_worker, args=c) for c in chunks]
+            
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        else:
+            for chunk in chunks:
+                dist_squared_and_line_segment_calculation_worker(*chunk)
         
     return dist_squared_matrix, line_segment_intersect_matrix
 
@@ -1418,7 +1429,7 @@ def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_
                             
     return distance_squared_matrix, line_segment_intersection_matrix
 
-def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, sequential=False):
+def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=False):
 
     num_tasks = given_tasks.shape[0]
     
@@ -1428,7 +1439,7 @@ def update_line_segment_intersection_and_dist_squared_matrices(num_threads, give
         chunks = []
         for i in range(num_threads):
             relevant_tasks = given_tasks[i*chunklen:(i+1)*chunklen]
-            chunks.append((distance_squared_matrix, line_segment_intersection_matrix, cells_bounding_box_array, all_cells_node_coords, relevant_tasks))
+            chunks.append((distance_squared_matrix, line_segment_intersection_matrix, cells_bounding_box_array, all_cells_node_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon, relevant_tasks))
             
         # Spawn one thread per chunk
         if not sequential:

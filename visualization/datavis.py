@@ -2258,6 +2258,69 @@ def graph_nonlin_to_lin_parameter_comparison(kgtp_rac_multipliers, kgtp_rho_mult
     ax.set_ylim([0, 20])    
     show_or_save_fig(fig, (6, 6), save_dir, "nonlin_vs_lin", "")
     
+# ==========================================================================
+
+def determine_intercellular_separations_after_first_collision(all_cell_centroids_per_repeat, cell_diameter, cutoff):
+    cell_intercellular_separations_after_first_collision = []
+    
+    for all_cell_centroids in all_cell_centroids_per_repeat:
+        timestep_at_first_collision = -1
+        
+        ics_per_tstep = np.abs(all_cell_centroids[0,:,0] - all_cell_centroids[1,:,0])/cell_diameter
+        
+        for t, ics in enumerate(ics_per_tstep):
+            if timestep_at_first_collision < 0:
+                if ics < 1.0:
+                    timestep_at_first_collision = t
+                    break
+
+        cell_intercellular_separations_after_first_collision.append((timestep_at_first_collision, ics_per_tstep[timestep_at_first_collision:(timestep_at_first_collision + cutoff)]*cell_diameter))
+        
+    return cell_intercellular_separations_after_first_collision
+            
+                
+            
+        
+        
+def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_repeat, T, cell_diameter, save_dir=None):
+    if all_cell_centroids_per_repeat[0].shape[0] != 2:
+        raise StandardError("Logic for determining post-collision separation distances for more than 2 cells has not been implemented! all_cell_centroids_per_repeat shape: {}".format(all_cell_centroids_per_repeat.shape))
+        
+    cell_intercellular_separations_after_first_collision = determine_intercellular_separations_after_first_collision(all_cell_centroids_per_repeat, cell_diameter, int(40.0/T))
+    
+    fig, ax = plt.subplots()
+    for i, ics_after_first_collision in enumerate(cell_intercellular_separations_after_first_collision):
+        ts = np.arange(len(ics_after_first_collision[1]))*T
+        ics = ics_after_first_collision[1]
+        
+        ax.plot(ts, ics, color=colors.color_list20[i%20])
+        
+    ax.set_xlabel("t (min.)")
+    ax.set_ylabel("centroid-to-centroid separation ($\mu$m)")
+    
+    show_or_save_fig(fig, (6, 6), save_dir, "post-collision-ics", "")
+    
+    fig, ax = plt.subplots()
+    tpoint_of_interest = int(30.0/T)
+    cell_ics_at_tpoint_of_interest = [icinfo[1][tpoint_of_interest] for icinfo in cell_intercellular_separations_after_first_collision]
+    
+    width = 0.35
+    
+    mean = np.average(cell_ics_at_tpoint_of_interest)
+    std = np.std(cell_ics_at_tpoint_of_interest)
+    rects1 = ax.bar(np.arange(1), mean, width, color='r', yerr=std)
+    
+    ax.set_ylabel('centroid-to-centroid separation\n30 min. after collision')
+    ax.set_xticks(np.arange(1) + width/2)
+    ax.set_xticklabels((""))
+    ax.set_title("mean separation after 30 min.={} $\mu$m\nstd={} $\mu$m".format(np.round(mean, decimals=2), np.round(std, decimals=2)))
+    
+    show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
+
+        
+    
+    
+    
     
 
     

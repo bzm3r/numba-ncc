@@ -17,7 +17,138 @@ import core.parameterorg as cporg
 
 global_randomization_scheme_dict = {'m': 'kgtp_rac_multipliers', 'w': 'wipeout'}
 
-def define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None):
+def make_default_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset):
+    
+    migr_space_poly = np.array([])
+    
+    if make_migr_space_poly == True:
+        bottom_left = [0 + corridor_x_offset, 0 + corridor_y_offset]
+        bottom_right = [width_corridor + corridor_x_offset, 0 + corridor_y_offset]
+        top_right = [width_corridor + corridor_x_offset, height_corridor + corridor_y_offset]
+        top_left = [0 + corridor_x_offset, height_corridor + corridor_y_offset]
+        migr_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
+            
+    return migr_space_poly
+
+#=====================================================================
+    
+def make_bottleneck_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, first_slope_start, first_slope_end, second_slope_start, second_slope_end, bottleneck_factor):
+    migr_space_poly = np.array([])
+    
+    if make_migr_space_poly == True:
+        bottleneck_y_dip = 0.5*height_corridor*(1. - bottleneck_factor)
+        remaining_corridor = width_corridor - (first_slope_start + first_slope_end + second_slope_start + second_slope_end)
+        
+        if remaining_corridor < 1e-16:
+            raise StandardError("Width of the corridor is not long enough to support bottleneck!")
+            
+        bottom_left = [0 + corridor_x_offset, 0 + corridor_y_offset]
+        first_slope_start_bottom = [0 + corridor_x_offset + first_slope_start, 0 + corridor_y_offset]
+        first_slope_end_bottom = [0 + corridor_x_offset + first_slope_start + first_slope_end, 0 + corridor_y_offset + bottleneck_y_dip]
+        second_slope_start_bottom = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start, 0 + corridor_y_offset + bottleneck_y_dip]
+        second_slope_end_bottom = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start + second_slope_end, 0 + corridor_y_offset]
+        bottom_right = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start + second_slope_end + remaining_corridor, 0 + corridor_y_offset]
+        top_right = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start + second_slope_end + remaining_corridor, 0 + corridor_y_offset + height_corridor]
+        second_slope_end_top = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start + second_slope_end, 0 + corridor_y_offset + height_corridor]
+        second_slope_start_top = [0 + corridor_x_offset + first_slope_start + first_slope_end + second_slope_start, 0 + corridor_y_offset + height_corridor - bottleneck_y_dip]
+        first_slope_end_top = [0 + corridor_x_offset + first_slope_start + first_slope_end, 0 + corridor_y_offset + height_corridor - bottleneck_y_dip]
+        first_slope_start_top = [0 + corridor_x_offset + first_slope_start, 0 + corridor_y_offset + height_corridor]
+        top_left = [0 + corridor_x_offset, 0 + corridor_y_offset + height_corridor]
+        
+        migr_space_poly = np.array([bottom_left, first_slope_start_bottom, first_slope_end_bottom, second_slope_start_bottom, second_slope_end_bottom, bottom_right, top_right, second_slope_end_top, second_slope_start_top, first_slope_end_top, first_slope_start_top, top_left])*1e-6
+        
+    return migr_space_poly
+
+#=====================================================================
+    
+def generate_bottom_and_top_curves(x_offset, y_offset, curve_start_x, curve_radius, height_corridor, resolution):
+    outer_radius = curve_radius + 0.5*height_corridor
+    inner_radius = outer_radius - height_corridor
+    thetas = np.linspace(0.75*2*np.pi, 2*np.pi, num=resolution)
+    
+    bottom_curve_untranslated = []
+    for theta in thetas:
+        bottom_curve_untranslated.append([outer_radius*np.cos(theta), outer_radius*np.sin(theta)])
+        
+    top_curve_unstranslated = []
+    for theta in thetas[::-1]:
+        top_curve_unstranslated.append([inner_radius*np.cos(theta), inner_radius*np.sin(theta)])
+        
+    y_offset = y_offset + 0.5*height_corridor + curve_radius
+    bottom_curve = np.array(bottom_curve_untranslated, dtype=np.float64) + [x_offset, y_offset]
+    top_curve = np.array(top_curve_unstranslated, dtype=np.float64) + [x_offset, y_offset]
+    
+    arc_base_line_length = 2*curve_radius*np.sin(np.abs(thetas[1] - thetas[0]))
+    length_within_curve = resolution*arc_base_line_length
+    
+    return bottom_curve, top_curve, length_within_curve
+
+# =================================================================
+    
+def make_curving_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, curve_start_x, curve_radius, resolution):
+    
+    if make_migr_space_poly == True:
+        bottom_curve, top_curve, length_within_curve = generate_bottom_and_top_curves(corridor_x_offset + curve_start_x, corridor_y_offset, curve_start_x, curve_radius, height_corridor, resolution)
+        
+        remaining_corridor = width_corridor - length_within_curve
+        if remaining_corridor < 1e-16:
+            raise StandardError("Corridor is not long enough to fit curve!")
+            
+        bottom_left = [[0 + corridor_x_offset, 0 + corridor_y_offset]]
+        bottom_right = [[bottom_curve[-1][0], bottom_curve[-1][1] + remaining_corridor]]
+        top_right = [[bottom_curve[-1][0] - height_corridor, bottom_curve[-1][1] + remaining_corridor]]
+        top_left = [[0 + corridor_x_offset, 0 + corridor_y_offset + height_corridor]]
+        
+        full_polygon = np.zeros((0, 2), dtype=np.float64)
+        
+        for curve in [bottom_left, bottom_curve, bottom_right, top_right, top_curve, top_left]:
+            full_polygon = np.append(full_polygon, curve, axis=0)
+        
+    return full_polygon*1e-6
+
+#=====================================================================
+
+def make_migr_space_polygons(corridor_definition, make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset):
+    
+    if corridor_definition[0] == "default":
+        return make_default_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset)
+    
+    elif corridor_definition[0] == "bottleneck":
+        if len(corridor_definition[1:]) != 5:
+            raise StandardError("Not enough parameters given to make bottleneck corridor.")
+            
+        first_slope_start, first_slope_end, second_slope_start, second_slope_end, bottleneck_factor = corridor_definition[1:]
+        
+        #make_migr_space_poly, make_phys_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, first_slope_start, first_slope_end, second_slope_start, second_slope_end, bottleneck_factor
+        return make_bottleneck_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, first_slope_start, first_slope_end, second_slope_start, second_slope_end, bottleneck_factor)
+    
+    elif corridor_definition[0] == "regular curve":
+        curve_start, curve_radius, resolution = corridor_definition[1:]
+        
+        return make_curving_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, curve_start, curve_radius, resolution)
+    else:
+        raise StandardError("Unknown migratory boundary polygon given.")
+
+#=====================================================================
+        
+def make_centered_physical_obstacle(width_factor, height_factor, x_offset, height_corridor, corridor_x_offset, corridor_y_offset, cell_diameter):
+    phys_space_poly = np.array([])
+    
+    bottom_y = corridor_y_offset + 0.5*height_corridor*(1 - cell_diameter*height_factor)
+    top_y = bottom_y + cell_diameter*height_corridor
+    
+    bottom_left = [x_offset + corridor_x_offset, bottom_y]
+    bottom_right = [x_offset + cell_diameter*width_factor + corridor_x_offset, bottom_y]
+    top_right = [x_offset + cell_diameter*width_factor + corridor_x_offset, top_y]
+    top_left = [x_offset + corridor_x_offset, top_y]
+    
+    phys_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
+    
+    return phys_space_poly
+    
+#=====================================================================
+
+def define_corridors_and_group_boxes_for_corridor_migration_tests(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None):
     test_lists = [num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes]
     test_list_labels = ['num_cells_in_boxes', 'box_heights', 'box_widths', 'x_space_between_boxes']
     allowed_placement_options = ["CENTER", "CENTRE", "ORIGIN", "OVERRIDE"]
@@ -84,7 +215,9 @@ def define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, p
     if migratory_bdry_y_offset == None:
         migratory_bdry_y_offset = origin_y_offset
         
-    space_migratory_bdry_polygon, space_physical_bdry_polygon = eu.make_space_polygons(make_migr_poly, make_phys_poly, width_migr_corridor, height_migr_corridor, migratory_bdry_x_offset, migratory_bdry_y_offset, physical_bdry_polygon_extra=physical_bdry_polygon_extra)
+    space_migratory_bdry_polygon = make_migr_space_polygons(corridor_definition, make_migr_poly, width_migr_corridor, height_migr_corridor, migratory_bdry_x_offset, migratory_bdry_y_offset)
+    
+    space_physical_bdry_polygon = np.array([])
     
     return np.arange(num_boxes), box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon
         
@@ -447,7 +580,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     
 # ============================================================================
 
-def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, justify_parameters=True):
+def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, corridor_definition=["default"], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, justify_parameters=True):
     global_scale = 4
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
@@ -472,8 +605,8 @@ def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_num
     x_space_between_boxes = [1*cell_diameter]
     plate_width, plate_height = 20*cell_diameter*1.2, 3*cell_diameter
 
-    # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "CENTRE", "ORIGIN", physical_bdry_polygon_extra=20,  migratory_corridor_size=[100*cell_diameter, cell_diameter], migratory_bdry_x_offset=-1*50*cell_diameter, make_only_migratory_corridor=True, origin_y_offset=25)
+    #define_corridors_and_group_boxes_for_corridor_migration_tests(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None)
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_corridors_and_group_boxes_for_corridor_migration_tests(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "CENTRE", "ORIGIN",  migratory_corridor_size=[100*cell_diameter, cell_diameter], migratory_bdry_x_offset=-1*50*cell_diameter, origin_y_offset=25)
     
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -515,6 +648,7 @@ def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_num
     
     if do_final_analysis:
         all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
+        datavis.graph_intercellular_distance_after_first_collision(all_cell_centroids_per_repeat, timestep_length*(1./60.0), cell_diameter, save_dir=experiment_dir)
             # ================================================================
         
         #time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22, general_data_structure=None
@@ -951,7 +1085,7 @@ def collate_corridor_convergence_data(num_experiment_repeats, experiment_dir):
 
 # ============================================================================
 
-def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, convergence_test=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, justify_parameters=True):
+def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, closeness_dist_squared_criteria=(1e-6)**2, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, corridor_definition=["default"], run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, convergence_test=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, justify_parameters=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if num_cells == 0:
@@ -1012,7 +1146,19 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     
     box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
 
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon  = define_corridors_and_group_boxes_for_corridor_migration_tests(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, box_y_offsets=box_y_offsets, physical_bdry_polygon_extra=physical_bdry_polygon_extra, origin_y_offset=origin_y_offset, migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter], make_only_migratory_corridor=convergence_test)
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon  = define_corridors_and_group_boxes_for_corridor_migration_tests(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, box_y_offsets=box_y_offsets, physical_bdry_polygon_extra=physical_bdry_polygon_extra, origin_y_offset=origin_y_offset, migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter], make_only_migratory_corridor=convergence_test)
+    
+    if corridor_definition[0] == "regular curve":
+        migr_poly_xs = space_migratory_bdry_polygon[:,0]
+        #migr_poly_ys = space_migratory_bdry_polygon[:,1]
+        curve_radius = corridor_definition[2]
+        plate_width = (np.max(migr_poly_xs/1e-6) - np.min(migr_poly_xs/1e-6))*1.1
+        if max_animation_corridor_length == None:
+            min_height = corridor_height + 0.5*corridor_height + curve_radius
+            plate_height = (min_height + (750 - min_height))*1.1
+        else:
+            min_height = corridor_height + 0.5*corridor_height + curve_radius
+            plate_height = (min_height + (max_animation_corridor_length - min_height))*1.1
 
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon

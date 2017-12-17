@@ -33,23 +33,6 @@ def convert_parameter_override_dictionary_into_keyvalue_tuple_list(base_paramete
                 keyvalue_tuple_list.append((label, orig_value, new_value))
             
     return keyvalue_tuple_list
-            
-def make_space_polygons(make_migr_space_poly, make_phys_space_poly, width_corridor, height_corridor, corridor_x_offset, corridor_y_offset, physical_bdry_polygon_extra=5):
-    
-    migr_space_poly = np.array([])
-    phys_space_poly = np.array([])
-    
-    if make_migr_space_poly == True:
-        migr_space_poly = np.array([[0 + corridor_x_offset, 0 + corridor_y_offset], [width_corridor + corridor_x_offset, 0 + corridor_y_offset], [width_corridor + corridor_x_offset, height_corridor + corridor_y_offset], [0 + corridor_x_offset, height_corridor + corridor_y_offset]], dtype=np.float64)*1e-6
-        
-        if make_phys_space_poly == True:
-            phys_space_poly = np.array([[0 + corridor_x_offset - physical_bdry_polygon_extra, 0 + corridor_y_offset- physical_bdry_polygon_extra], [width_corridor + corridor_x_offset + physical_bdry_polygon_extra, 0 + corridor_y_offset - physical_bdry_polygon_extra], [width_corridor + corridor_x_offset + physical_bdry_polygon_extra, height_corridor + corridor_y_offset + physical_bdry_polygon_extra], [0 + corridor_x_offset - physical_bdry_polygon_extra, height_corridor + corridor_y_offset + physical_bdry_polygon_extra]], dtype=np.float64)*1e-6
-    else:
-        if make_phys_space_poly == True:
-            phys_space_poly = np.array([[0 + corridor_x_offset, 0 + corridor_y_offset], [width_corridor + corridor_x_offset, 0 + corridor_y_offset], [width_corridor + corridor_x_offset, height_corridor + corridor_y_offset + physical_bdry_polygon_extra], [0 + corridor_x_offset, height_corridor + corridor_y_offset]], dtype=np.float64)*1e-6
-        
-            
-    return migr_space_poly, phys_space_poly
     
 # =============================================================================
     

@@ -542,7 +542,7 @@ class Environment():
                 cells_bounding_box_array[cell_index] = geometry.calculate_polygon_bounding_box(this_cell_coords)
                 if recalc_geometry[cell_index]:
                     #cells_node_distance_matrix, cells_line_segment_intersection_matrix =  geometry.update_line_segment_intersection_and_dist_squared_matrices_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
-                    geometry.update_line_segment_intersection_and_dist_squared_matrices(4, self.geometry_tasks_per_cell[cell_index], self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                    geometry.update_line_segment_intersection_and_dist_squared_matrices(4, self.geometry_tasks_per_cell[cell_index], self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix, self.space_migratory_bdry_polygon, self.space_physical_bdry_polygon)
                 else:
                     geometry.update_distance_squared_matrix(4, self.geometry_tasks_per_cell[cell_index], self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
                     #cells_node_distance_matrix = geometry.update_distance_squared_matrix_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
@@ -769,7 +769,7 @@ class Environment():
             curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
             
             cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
-            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(4, self.all_geometry_tasks, num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords)
+            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(4, self.all_geometry_tasks, num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords, self.space_migratory_bdry_polygon, self.space_physical_bdry_polygon)
                 
             #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
         
