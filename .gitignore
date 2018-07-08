@@ -1,0 +1,8 @@
+*.pyc
+*.pyd
+*.c
+*.so
+*.py.bak
+
+build/
+output/
