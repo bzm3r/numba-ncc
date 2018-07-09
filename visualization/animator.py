@@ -1,4 +1,4 @@
-import cairocffi as cairo
+import cairo #pycairo package
 import numpy as np
 import numba as nb
 import core.geometry as geometry
@@ -6,17 +6,27 @@ import os, shutil
 import subprocess
 import time
 from . import colors
-import sys
 import core.hardio as hardio
 import core.utilities as cu
 import core.chemistry as chemistry
 import threading
-import matplotlib.pyplot as plt
-import multiprocessing as mp
 import general.utilities as gu
+from pathos.multiprocessing import ProcessingPool 
 
 def fsquared(x):
     return x*x
+
+def convert_numpy_array_to_pycairo_matrix(np_array):
+    xx, xy = np_array[0]
+    yx, yy = np_array[1]
+    x0, y0 = np_array[2]
+    
+    return cairo.Matrix(xx=xx, xy=xy, yx=yx, yy=yy, x0=x0, y0=y0)
+
+def convert_pycairo_matrix_numpy_array(cairo_matrix):
+    xx, xy, yx, yy, x0, y0 = cairo_matrix.xx, cairo_matrix.xy, cairo_matrix.yx, cairo_matrix.yy, cairo_matrix.x0, cairo_matrix.y0
+    
+    return np.array([[xx, xy], [yx, yy], [x0, y0]])
 
 @nb.jit(nopython=True)
 def float_cartesian_product(xs, ys):
@@ -879,9 +889,8 @@ def generate_coa_data_depending_on_grid_point_relevancy(unique_undrawn_timesteps
             print("Executing in parallel.")
             st = time.time()
             
-            with mp.Pool(maxtasksperchild=4, processes=4) as pool:
-                results = pool.starmap(coa_data_calculation_worker, coa_data_calculation_worker_tasks)
-          
+            pool = ProcessingPool(nodes=4)
+            results = pool.map(coa_data_calculation_worker, coa_data_calculation_worker_tasks)          
             
             et = time.time()
             print("Time taken: {}s.".format(np.round(et - st, decimals=1)))
@@ -938,82 +947,86 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
     return
 
 # -------------------------------------
-   
-def draw_animation_frame_for_given_timestep(tasks):
+
+def draw_animation_frame(task):
+    
+    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = task
+    
+    if image_format == ".png":
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
+    elif image_format == ".svg":
+        surface = cairo.SVGSurface(os.path.join(global_image_dir, global_image_name_format_str.format(timestep)), image_width_in_pixels, image_height_in_pixels)
+            
+    context = cairo.Context(surface)
+        
+    context.set_source_rgb(*background_color)
+    context.paint()
+
+    # timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context
+    draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, image_width_in_pixels, image_height_in_pixels, context)
+    
+    context.transform(convert_numpy_array_to_pycairo_matrix(transform_matrix))
+        
+    if space_physical_bdry_polygon.shape[0] != 0:
+        context.new_path()
+        draw_polygon_jit(space_physical_bdry_polygon, physical_bdry_color, background_color, 2, context)
+        
+    if space_migratory_bdry_polygon.shape[0] != 0:
+        context.new_path()
+        #polygon_coords, polygon_edge_and_vertex_color, polygon_fill_color, polygon_line_width, context
+        draw_polygon_jit(space_migratory_bdry_polygon, migratory_bdry_color, background_color, 2, context)
+        
+    if type(coa_data_per_gridpoint) == np.ndarray:
+        if coa_grid_points.shape[0] > 0:
+            draw_coa_overlay(coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, context)
+    
+    for cell_index, anicell in enumerate(animation_cells):
+        
+        if type(rgtpase_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
+            rgtpase_data = None
+        else:
+            rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
+            
+        if type(rac_random_spikes_info_per_timepoint_per_cell) != np.ndarray:
+            rac_random_spikes_info = None
+        else:
+            rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
+            
+        if type(velocity_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
+            velocity_data = None
+        else:
+            velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
+        
+        if type(centroid_coords_per_timepoint_per_cell) != np.ndarray:
+            centroid_data = None
+        else:
+            centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][unique_timesteps[:timestep+1]]
+        
+        if type(coa_line_coords_per_timepoint_per_cell) != np.ndarray:
+            coa_data = None
+        else:
+            coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
+        
+        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
+    
+    if len(chemoattractant_source_location) != 0:
+        context.new_path()
+        draw_dot_jit(chemoattractant_source_location, chemoattractant_dot_color, 2, context)
+        
+        if chemotaxis_target_radius > 0.0:
+            draw_circle_jit(chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_dot_color, 2, context)
+        
+    if image_format == ".svg":
+        #context.show_page()
+        surface.finish()
+    else:
+        image_fp = os.path.join(global_image_dir, global_image_name_format_str.format(timestep))
+        surface.write_to_png(image_fp)
+            
+def draw_animation_frame_for_given_timesteps(tasks):
     
     for task in tasks:
-        timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = task
-        
-        if image_format == ".png":
-            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
-        elif image_format == ".svg":
-            surface = cairo.SVGSurface(os.path.join(global_image_dir, global_image_name_format_str.format(timestep)), image_width_in_pixels, image_height_in_pixels)
-            
-        context = cairo.Context(surface)
-            
-        context.set_source_rgb(*background_color)
-        context.paint()
-    
-        # timestep, timestep_length, text_color, font_size, global_scale, img_width, img_height, context
-        draw_timestamp(timestep, timestep_length, font_color, font_size, global_scale, image_width_in_pixels, image_height_in_pixels, context)
-        
-        context.transform(transform_matrix)
-            
-        if space_physical_bdry_polygon.shape[0] != 0:
-            context.new_path()
-            draw_polygon_jit(space_physical_bdry_polygon, physical_bdry_color, background_color, 2, context)
-            
-        if space_migratory_bdry_polygon.shape[0] != 0:
-            context.new_path()
-            #polygon_coords, polygon_edge_and_vertex_color, polygon_fill_color, polygon_line_width, context
-            draw_polygon_jit(space_migratory_bdry_polygon, migratory_bdry_color, background_color, 2, context)
-            
-        if type(coa_data_per_gridpoint) == np.ndarray:
-            if coa_grid_points.shape[0] > 0:
-                draw_coa_overlay(coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, context)
-        
-        for cell_index, anicell in enumerate(animation_cells):
-            
-            if type(rgtpase_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
-                rgtpase_data = None
-            else:
-                rgtpase_data = rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
-                
-            if type(rac_random_spikes_info_per_timepoint_per_cell) != np.ndarray:
-                rac_random_spikes_info = None
-            else:
-                rac_random_spikes_info = rac_random_spikes_info_per_timepoint_per_cell[cell_index][timestep_index]
-                
-            if type(velocity_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
-                velocity_data = None
-            else:
-                velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[cell_index][timestep_index]
-            
-            if type(centroid_coords_per_timepoint_per_cell) != np.ndarray:
-                centroid_data = None
-            else:
-                centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][unique_timesteps[:timestep+1]]
-            
-            if type(coa_line_coords_per_timepoint_per_cell) != np.ndarray:
-                coa_data = None
-            else:
-                coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
-            
-            anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
-        
-        if len(chemoattractant_source_location) != 0:
-            context.new_path()
-            draw_dot_jit(chemoattractant_source_location, chemoattractant_dot_color, 2, context)
-            
-            if chemotaxis_target_radius > 0.0:
-                draw_circle_jit(chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_dot_color, 2, context)
-            
-        if image_format == ".svg":
-            #context.show_page()
-            surface.finish()
-        else:
-            image_fp = os.path.join(global_image_dir, global_image_name_format_str.format(timestep))
-            surface.write_to_png(image_fp)
+        draw_animation_frame(task)
 
 # --------------------------------------------------------------------------  
   
@@ -1048,7 +1061,7 @@ class EnvironmentAnimation():
         if self.image_width_in_pixels%2 == 1:
             self.image_width_in_pixels += 1
         
-        self.transform_matrix = self.calculate_transform_matrix()
+        self.transform_matrix = convert_pycairo_matrix_numpy_array(self.calculate_transform_matrix())
         
         self.num_cells = num_cells
         self.num_nodes = num_nodes
@@ -1400,23 +1413,26 @@ class EnvironmentAnimation():
                 
             self.image_drawn_array[t] = 1
             drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format))
-          
-        multithread = False
-        if multithread:
-            num_tasks = len(drawing_tasks)
-            chunklen = (num_tasks + num_threads - 1) // num_threads
-            # Create argument tuples for each input chunk
-            chunks = []
-            for i in range(num_threads):
-                chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
-                
-            threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
-        else:
-            draw_animation_frame_for_given_timestep(drawing_tasks)
+        
+        pool = ProcessingPool(nodes=4)
+        pool.map(draw_animation_frame, drawing_tasks)
+            
+#        multithread = False
+#        if multithread:
+#            num_tasks = len(drawing_tasks)
+#            chunklen = (num_tasks + num_threads - 1) // num_threads
+#            # Create argument tuples for each input chunk
+#            chunks = []
+#            for i in range(num_threads):
+#                chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
+#                
+#            threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
+#            for thread in threads:
+#                thread.start()
+#            for thread in threads:
+#                thread.join()
+#        else:
+#            draw_animation_frame_for_given_timestep(drawing_tasks)
                 
             
         et = time.time()

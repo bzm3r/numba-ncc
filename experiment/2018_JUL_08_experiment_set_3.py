@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parameter_dict.update([('kgtp_rac_multiplier', 12.0),
   ('kgtp_rho_multiplier', 14.0),
   ('kdgtp_rac_multiplier', 4.0),
-  ('kdgtp_rho_multiplier', 30.0),
+  ('kdgtp_rho_multiplier', 24.0),
   ('kgtp_rac_autoact_multiplier', 250.0),
   ('kgtp_rho_autoact_multiplier', 195.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
@@ -40,7 +40,7 @@ if __name__ == "__main__":
   ('tension_mediated_rac_inhibition_magnitude', 40.0),
   ('max_force_rac', 3000.0),
   ('eta', 2.9*10000.0),
-  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25)])
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 10.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 16.0), ('randomization_node_percentage', 0.25)])
     
     sub_experiment_number = 0
     
@@ -52,8 +52,9 @@ if __name__ == "__main__":
     
     #ets.chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[3.25, 3.5, 3.75, 4.0], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=coa_dict[4], default_cil=default_cil, chemotaxis_target_radius=160.0, box_width=2, box_height=2, box_y_placement_factor=0.5, num_cells=4)
     
-    # {'source_type': 'normal', 'x_offset_in_corridor': 0.8*625.0, 'gaussian_width': 0.5*625.0, 'gaussian_height': 1.0}
-    ets.no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), {'source_type': 'linear', 'x_offset_in_corridor': 625.0, 'max_value': 0.0, 'slope': 0.0016}, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=2917, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[4], default_cil=60.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=2, box_height=2, num_cells=4, box_y_placement_factor=0.5, remake_graphs=False, remake_animation=True, do_final_analysis=True, show_coa_overlay=False, coa_overlay_resolution=2)
+    # {'source_type': 'linear', 'x_offset_in_corridor': 625.0, 'max_value': 6.0, 'slope': 2*0.0016}
+    for seed in [2917, 6278, 5799,  406, 2829, 5593]:
+        ets.no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), {'source_type': 'normal', 'x_offset_in_corridor': 0.8*625.0, 'gaussian_width': 0.5*625.0, 'gaussian_height': 2*0.75}, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[4], default_cil=60.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=2, box_height=2, num_cells=4, box_y_placement_factor=0.5, remake_graphs=False, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, coa_overlay_resolution=2)
     
 #    parameter_dict.update([('kgtp_rac_multiplier', 0.25*24.0),
 #      ('kgtp_rho_multiplier', 0.25*24.0),

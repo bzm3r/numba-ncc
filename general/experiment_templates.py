@@ -1174,15 +1174,15 @@ def collate_corridor_convergence_data(num_experiment_repeats, experiment_dir):
 
 # ============================================================================
 
-def make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, chemotaxis_effect_factor):
+def make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition):
     if len(chemoattractant_source_definition.keys()) == 0:
         return ''
     else:
         if chemoattractant_source_definition['source_type'] == "linear":
-            return "-CS={}xL-{}-{}-{}".format(chemotaxis_effect_factor, chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["max_value"], chemoattractant_source_definition["slope"])
+            return "-CS=L-{}-{}-{}".format(chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["max_value"], chemoattractant_source_definition["slope"])
         
         elif chemoattractant_source_definition['source_type'] == 'normal':
-            return "-CS={}xN-{}-{}-{}".format(chemotaxis_effect_factor, chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["gaussian_width"], chemoattractant_source_definition["gaussian_height"])
+            return "-CS=N-{}-{}-{}".format(chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["gaussian_width"], chemoattractant_source_definition["gaussian_height"])
         else:
             return "-CS=ERROR"
       
@@ -1211,9 +1211,9 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         experiment_name_format_string = "corr_conv_{}_{}_NN={}_CIL={}_COA={}".format(sub_experiment_number, "{}", parameter_dict['num_nodes'], np.round(default_cil, decimals=3), np.round(default_coa, decimals=3))
     else:
         if cell_placement_method == "":
-            experiment_name_format_string = "cm_{}_{}_NC=({}, {}, {}, {}, {}){}_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict['chemotaxis_effect_factor']))
+            experiment_name_format_string = "cm_{}_{}_NC=({}, {}, {}, {}, {}){}_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition))
         else:
-            experiment_name_format_string = "cm_{}_{}_NC=({}, {}, {}, {}, {})({}, {}, {})_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict['chemotaxis_effect_factor']))
+            experiment_name_format_string = "cm_{}_{}_NC=({}, {}, {}, {}, {})({}, {}, {})_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, corridor_height, box_y_placement_factor, cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition))
         
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -1366,9 +1366,9 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         raise Exception("Unknown placement method given: {}, expected one of {}".format(cell_placement_method, accepted_cell_placement_methods))
         
     if cell_placement_method == "":
-        experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {}){}_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor, cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict['chemotaxis_effect_factor']))
+        experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {}){}_COA={}_CIL={}{}_S={}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor, cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition), seed)
     else:
-        experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {})({}, {}, {})_COA={}_CIL={}{}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor, cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict['chemotaxis_effect_factor']))
+        experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {})({}, {}, {})_COA={}_CIL={}{}_S={}".format(sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor, cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3), make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition), seed)
         
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -1556,7 +1556,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
     parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
     
-    chemoattractant_gradient_fn_per_subexperiment = [make_chemoattractant_gradient_function(chemoattractant_source_definition, parameter_dict['chemotaxis_effect_factor'])]
+    chemoattractant_gradient_fn_per_subexperiment = [make_chemoattractant_gradient_function(chemoattractant_source_definition)]
     
     user_cell_group_defns_per_subexperiment = []
     user_cell_group_defns = []
