@@ -8,12 +8,11 @@ Created on Sun Aug 07 16:00:16 2016
 import numpy as np
 import general.exec_utils as eu
 import core.utilities as cu
+import core.chemistry as chemistry
 import visualization.datavis as datavis
 import os
 import copy
-import numba as nb
 import dill
-import core.parameterorg as cporg
 import visualization.colors as colors
 
 global_randomization_scheme_dict = {'m': 'kgtp_rac_multipliers', 'w': 'wipeout'}
@@ -1012,45 +1011,6 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     
     return experiment_name
 
-# =============================================================================
-def make_linear_gradient_function(source_x, source_y, max_value, slope):
-    @nb.jit(nopython=True)
-    def f(x):
-        d = np.sqrt((x[0] - source_x)**2 + (x[1] - source_y)**2)
-        calc_value = max_value - slope*d
-        
-        if calc_value > max_value:
-            return max_value
-        elif calc_value < 0.0:
-            return 0.0
-        else:
-            return calc_value
-            
-    return f
-
-def make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height):    
-    widthsq = gaussian_width*gaussian_width
-    
-    @nb.jit(nopython=True)
-    def f(x):
-        dsq = (x[0] - source_x)**2 + (x[1] - source_y)**2
-        return gaussian_height*np.exp(-1*dsq/(2*widthsq))
-    
-    return f
-
-def make_chemoattractant_gradient_function(source_type='', source_x=np.nan, source_y=np.nan, max_value=np.nan, slope=np.nan, gaussian_width=np.nan, gaussian_height=np.nan):
-    if source_type == '':
-        return lambda x: 0.0
-    elif source_type == "normal":
-        if not np.any(np.isnan([source_x, source_y, gaussian_width, gaussian_height])):
-            return make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height)
-        else:
-            raise Exception("Normal chemoattractant gradient function requested, but definition is not filled out properly!")
-    elif source_type == "linear":
-        if not np.any(np.isnan([source_x, source_y, max_value, slope])):
-            return make_linear_gradient_function(source_x, source_y, max_value, slope)
-        else:
-            raise Exception("Linear chemoattractant gradient function requested, but definition is not filled out properly!")
 # ============================================================================
 
 def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
@@ -1290,7 +1250,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         chemoattractant_source_definition['source_y'] = box_y_offsets[0] + corridor_height*cell_diameter*0.5
         chemoattractant_source_location = np.array([chemoattractant_source_definition['source_x'], chemoattractant_source_definition['source_y']])
     
-    chemoattractant_gradient_fn_per_subexperiment = [make_chemoattractant_gradient_function(**chemoattractant_source_definition)]
+    chemoattractant_gradient_fn_per_subexperiment = [chemistry.make_chemoattractant_gradient_function(**chemoattractant_source_definition)]
         
     user_cell_group_defns_per_subexperiment = []
     user_cell_group_defns = []
@@ -1426,7 +1386,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         chemoattractant_source_definition['source_y'] = box_y_offsets[0] + box_height*cell_diameter*0.5
         chemoattractant_source_location = np.array([chemoattractant_source_definition['source_x'], chemoattractant_source_definition['source_y']])
     
-    chemoattractant_gradient_fn_per_subexperiment = [make_chemoattractant_gradient_function(**chemoattractant_source_definition)]
+    chemoattractant_gradient_fn_per_subexperiment = [chemistry.make_chemoattractant_gradient_function(**chemoattractant_source_definition)]
         
     user_cell_group_defns_per_subexperiment = []
     user_cell_group_defns = []
@@ -1556,7 +1516,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
     parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
     
-    chemoattractant_gradient_fn_per_subexperiment = [make_chemoattractant_gradient_function(chemoattractant_source_definition)]
+    chemoattractant_gradient_fn_per_subexperiment = [chemistry.make_chemoattractant_gradient_function(chemoattractant_source_definition)]
     
     user_cell_group_defns_per_subexperiment = []
     user_cell_group_defns = []

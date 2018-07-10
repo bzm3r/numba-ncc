@@ -35,7 +35,7 @@ g_var_labels = ['exponent', 'threshold', 'diffusion', 'space', 'eta', 'length', 
 #-----------------------------------------------------------------
 rho_gtpase_parameter_labels = ['C_total', 'H_total', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac', 'diffusion_const_active', 'diffusion_const_inactive', 'kgtp_rac_baseline', 'kdgtp_rac_baseline', 'kgtp_rho_baseline', 'kdgtp_rho_baseline', 'kgtp_rac_autoact_baseline', 'kgtp_rho_autoact_baseline', 'kdgtp_rho_mediated_rac_inhib_baseline', 'kdgtp_rac_mediated_rho_inhib_baseline', 'kgdi_rac', 'kdgdi_rac', 'kgdi_rho', 'kdgdi_rho', 'threshold_rac_activity', 'threshold_rho_activity', 'hill_exponent', 'tension_mediated_rac_inhibition_half_strain', 'tension_mediated_rac_inhibition_magnitude', 'strain_calculation_type']
 
-mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge', 'stiffness_cytoplasmic', 'eta', 'max_protrusive_nodal_velocity', 'max_force_rac', 'max_force_rho', 'threshold_force_rac_activity', 'threshold_force_rho_activity', 'force_adh_const']
+mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge_resting', 'stiffness_edge_high_tensile_strain', 'high_tensile_strain_definition', 'stiffness_cytoplasmic', 'eta', 'max_protrusive_nodal_velocity', 'max_force_rac', 'max_force_rho', 'threshold_force_rac_activity', 'threshold_force_rho_activity', 'force_adh_const']
 
 space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
 
@@ -59,7 +59,7 @@ user_interaction_parameters = {'interaction_factors_intercellular_contact_per_ce
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
-user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.001*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.01*1e5, 1e100]}
+user_mechanical_parameters = {'stiffness_cytoplasmic': None, 'length_3D_dimension': 1e-05, 'skip_dynamics': None, 'max_force_rac': [0.001*10e3, 5*10e3], 'force_adh_const': [0, 100], 'stiffness_edge': [1, 8000], 'force_rho_multiplier': [0, 1], 'eta': [0.01*1e5, 1e100], 'stiffness_edge_resting': [1000, 8000], 'stiffness_edge_high_tensile_strain': [1e-6, 8000], 'high_tensile_strain_definition': None}
 
 user_randomization_parameters = {'randomization_magnitude': None, 'randomization_scheme': None, 'randomization_time_mean': None, 'randomization_time_variance_factor': None, 'randomization_node_percentage': [0.01, 0.5], 'randomization_type': None}
     
@@ -164,7 +164,9 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
 
     length_3D_dimension = user_parameter_dict['length_3D_dimension']
     cell_parameter_dict['eta'] = user_parameter_dict['eta']*length_3D_dimension
-    cell_parameter_dict['stiffness_edge'] = user_parameter_dict['stiffness_edge']*length_3D_dimension
+    cell_parameter_dict['stiffness_edge_resting'] = user_parameter_dict['stiffness_edge_resting']*length_3D_dimension
+    cell_parameter_dict['high_tensile_strain_definition'] = user_parameter_dict['high_tensile_strain_definition']
+    cell_parameter_dict['stiffness_edge_high_tensile_strain'] = user_parameter_dict['stiffness_edge_high_tensile_strain']*length_3D_dimension
     cell_parameter_dict['stiffness_cytoplasmic'] = user_parameter_dict['stiffness_cytoplasmic']
     cell_parameter_dict['length_edge_resting'] = length_edge_resting
     cell_parameter_dict['max_force_rac'] = user_parameter_dict['max_force_rac']*length_edge_resting*200e-9

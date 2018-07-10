@@ -8,6 +8,7 @@ Created on Tue May 12 13:26:37 2015
 from . import geometry
 import numpy as np
 import numba as nb
+import scipy.optimize as sciopt
 
         
 # -----------------------------------------------------------------
@@ -75,7 +76,7 @@ def calculate_cytoplasmic_force(num_vertices, this_cell_coords, area_resting, st
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_spring_edge_forces(num_vertices, this_cell_coords, stiffness_edge, length_edge_resting):
+def calculate_spring_edge_forces(num_vertices, this_cell_coords, stiffness_fn_a, stiffness_fn_b, stiffness_fn_c, length_edge_resting):
     
     edge_vectors_to_plus = np.empty((num_vertices, 2), dtype=np.float64)
     edge_vectors_to_minus = np.empty((num_vertices, 2), dtype=np.float64)
@@ -112,8 +113,8 @@ def calculate_spring_edge_forces(num_vertices, this_cell_coords, stiffness_edge,
     EFplus_mags = np.zeros(num_vertices, dtype=np.float64)
     EFminus_mags = np.zeros(num_vertices, dtype=np.float64)
     for i in range(num_vertices):
-        EFplus_mags[i] = edge_strains_plus[i]*stiffness_edge
-        EFminus_mags[i] = edge_strains_minus[i]*stiffness_edge
+        EFplus_mags[i] = edge_strains_plus[i]*exponential_stiffness_fn(edge_strains_plus[i], stiffness_fn_a, stiffness_fn_b, stiffness_fn_c)
+        EFminus_mags[i] = edge_strains_minus[i]*exponential_stiffness_fn(edge_strains_minus[i], stiffness_fn_a, stiffness_fn_b, stiffness_fn_c)
         
     EFplus = geometry.multiply_vectors_by_scalars(unit_edge_disp_vecs_plus, EFplus_mags)
     
@@ -255,7 +256,7 @@ def calculate_external_forces(num_vertices, num_cells, this_ci, close_point_on_o
 
 # ----------------------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_forces(num_vertices, num_cells, this_ci, this_cell_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_edge, threhsold_force_rac_activity, threhsold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria):
+def calculate_forces(num_vertices, num_cells, this_ci, this_cell_coords, rac_membrane_actives, rho_membrane_actives, length_edge_resting, stiffness_fn_a, stiffness_fn_b, stiffness_fn_c, threhsold_force_rac_activity, threhsold_force_rho_activity, max_force_rac, max_force_rho, force_adh_constant, area_resting, stiffness_cytoplasmic, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, all_cells_centres, all_cells_node_forces, closeness_dist_criteria):
     
     unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(this_cell_coords)
     
@@ -263,7 +264,7 @@ def calculate_forces(num_vertices, num_cells, this_ci, this_cell_coords, rac_mem
 
     F_cytoplasmic = calculate_cytoplasmic_force(num_vertices, this_cell_coords, area_resting, stiffness_cytoplasmic, unit_inside_pointing_vectors)
     
-    EFplus, EFminus = calculate_spring_edge_forces(num_vertices, this_cell_coords, stiffness_edge, length_edge_resting) 
+    EFplus, EFminus = calculate_spring_edge_forces(num_vertices, this_cell_coords, stiffness_fn_a, stiffness_fn_b, stiffness_fn_c, length_edge_resting) 
     
     F_internal = rgtpase_mediated_forces + EFplus + EFminus + F_cytoplasmic
     
@@ -290,3 +291,17 @@ def calculate_average_tensile_local_strains(local_strains):
             sum_tensile_strains += local_strain
             
     return sum_tensile_strains/local_strains.shape[0]
+
+# ====================================================================
+
+def exponential_function(x, a, b, c):
+    return a*np.exp(b*x) + c
+
+# ====================================================================
+    
+def calculate_exponential_stiffness_function_parameters(defining_strains, defining_stiffnesses):
+    return sciopt.curve_fit(exponential_function, defining_strains, defining_stiffnesses)[0]
+
+@nb.jit(nopython=True)
+def exponential_stiffness_fn(x, a, b, c):
+    return a*np.exp(b*x) + c

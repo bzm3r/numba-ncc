@@ -313,4 +313,49 @@ def calculate_coa_signal(max_coa_signal, too_close_dist_squared, coa_distributio
             return False, new_node_coa_signal
         else:
             return True, max_coa_signal
+
+# -----------------------------------------------------------------
+            
+def make_linear_gradient_function(source_x, source_y, max_value, slope):
+    @nb.jit(nopython=True)
+    def f(x):
+        d = np.sqrt((x[0] - source_x)**2 + (x[1] - source_y)**2)
+        calc_value = max_value - slope*d
+        
+        if calc_value > max_value:
+            return max_value
+        elif calc_value < 0.0:
+            return 0.0
+        else:
+            return calc_value
+            
+    return f
+
+# -----------------------------------------------------------------
+    
+def make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height):    
+    widthsq = gaussian_width*gaussian_width
+    
+    @nb.jit(nopython=True)
+    def f(x):
+        dsq = (x[0] - source_x)**2 + (x[1] - source_y)**2
+        return gaussian_height*np.exp(-1*dsq/(2*widthsq))
+    
+    return f
+
+# -----------------------------------------------------------------
+    
+def make_chemoattractant_gradient_function(source_type='', source_x=np.nan, source_y=np.nan, max_value=np.nan, slope=np.nan, gaussian_width=np.nan, gaussian_height=np.nan):
+    if source_type == '':
+        return lambda x: 0.0
+    elif source_type == "normal":
+        if not np.any(np.isnan([source_x, source_y, gaussian_width, gaussian_height])):
+            return make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height)
+        else:
+            raise Exception("Normal chemoattractant gradient function requested, but definition is not filled out properly!")
+    elif source_type == "linear":
+        if not np.any(np.isnan([source_x, source_y, max_value, slope])):
+            return make_linear_gradient_function(source_x, source_y, max_value, slope)
+        else:
+            raise Exception("Linear chemoattractant gradient function requested, but definition is not filled out properly!")
         
