@@ -568,77 +568,7 @@ def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_
     
 # ============================================================================
 
-def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8, run_experiments=True, remake_graphs=False, remake_animation=False, justify_parameters=True, show_coa_overlay=False):
-    global_scale = 4
-    
-    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
-    experiment_name_format_string = "ciltest_{}_CIL={}_COA={}_W={}".format(sub_experiment_number, default_cil, default_coa, migr_bdry_height_factor) + "_{}"
-    
-    if no_randomization:
-        parameter_dict.update([('randomization_scheme', None)])
-        
-    randomization_scheme = parameter_dict['randomization_scheme']
-    experiment_name = fill_experiment_name_format_string_with_randomization_info(experiment_name_format_string, randomization_scheme, parameter_dict)
-    
-    experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
-    
-    total_time = total_time_in_hours*3600
-    num_timesteps = int(total_time/timestep_length)
-    
-    num_boxes = 2
-    num_cells_in_boxes = [1, 1]
-    box_heights = [1*cell_diameter]*num_boxes
-    box_widths = [1*cell_diameter]*num_boxes
-
-    x_space_between_boxes = [0*cell_diameter]
-    plate_width, plate_height = 10*cell_diameter*1.2, 3*cell_diameter
-
-    # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
-    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, "OVERRIDE", "ORIGIN", physical_bdry_polygon_extra=20, box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],  migratory_corridor_size=[cell_diameter, migr_bdry_height_factor*cell_diameter], make_only_migratory_corridor=True, origin_y_offset=25)
-    
-    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
-    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
-    
-    environment_wide_variable_defns = {'num_timesteps': num_timesteps, 'space_physical_bdry_polygon': space_physical_bdry_polygon, 'space_migratory_bdry_polygon': space_migratory_bdry_polygon, 'T': timestep_length, 'verbose': verbose, 'integration_params': integration_params, 'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed, 'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc, "cell_placement_method": ""}
-    
-    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [[dict([(x, default_coa) for x in boxes])]*num_boxes]
-    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
-    
-    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}, {'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 1.0]}]]
-    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
-    experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
-    chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
-    
-    user_cell_group_defns_per_subexperiment = []
-    user_cell_group_defns = []
-    
-    si = 0
-    
-    for bi in boxes:
-        this_box_x_offset = box_x_offsets[bi]
-        this_box_y_offset = box_y_offsets[bi]
-        this_box_width = box_widths[bi]
-        this_box_height = box_heights[bi]
-        
-        cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi], 'cell_group_bounding_box': np.array([this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset, this_box_height + this_box_y_offset])*1e-6, 'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi], 'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[si][bi], 'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dicts[si][bi], 'parameter_dict': parameter_dict_per_sub_experiment[si][bi]} 
-        
-        user_cell_group_defns.append(cell_group_dict)
-        
-    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
-
-    global_scale = 4
-        
-    animation_settings = setup_animation_settings(timestep_length, global_scale, plate_height, plate_width, show_rac_random_spikes=False, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, string_together_pictures_into_animation=True, show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1, coa_distribution_exponent=np.log(parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict['coa_sensing_dist_at_value']/1e-6), rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5, coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])  
-    
-    produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
-    
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
-
-    print("Done.")
-    
-# ============================================================================
-
-def two_cells_cil_test_symmetric(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, corridor_definition=["default"], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, justify_parameters=True):
+def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, corridor_definition=["default"], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, justify_parameters=True):
     global_scale = 4
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
