@@ -15,7 +15,7 @@ import copy
 
 output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'global_strain', 'interaction_factors_intercellular_contact_per_celltype', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
-output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'chemoattractant_gradient_on_nodes']
+output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'chemoattractant_signal_on_nodes']
 
 output_info_labels = output_mech_labels + output_chem_labels
 
@@ -250,7 +250,7 @@ def find_undefined_labels(cell_group_parameter_dict):
     
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(animation_settings, environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_gradient_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
+def make_environment_given_user_cell_group_defns(animation_settings, environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_signal_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
     
     num_cell_groups = len(user_cell_group_defns)
         
@@ -265,6 +265,6 @@ def make_environment_given_user_cell_group_defns(animation_settings, environment
         
         
     
-    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, chemoattractant_gradient_fn=chemoattractant_gradient_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions, cell_placement_method=cell_placement_method, max_placement_distance_factor=max_placement_distance_factor, init_random_cell_placement_x_factor=init_random_cell_placement_x_factor, convergence_test=convergence_test, graph_group_centroid_splits=graph_group_centroid_splits)
+    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, chemoattractant_signal_fn=chemoattractant_signal_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions, cell_placement_method=cell_placement_method, max_placement_distance_factor=max_placement_distance_factor, init_random_cell_placement_x_factor=init_random_cell_placement_x_factor, convergence_test=convergence_test, graph_group_centroid_splits=graph_group_centroid_splits)
     
     return the_environment

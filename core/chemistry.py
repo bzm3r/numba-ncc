@@ -123,7 +123,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_gradient_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
+def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]
     result = np.empty(num_vertices, dtype=np.float64)
     kgtp_rac_autoact = 0.0
@@ -136,15 +136,19 @@ def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exp
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]#*(1.0 - smooth_factor)
         
-        chemoattractant_gradient_signal = hill_function(3, 0.5, chemoattractant_gradient_on_nodes[i])*hill_function(3, threshold_rac_autoact, conc_rac_membrane_actives[i])
+        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
+        
+        if chemoattractant_signal_at_node > 1e-6:
+            chemoattractant_signal = hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
+        else:
+            chemoattractant_signal = 0.0
         
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
-            chemoattractant_gradient_signal = 0.0
-        
+            
         kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
         
-        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + (chemoattractant_gradient_signal + 1.0)*kgtp_rac_autoact
+        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + (chemoattractant_signal + 1.0)*kgtp_rac_autoact
         
     return result
 

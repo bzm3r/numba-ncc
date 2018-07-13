@@ -11,7 +11,7 @@ import core.utilities as cu
 import core.chemistry as chemistry
 import threading
 import general.utilities as gu
-from pathos.multiprocessing import ProcessingPool 
+from pathos.multiprocessing import ProcessPool 
 
 def fsquared(x):
     return x*x
@@ -522,26 +522,7 @@ class AnimationCell():
             for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
                 offset_direction = offset_directions[i]
                 
-                if offset_direction != - 1:
-                    context.set_source_rgb(r, g, b)
-                    for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
-                        x0, y0 = polygon_coord + offset_direction*offset_coord
-                        x1, y1 = rgtpase_line_coord
-                        
-                        context.new_path()
-                        context.move_to(x0, y0)
-                        context.line_to(x1, y1)
-                        context.stroke()
-                        
-        context.set_line_width(self.rgtpase_line_width)
-        offset_coords = rgtpase_line_coords_per_gtpase[-1]
-        offset_directions = [0, -1, 0, -1]
-        
-        for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
-            offset_direction = offset_directions[i]
-            
-            if offset_direction != - 1:
-                r, g, b = self.rgtpase_colors[i]
+                #if offset_direction != - 1:
                 context.set_source_rgb(r, g, b)
                 for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
                     x0, y0 = polygon_coord + offset_direction*offset_coord
@@ -551,6 +532,25 @@ class AnimationCell():
                     context.move_to(x0, y0)
                     context.line_to(x1, y1)
                     context.stroke()
+                        
+        context.set_line_width(self.rgtpase_line_width)
+        offset_coords = rgtpase_line_coords_per_gtpase[-1]
+        offset_directions = [0, -1, 0, -1]
+        
+        for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
+            offset_direction = offset_directions[i]
+            
+            #if offset_direction != - 1:
+            r, g, b = self.rgtpase_colors[i]
+            context.set_source_rgb(r, g, b)
+            for polygon_coord, rgtpase_line_coord, offset_coord in zip(polygon_coords, rgtpase_line_coords, offset_coords):
+                x0, y0 = polygon_coord + offset_direction*offset_coord
+                x1, y1 = rgtpase_line_coord
+                
+                context.new_path()
+                context.move_to(x0, y0)
+                context.line_to(x1, y1)
+                context.stroke()
             
     # -------------------------------------
         
@@ -561,26 +561,26 @@ class AnimationCell():
         
         for i, rgtpase_line_coords in enumerate(rgtpase_line_coords_per_gtpase[:-1]):
             offset_direction = offset_directions[i]
-            if offset_direction != -1:
-                default_rgb = self.rgtpase_colors[i]
-                context.set_source_rgb(*default_rgb)
-                
-                
-                for n, drawing_data in enumerate(zip(polygon_coords, rgtpase_line_coords, offset_coords)):
-                    polygon_coord, rgtpase_line_coord, offset_coord = drawing_data
-                    if i == 0:
-                        if rac_random_spikes_info[n] > 1:
-                            context.set_source_rgb(*rac_random_spike_color)
-                        else:
-                            context.set_source_rgb(*default_rgb)
-                        
-                    x0, y0 = polygon_coord + offset_direction*offset_coord
-                    x1, y1 = rgtpase_line_coord
+            #if offset_direction != -1:
+            default_rgb = self.rgtpase_colors[i]
+            context.set_source_rgb(*default_rgb)
+            
+            
+            for n, drawing_data in enumerate(zip(polygon_coords, rgtpase_line_coords, offset_coords)):
+                polygon_coord, rgtpase_line_coord, offset_coord = drawing_data
+                if i == 0:
+                    if rac_random_spikes_info[n] > 1:
+                        context.set_source_rgb(*rac_random_spike_color)
+                    else:
+                        context.set_source_rgb(*default_rgb)
                     
-                    context.new_path()
-                    context.move_to(x0, y0)
-                    context.line_to(x1, y1)
-                    context.stroke()
+                x0, y0 = polygon_coord + offset_direction*offset_coord
+                x1, y1 = rgtpase_line_coord
+                
+                context.new_path()
+                context.move_to(x0, y0)
+                context.line_to(x1, y1)
+                context.stroke()
                 
     # -------------------------------------
         
@@ -703,7 +703,7 @@ def prepare_rgtpase_data(rgtpase_scale, cell_index, unique_undrawn_timesteps, po
     normal_to_uivs = normal_to_uivs.reshape((num_timesteps, num_nodes, 2))
     unit_inside_pointing_vecs = unit_inside_pointing_vecs.reshape((num_timesteps, num_nodes, 2))
         
-    offset_vecs = 0*normal_to_uivs #offest_magnitude*normal_to_uivs
+    offset_vecs = offset_magnitude*normal_to_uivs #0*normal_to_uivs
     
     positive_offset = offset_vecs + polygon_coords_per_timestep
     negative_offset = -1*offset_vecs + polygon_coords_per_timestep
@@ -889,7 +889,7 @@ def generate_coa_data_depending_on_grid_point_relevancy(unique_undrawn_timesteps
             print("Executing in parallel.")
             st = time.time()
             
-            pool = ProcessingPool(nodes=4)
+            pool = ProcessPool(nodes=4)
             results = pool.map(coa_data_calculation_worker, coa_data_calculation_worker_tasks)          
             
             et = time.time()
@@ -1038,7 +1038,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # --------------------------------------------------------------------------     
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, chemoattractant_dot_color=colors.RGB_LIGHT_GREEN, migratory_bdry_color=colors.RGB_BRIGHT_RED, physical_bdry_color=colors.RGB_BLACK, default_cell_polygon_fill_color=colors.RGB_WHITE, cell_polygon_edge_and_vertex_colors=[], default_cell_polygon_edge_and_vertex_color=colors.RGB_BLACK, rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], rgtpase_background_shine_color=None, velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, show_physical_bdry_polygon=False, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_source_location=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, show_coa_overlay=True, max_coa_signal=-1.0, coa_too_close_dist_squared=1e-12, coa_distribution_exponent=0.0, coa_intersection_exponent=0.0, coa_overlay_color=colors.RGB_LIGHT_GREEN, coa_overlay_resolution=1, cell_dependent_coa_signal_strengths=[], short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, allowed_drift_before_geometry_recalc=-1.0, specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1):        
+    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_inactive_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, chemoattractant_dot_color=colors.RGB_LIGHT_GREEN, migratory_bdry_color=colors.RGB_BRIGHT_RED, physical_bdry_color=colors.RGB_BLACK, default_cell_polygon_fill_color=colors.RGB_WHITE, cell_polygon_edge_and_vertex_colors=[], default_cell_polygon_edge_and_vertex_color=colors.RGB_BLACK, rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], rgtpase_background_shine_color=None, velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.0, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, show_physical_bdry_polygon=False, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_source_location=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, show_coa_overlay=True, max_coa_signal=-1.0, coa_too_close_dist_squared=1e-12, coa_distribution_exponent=0.0, coa_intersection_exponent=0.0, coa_overlay_color=colors.RGB_LIGHT_GREEN, coa_overlay_resolution=1, cell_dependent_coa_signal_strengths=[], short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, allowed_drift_before_geometry_recalc=-1.0, specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1):        
         self.global_scale = global_scale
         self.rotation_theta = rotation_theta
         self.translation_x = translation_x
@@ -1069,6 +1069,7 @@ class EnvironmentAnimation():
         
         self.show_velocities = show_velocities
         self.show_rgtpase = show_rgtpase
+        self.show_inactive_rgtpase = show_inactive_rgtpase
         self.show_centroid_trail = show_centroid_trail
         self.show_coa = show_coa
         
@@ -1144,7 +1145,6 @@ class EnvironmentAnimation():
         self.gathered_info = np.zeros((self.max_num_timepoints, self.num_cells), dtype=np.int64)
         self.animation_cells = np.empty(self.num_cells, dtype=object)
         self.image_drawn_array = self.determine_drawn_timesteps(np.zeros(self.max_num_timepoints, dtype=np.int64))
-        self.cell_offset_magnitudes = np.zeros(num_cells, dtype=np.float64)
         
         self.coa_overlay_info = (self.plate_width_in_micrometers, self.plate_height_in_micrometers, max_coa_signal, coa_too_close_dist_squared, coa_distribution_exponent, cell_dependent_coa_signal_strengths)
         self.coa_overlay_color = coa_overlay_color
@@ -1237,6 +1237,7 @@ class EnvironmentAnimation():
                 
                 for x in range(self.num_rgtpase_labels + 1):
                     rgtpase_line_coords_per_label_per_timepoint_per_cell[cell_index,:,x,:,:] = rgtpase_data_for_undrawn_timesteps[x]
+
                     
             if self.show_rac_random_spikes:
                 rac_random_spike_info_per_timepoint_per_cell[cell_index,:,:] = prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, self.storefile_path)
@@ -1413,27 +1414,12 @@ class EnvironmentAnimation():
                 
             self.image_drawn_array[t] = 1
             drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format))
-        
-        pool = ProcessingPool(nodes=4)
+    
+        pool = ProcessPool(nodes=4)
         pool.map(draw_animation_frame, drawing_tasks)
-            
-#        multithread = False
-#        if multithread:
-#            num_tasks = len(drawing_tasks)
-#            chunklen = (num_tasks + num_threads - 1) // num_threads
-#            # Create argument tuples for each input chunk
-#            chunks = []
-#            for i in range(num_threads):
-#                chunks.append(drawing_tasks[i*chunklen:(i+1)*chunklen])
-#                
-#            threads = [threading.Thread(target=draw_animation_frame_for_given_timestep, args=(c,)) for c in chunks]
-#            for thread in threads:
-#                thread.start()
-#            for thread in threads:
-#                thread.join()
-#        else:
-#            draw_animation_frame_for_given_timestep(drawing_tasks)
-                
+        
+#        for task in drawing_tasks:
+#            draw_animation_frame(task)
             
         et = time.time()
         print("Time taken to draw images: {} s".format(np.round(et - st, decimals=3)))

@@ -188,7 +188,7 @@ def get_pickled_env_path(env_dir):
 # ========================================================================
 
 
-def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
+def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_signal_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
     
     for repeat_number in range(num_experiment_repeats):
         for subexperiment_index, user_cell_group_defns in enumerate(user_cell_group_defns_per_subexperiment):
@@ -249,7 +249,7 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
                 print("Creating environment...")
                 parameter_overrides = [x['parameter_override_dict'] for x in user_cell_group_defns]
                 
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_gradient_fn=chemoattractant_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_signal_fn=chemoattractant_signal_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
                 
             an_environment.full_print = full_print
             
@@ -372,16 +372,16 @@ def check_if_simulation_exists_and_is_complete(environment_dir, experiment_strin
     else:
         return "simulation incomplete", an_environment, False
     
-def create_environment(environment_name, environment_dir, experiment_description, parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_gradient_fn, animation_settings):
+def create_environment(environment_name, environment_dir, experiment_description, parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_signal_fn, animation_settings):
     os.makedirs(environment_dir)
     autogenerate_debug_file(environment_dir)
     make_template_experiment_description_file(experiment_description, environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns)    
     
-    an_environment = parameterorg.make_environment_given_user_cell_group_defns(animation_settings, environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_gradient_fn=chemoattractant_gradient_fn, justify_parameters=justify_parameters, **environment_wide_variable_defns)
+    an_environment = parameterorg.make_environment_given_user_cell_group_defns(animation_settings, environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_signal_fn=chemoattractant_signal_fn, justify_parameters=justify_parameters, **environment_wide_variable_defns)
     
     return an_environment, animation_settings
 
-def run_template_experiments(experiment_directory, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
+def run_template_experiments(experiment_directory, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_signal_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
     
     template_experiment_name_format_string = "RPT={}"
     for repeat_number in range(num_experiment_repeats):
@@ -397,7 +397,7 @@ def run_template_experiments(experiment_directory, parameter_dict, environment_w
                 if run_experiments:
                     "running simulation..."
                     if message != "simulation incomplete":
-                        an_environment, animation_settings = create_environment(environment_name, environment_dir, experiment_descriptions_per_subexperiment[subexperiment_index], parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_gradient_fn_per_subexperiment[subexperiment_index], animation_settings)
+                        an_environment, animation_settings = create_environment(environment_name, environment_dir, experiment_descriptions_per_subexperiment[subexperiment_index], parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_signal_fn_per_subexperiment[subexperiment_index], animation_settings)
                     
                     an_environment.full_print = full_print
                     

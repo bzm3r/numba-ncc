@@ -18,7 +18,7 @@ import matplotlib.patches as mpatch
 import numba as nb
 import shutil
 import subprocess
-import multiprocessing as mp
+from pathos.multiprocessing import ProcessPool 
 import time
 plt.ioff()
 
@@ -538,20 +538,22 @@ def graph_important_cell_variables_over_time_old(T, L, cell_index, tension_media
 
 # =================================================================================
 
-# =================================================================================
-
 def get_wrapped_around_data(data_array, tp):
     return np.append(data_array[tp], data_array[tp,:0])
 
-def frame_output_worker(img_index, tp, num_nodes, timepoints, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, local_strains, fontsize):
+# =================================================================================
+    
+def draw_frame(task):
+    
+    img_index, num_nodes, time_in_min, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, global_strain, fontsize = task
     
     fig, ax = plt.subplots()
     
-    ax.plot(node_indices, rac_mem_active[tp], color='b', ls='', marker='.', label="$R_{a}$")
-    ax.plot(node_indices, rac_mem_inactive[tp], color='b', ls='', marker='o', label="$R_{i}$")
-    ax.plot(node_indices, rho_mem_active[tp], color='r', ls='', marker='.', label="$\\rho_{a}$")
-    ax.plot(node_indices, rho_mem_inactive[tp], color='r', ls='', marker='o', label="$\\rho_{i}$")
-    ax.plot(node_indices, local_strains[tp], color='k', ls='', marker='.', label="strain")
+    ax.plot(node_indices, rac_mem_active, color='b', ls='', marker='.', label="$R_{a}$")
+    ax.plot(node_indices, rac_mem_inactive, color='b', ls='', marker='o', label="$R_{i}$")
+    ax.plot(node_indices, rho_mem_active, color='r', ls='', marker='.', label="$\\rho_{a}$")
+    ax.plot(node_indices, rho_mem_inactive, color='r', ls='', marker='o', label="$\\rho_{i}$")
+    ax.axhline(y=global_strain, color='k', label="strain")
     
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
@@ -565,55 +567,16 @@ def frame_output_worker(img_index, tp, num_nodes, timepoints, node_indices, max_
     ax.set_xlabel("node")
     fig.set_size_inches(7.0, 7.0)
     
-    sum_rac = rac_cyt_gdi[tp] + np.sum(rac_mem_active[tp]) + np.sum(rac_mem_inactive[tp])
-    sum_rho = rho_cyt_gdi[tp] + np.sum(rho_mem_active[tp]) + np.sum(rho_mem_inactive[tp])
+    sum_rac = rac_cyt_gdi + np.sum(rac_mem_active) + np.sum(rac_mem_inactive)
+    sum_rho = rho_cyt_gdi + np.sum(rho_mem_active) + np.sum(rho_mem_inactive)
     
-    ax.set_title("t = {} min., $R_T = {}$, $\\rho_T = {}$".format(np.round(timepoints[tp], decimals=1), np.round(sum_rac, decimals=4), np.round(sum_rho, decimals=4)))
-    
-    img_save_path = os.path.join(frame_save_dir, "img{}".format("%0{}d".format(pad_length) % img_index) + ".png")
-    fig.savefig(img_save_path, forward=True, dpi=100)
-    
-def set_init_frame(img_index, tp, num_nodes, timepoints, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, local_strains, fontsize):
-    
-    fig, ax = plt.subplots()
-    
-    rac_mem_active_line = ax.plot(node_indices, rac_mem_active[tp], color='b', ls='', marker='.', label="$R_{a}$")[0]
-    rac_mem_inactive_line = ax.plot(node_indices, rac_mem_inactive[tp], color='b', ls='', marker='o', label="$R_{i}$")[0]
-    rho_mem_active_line = ax.plot(node_indices, rho_mem_active[tp], color='r', ls='', marker='.', label="$\\rho_{a}$")[0]
-    rho_mem_inactive_line = ax.plot(node_indices, rho_mem_inactive[tp], color='r', ls='', marker='o', label="$\\rho_{i}$")[0]
-    strain_line = ax.plot(node_indices, local_strains[tp], color='k', ls='', marker='.', label="strain")[0]
-    
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-
-    ax.set_xlim([0, num_nodes])
-    ax.set_ylim([0, max_ylim])
-    
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
-    ax.grid(which='both')
-    
-    ax.set_xlabel("node")
-    fig.set_size_inches(7.0, 7.0)
-    
-    return fig, ax, rac_mem_active_line, rac_mem_inactive_line, rho_mem_active_line, rho_mem_inactive_line, strain_line
-    
-    
-def frame_output_worker_advanced(fig, ax, img_index, tp, timepoints, pad_length, frame_save_dir, rac_mem_active, rac_mem_active_line, rac_mem_inactive, rac_mem_inactive_line, rho_mem_active, rho_mem_active_line, rho_mem_inactive, rho_mem_inactive_line, rac_cyt_gdi, rho_cyt_gdi, local_strains, strain_line):
-    
-    rac_mem_active_line.set_ydata(rac_mem_active[tp])
-    rac_mem_inactive_line.set_ydata(rac_mem_inactive[tp])
-    rho_mem_active_line.set_ydata(rho_mem_active[tp])
-    rho_mem_inactive_line.set_ydata(rho_mem_inactive[tp])
-    strain_line.set_ydata(local_strains[tp])
-    
-    sum_rac = rac_cyt_gdi[tp] + np.sum(rac_mem_active[tp]) + np.sum(rac_mem_inactive[tp])
-    sum_rho = rho_cyt_gdi[tp] + np.sum(rho_mem_active[tp]) + np.sum(rho_mem_inactive[tp])
-    
-    ax.set_title("t = {} min., $R_T = {}$, $\\rho_T = {}$".format(np.round(timepoints[tp], decimals=1), np.round(sum_rac, decimals=4), np.round(sum_rho, decimals=4)))
+    ax.set_title("t = {} min., $R_T = {}$, $\\rho_T = {}$".format(np.round(time_in_min, decimals=1), np.round(sum_rac, decimals=4), np.round(sum_rho, decimals=4)))
     
     img_save_path = os.path.join(frame_save_dir, "img{}".format("%0{}d".format(pad_length) % img_index) + ".png")
     fig.savefig(img_save_path, forward=True, dpi=100)
 
+# =================================================================================
+    
 def animate_important_cell_variables_over_time(T, cell_index, storefile_path, save_dir=None, max_tstep=None, fontsize=22):
     set_fontsize(fontsize)
     fig, ax = plt.subplots()
@@ -635,7 +598,7 @@ def animate_important_cell_variables_over_time(T, cell_index, storefile_path, sa
     
     rho_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_cytosolic_gdi_bound', storefile_path)[:, 0]
     
-    local_strains = hardio.get_data_until_timestep(cell_index, max_tstep, "local_strains", storefile_path)
+    global_strains = hardio.get_data_until_timestep(cell_index, max_tstep, "global_strain", storefile_path)[:, 0]
     
     num_timepoints = rac_mem_active.shape[0]
     timepoint_indices = np.arange(num_timepoints)
@@ -646,24 +609,22 @@ def animate_important_cell_variables_over_time(T, cell_index, storefile_path, sa
     
     pad_length = len(str(num_timepoints))
     
-    duration = (num_timepoints/1000)*10.0
-    num_required_frames = duration*5
-    required_frame_indices = np.linspace(0, num_timepoints - 1, num=num_required_frames, dtype=np.int64)
+    frame_rate = 30
+    duration = np.round((num_timepoints/1000)*10.0, decimals=0)
+    num_frames = int(duration*frame_rate)
     
-    max_ylim = np.max([np.max(rac_mem_active), np.max(rac_mem_inactive), np.max(rho_mem_active), np.max(rho_mem_inactive), np.max(local_strains)])
+    unique_frame_indices = np.sort(np.array([x for x in list(set(np.linspace(0, num_timepoints, num=num_frames, endpoint=False, dtype=np.int64)))]))
+    num_unique_timesteps = unique_frame_indices.shape[0]
     
-    #img_index, tp, num_nodes, timepoints, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, local_strains, fontsize
+    max_ylim = np.max([np.max(rac_mem_active), np.max(rac_mem_inactive), np.max(rho_mem_active), np.max(rho_mem_inactive), np.max(global_strains)])
     
-#    fig, ax, rac_mem_active_line, rac_mem_inactive_line, rho_mem_active_line, rho_mem_inactive_line, strain_line = set_init_frame(0, required_frame_indices[0], num_nodes, timepoints, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, local_strains, fontsize)
-    
-    frame_output_worker_args = [(i, tp, num_nodes, timepoints, node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active, rac_mem_inactive, rho_mem_active, rho_mem_inactive, rac_cyt_gdi, rho_cyt_gdi, local_strains, fontsize) for i, tp in enumerate(required_frame_indices)]
-    
-#    frame_output_worker_args = [(copy.deepcopy(fig), copy.deepcopy(ax), img_index, tp, timepoints, pad_length, frame_save_dir, rac_mem_active, rac_mem_active_line, rac_mem_inactive, rac_mem_inactive_line, rho_mem_active, rho_mem_active_line, rho_mem_inactive, rho_mem_inactive_line, rac_cyt_gdi, rho_cyt_gdi, local_strains, strain_line)]
+    draw_frame_tasks = [(i, num_nodes, timepoints[tp], node_indices, max_ylim, pad_length, frame_save_dir, rac_mem_active[tp], rac_mem_inactive[tp], rho_mem_active[tp], rho_mem_inactive[tp], rac_cyt_gdi[tp], rho_cyt_gdi[tp], global_strains[tp], fontsize) for i, tp in enumerate(unique_frame_indices)]
     
     print("Creating frames...")
     t0 = time.time()
-    with mp.Pool(processes=6, maxtasksperchild=100) as pool:
-        pool.starmap(frame_output_worker, frame_output_worker_args)
+    pool = ProcessPool(nodes=4)
+    pool.map(draw_frame, draw_frame_tasks)
+    del pool
     print("took {}s".format(np.round(time.time() - t0), decimals=2))
                 
     print("Stringing together pictures...")
@@ -671,100 +632,9 @@ def animate_important_cell_variables_over_time(T, cell_index, storefile_path, sa
     
     command = [ 'ffmpeg',
     '-y', # (optional) overwrite output file if it exists,
-    '-framerate', str(num_timepoints/duration),
+    '-framerate', str(float(num_unique_timesteps)/duration),
     '-i', os.path.join(frame_save_dir, 'img%0{}d.png'.format(pad_length)),
-    '-r', str(5), # frames per second
-    '-an', # Tells FFMPEG not to expect any audio
-    '-threads', str(4),
-    '-vcodec', 'libx264', 
-    '-pix_fmt', 'yuv420p',
-    animation_output_path ]
-    
-    subprocess.call(command)
-       
-def animate_important_cell_variables_over_time_old(T, cell_index, storefile_path, save_dir=None, max_tstep=None, fontsize=22):
-    set_fontsize(fontsize)
-    fig, ax = plt.subplots()
-    
-    frame_save_dir = os.path.join(save_dir, "frames")
-    if os.path.isdir(frame_save_dir):
-        shutil.rmtree(frame_save_dir)
-    os.mkdir(frame_save_dir)
-
-    rac_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_active', storefile_path)
-    
-    rac_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_membrane_inactive', storefile_path)
-
-    rho_mem_active = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_active', storefile_path)
-    
-    rho_mem_inactive = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_membrane_inactive', storefile_path)
-    
-    rac_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_cytosolic_gdi_bound', storefile_path)[:, 0]
-    
-    rho_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_cytosolic_gdi_bound', storefile_path)[:, 0]
-    
-    local_strains = hardio.get_data_until_timestep(cell_index, max_tstep, "local_strains", storefile_path)
-    
-    num_timepoints = rac_mem_active.shape[0]
-    timepoint_indices = np.arange(num_timepoints)
-    timepoints = T*timepoint_indices
-    
-    num_nodes = rac_mem_active.shape[1]
-    node_indices = np.arange(num_nodes)
-    
-    pad_length = len(str(num_timepoints))
-    
-    rac_mem_active_line, rac_mem_inactive_line, rho_mem_active_line, rho_mem_inactive_line, strain_line = None, None, None, None, None
-    
-    duration = (num_timepoints/1000)*10.0
-    num_required_frames = duration*30
-    required_frame_indices = np.linspace(0, num_timepoints - 1, num=num_required_frames, dtype=np.int64)
-    
-    max_ylim = np.max([np.max(rac_mem_active), np.max(rac_mem_inactive), np.max(rho_mem_active), np.max(rho_mem_inactive), np.max(local_strains)])
-    
-    for i, tp in enumerate(required_frame_indices):
-        if tp == 0:
-            rac_mem_active_line = ax.plot(node_indices, rac_mem_active[tp], color='b', ls='', marker='.', label="$R_{a}$")[0]
-            rac_mem_inactive_line = ax.plot(node_indices, rac_mem_inactive[tp], color='b', ls='', marker='o', label="$R_{i}$")[0]
-            rho_mem_active_line = ax.plot(node_indices, rho_mem_active[tp], color='r', ls='', marker='.', label="$\\rho_{a}$")[0]
-            rho_mem_inactive_line = ax.plot(node_indices, rho_mem_inactive[tp], color='r', ls='', marker='o', label="$\\rho_{i}$")[0]
-            strain_line = ax.plot(node_indices, local_strains[tp], color='k', ls='', marker='.', label="strain")[0]
-            
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    
-            ax.set_xlim([0, num_nodes])
-            ax.set_ylim([0, max_ylim])
-            
-            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
-            ax.grid(which='both')
-            
-            ax.set_xlabel("node")
-            fig.set_size_inches(7.0, 7.0)
-        else:
-            rac_mem_active_line.set_ydata(rac_mem_active[tp])
-            rac_mem_inactive_line.set_ydata(rac_mem_inactive[tp])
-            rho_mem_active_line.set_ydata(rho_mem_active[tp])
-            rho_mem_inactive_line.set_ydata(rho_mem_inactive[tp])
-            strain_line.set_ydata(local_strains[tp])
-        
-        sum_rac = rac_cyt_gdi[tp] + np.sum(rac_mem_active[tp]) + np.sum(rac_mem_inactive[tp])
-        sum_rho = rho_cyt_gdi[tp] + np.sum(rho_mem_active[tp]) + np.sum(rho_mem_inactive[tp])
-        
-        ax.set_title("t = {} min., $R_T = {}$, $\\rho_T = {}$".format(np.round(timepoints[tp], decimals=1), np.round(sum_rac, decimals=4), np.round(sum_rho, decimals=4)))
-        
-        img_save_path = os.path.join(frame_save_dir, "img{}".format("%0{}d".format(pad_length) % i) + ".png")
-        fig.savefig(img_save_path, forward=True, dpi=100)
-        
-    animation_output_path = os.path.join(save_dir, "animated_cell_variables.mp4")
-                
-    print("Stringing together pictures...")
-    
-    command = [ 'ffmpeg',
-    '-y', # (optional) overwrite output file if it exists,
-    '-framerate', str(num_timepoints/duration),
-    '-i', os.path.join(frame_save_dir, 'img%0{}d.png'.format(pad_length)),
-    '-r', str(30), # frames per second
+    '-r', str(frame_rate), # frames per second
     '-an', # Tells FFMPEG not to expect any audio
     '-threads', str(4),
     '-vcodec', 'libx264', 
@@ -783,7 +653,7 @@ def graph_edge_and_areal_strains(T, cell_index, storefile_path, save_dir=None, s
     #avg_edge_strains = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)
     #avg_tensile_local_strains = hardio.get_data_until_timestep(cell_index, max_tstep, 'avg_tensile_local_strains', storefile_path)[:, 0]
     global_strains = hardio.get_data_until_timestep(cell_index, max_tstep, 'global_strain', storefile_path)[:, 0]
-    node_coordinates_per_tstep = hardio.get_node_coords_for_all_tsteps(cell_index, storefile_path)
+    node_coordinates_per_tstep = hardio.get_node_coords_until_tstep(cell_index, max_tstep, storefile_path)
     areas = np.array([geometry.calculate_polygon_area(ncs) for ncs in node_coordinates_per_tstep])
     areal_strains = (areas - areas[0])/areas[0]
     
@@ -968,7 +838,10 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_time.set_ylabel("$\mu m$")
     ax_time.set_xlabel("$\mu m$")
 
-    y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim), np.abs(chemoattraction_source_coords[1])])
+    if type(chemoattraction_source_coords) == type(None):
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
+    else:
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim), np.abs(chemoattraction_source_coords[1])])
     
     if max_x_data_lim > 0.0:
         max_x_data_lim = 1.1*max_x_data_lim
