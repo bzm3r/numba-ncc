@@ -122,6 +122,18 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     return 1 - hill_function(tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, strain)
     
 # -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_rgtpase_mediated_kdgdi_increase(conc_rgtpase_membrane_actives, exponent_rgtpase_autoact, threshold_rgtpase_autoact):
+    num_vertices = conc_rgtpase_membrane_actives.shape[0]
+    result = np.empty(num_vertices, dtype=np.float64)
+    
+    for ni in range(num_vertices):
+        result[ni] = hill_function(exponent_rgtpase_autoact, threshold_rgtpase_autoact, conc_rgtpase_membrane_actives[ni])
+        
+    return result
+
+# -----------------------------------------------------------------
+    
 @nb.jit(nopython=True)        
 def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]

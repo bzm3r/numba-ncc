@@ -585,10 +585,10 @@ class Environment():
                 
                 data_dict = datavis.graph_important_cell_variables_over_time_old(self.T/60.0, cell_Ls[cell_index], cell_index, tension_mediated_rac_inhibition_half_strain, self.storefile_path, polarity_scores=scores_per_tstep, save_name='C={}'.format(cell_index) + '_important_cell_vars_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
                 
+                datavis.animate_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path, save_dir=save_dir_for_cell, max_tstep=t)
+                
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 data_dict = datavis.graph_edge_and_areal_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t, general_data_structure=data_dict)
-            
-            datavis.animate_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path, save_dir=save_dir_for_cell, max_tstep=t)
             
             data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
             

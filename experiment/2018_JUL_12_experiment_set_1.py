@@ -3,6 +3,7 @@ import general.exec_utils as eu
 import general.experiment_templates as ets
 import os
 import copy
+import matplotlib
 
 scriptname = os.path.basename(__file__)[:-3]
 date_str, experiment_number = eu.get_date_and_experiment_number(scriptname)
@@ -22,7 +23,7 @@ remake_animation = False
 remake_graphs = False
 do_final_analysis = True
 
-default_cil = 60.0
+default_cil = 15.0
 integration_params = {'rtol': 1e-4}
 
 base_output_dir = "B:\\numba-ncc\\output" 
@@ -33,28 +34,28 @@ if __name__ == "__main__":
   ('kgtp_rho_multiplier', 14.0),
   ('kdgtp_rac_multiplier', 4.0),
   ('kdgtp_rho_multiplier', 24.0),
-  ('kgtp_rac_autoact_multiplier', 0.5*250.0),
-  ('kgtp_rho_autoact_multiplier', 0.5*195.0),
+  ('kgtp_rac_autoact_multiplier', 0.2*250.0),
+  ('kgtp_rho_autoact_multiplier', 0.2*195.0),
   ('kdgtp_rac_mediated_rho_inhib_multiplier', 200.0),
   ('kdgtp_rho_mediated_rac_inhib_multiplier', 200.0), ('tension_mediated_rac_inhibition_half_strain', 0.1),
   ('tension_mediated_rac_inhibition_magnitude', 40.0),
   ('max_force_rac', 3000.0),
   ('eta', 2.9*10000.0),
-  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25), ('kdgdi_rac_auto_factor', 5), ('kdgdi_rho_auto_factor', 5)])
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', (8.0/12.0)*12.0), ('randomization_node_percentage', 0.25), ('kdgdi_rac_auto_factor', 5), ('kdgdi_rho_auto_factor', 5)])
     
     sub_experiment_number = 0
     
     coa_dict = {49: 8.0, 36: 9.0, 25: 12.0, 16: 14.0, 9: 16.0, 4: 24.0, 2: 24.0, 1: 24.0}
     
-    ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=4., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True, zoomed_in=False)
+    #ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir=base_output_dir, total_time_in_hours=4., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True, zoomed_in=False)
 #    
-    ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir=base_output_dir, total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True)
+    #ets.single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir=base_output_dir, total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=0.0, default_cil=0.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, remake_graphs=False, remake_animation=False, show_centroid_trail=True, show_randomized_nodes=True)
 #    
-    ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True)
+    #ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True)
 #    
-    ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False)
+    #ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False)
     
-    
+    ets.no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), {'source_type': 'normal', 'x_offset_in_corridor': 625.0, 'gaussian_width': 625.0, 'gaussian_height': 100.0}, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=10293475, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[1], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=1, box_height=1, num_cells=1, box_y_placement_factor=0.5, remake_graphs=True, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, coa_overlay_resolution=2)
     
     #ets.chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[3.25, 3.5, 3.75, 4.0], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=coa_dict[4], default_cil=default_cil, chemotaxis_target_radius=160.0, box_width=2, box_height=2, box_y_placement_factor=0.5, num_cells=4)
     

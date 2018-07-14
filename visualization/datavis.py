@@ -574,6 +574,7 @@ def draw_frame(task):
     
     img_save_path = os.path.join(frame_save_dir, "img{}".format("%0{}d".format(pad_length) % img_index) + ".png")
     fig.savefig(img_save_path, forward=True, dpi=100)
+    plt.close(fig)
 
 # =================================================================================
     
