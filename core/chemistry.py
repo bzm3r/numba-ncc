@@ -133,7 +133,26 @@ def calculate_rgtpase_mediated_kdgdi_increase(conc_rgtpase_membrane_actives, exp
     return result
 
 # -----------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_kdgdi_rac(kdgdi_rac, kdgdi_rac_auto_factor, conc_rac_membrane_actives, conc_rac_membrane_inactives, exponent_rac_autoact, threshold_rac_autoact, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax):
+    num_vertices = conc_rac_membrane_actives.shape[0]
+    result = np.empty(num_vertices, dtype=np.float64)
     
+    for i in range(num_vertices):
+        conc_rac_membrane_active = conc_rac_membrane_actives[i]
+        
+        rac_mediated_kdgdi_increase = kdgdi_rac_auto_factor*kdgdi_rac*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active)
+        
+        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
+        if chemoattractant_signal_at_node > 1e-3:
+            chemoattraction_transduction_factor = hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_active + conc_rac_membrane_inactives[i])
+        else:
+            chemoattraction_transduction_factor = 0.0
+        
+        result[i] = kdgdi_rac + rac_mediated_kdgdi_increase + kdgdi_rac_auto_factor*kdgdi_rac*chemoattraction_transduction_factor
+        
+    return result
+
 @nb.jit(nopython=True)        
 def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]
@@ -148,13 +167,14 @@ def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exp
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]#*(1.0 - smooth_factor)
         
-        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
+#        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
+#        
+#        if chemoattractant_signal_at_node > 1e-6:
+#            chemoattractant_signal = hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
+#        else:
+#            chemoattractant_signal = 0.0
         
-        if chemoattractant_signal_at_node > 1e-6:
-            chemoattractant_signal = hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
-        else:
-            chemoattractant_signal = 0.0
-        
+        chemoattractant_signal = 0.0
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
             

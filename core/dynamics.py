@@ -117,20 +117,21 @@ def cell_dynamics(state_array, t0, state_parameters, this_cell_index, num_nodes,
     
     conc_rho_membrane_actives = chemistry.calculate_concentrations(rho_membrane_actives, avg_edge_lengths)
     
+    conc_rac_membrane_inactives = chemistry.calculate_concentrations(rac_membrane_inactives, avg_edge_lengths)
+    conc_rho_membrane_inactives = chemistry.calculate_concentrations(rho_membrane_inactives, avg_edge_lengths)
+    
     global_strain = mechanics.calculate_global_strain(perimeter_resting, node_coords)
     
     kdgtps_rac = chemistry.calculate_kdgtp_rac(conc_rho_membrane_actives, exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, kdgtp_rac_baseline, kdgtp_rho_mediated_rac_inhib_baseline, intercellular_contact_factors, migr_bdry_contact_factors, tension_mediated_rac_inhibition_half_strain, tension_mediated_rac_inhibition_magnitude, global_strain)
 
-    kdgdis_rac = kdgdi_rac*np.ones(num_nodes, dtype=np.float64) + kdgdi_rac_auto_factor*kdgdi_rac*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, exponent_rac_autoact, threshold_rac_autoact)
+    #kdgdi_rac*np.ones(num_nodes, dtype=np.float64) + kdgdi_rac_auto_factor*kdgdi_rac*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, exponent_rac_autoact, threshold_rac_autoact)
+    kdgdis_rac = chemistry.calculate_kdgdi_rac(kdgdi_rac, kdgdi_rac_auto_factor, conc_rac_membrane_actives, conc_rac_membrane_inactives, exponent_rac_autoact, threshold_rac_autoact, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax)
     
     kgtps_rho = chemistry.calculate_kgtp_rho(conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, exponent_rho_autoact, threshold_rho_autoact, kgtp_rho_baseline, kgtp_rho_autoact_baseline)
     
     kdgtps_rho = chemistry.calculate_kdgtp_rho(conc_rac_membrane_actives, exponent_rac_mediated_rho_inhib, threshold_rac_mediated_rho_inhib, kdgtp_rho_baseline, kdgtp_rac_mediated_rho_inhib_baseline)
     
     kdgdis_rho = kdgdi_rho*np.ones(num_nodes, dtype=np.float64) + kdgdi_rho_auto_factor*kdgdi_rho*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rho_membrane_actives, exponent_rho_autoact, threshold_rho_autoact)
-    
-    conc_rac_membrane_inactives = chemistry.calculate_concentrations(rac_membrane_inactives, avg_edge_lengths)
-    conc_rho_membrane_inactives = chemistry.calculate_concentrations(rho_membrane_inactives, avg_edge_lengths)
     
     diffusion_rac_membrane_active = chemistry.calculate_diffusion(conc_rac_membrane_actives, diffusion_const_active, edgeplus_lengths, avg_edge_lengths)
     diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(conc_rac_membrane_inactives, diffusion_const_inactive, edgeplus_lengths, avg_edge_lengths)

@@ -392,6 +392,7 @@ class Cell():
         #print {"rac_membrane_active": self.system_history[access_index, :, parameterorg.rac_membrane_active_index], "rho_membrane_active": self.system_history[access_index, :, parameterorg.rho_membrane_active_index], "rac_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rac_cytosolic_gdi_bound_index], "rho_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rho_cytosolic_gdi_bound_index], "rac_membrane_inactive": self.system_history[access_index, :, parameterorg.rac_membrane_inactive_index], "rho_membrane_inactive": self.system_history[access_index, :, parameterorg.rho_membrane_inactive_index]}
         
         rac_membrane_actives = self.system_history[access_index, :, parameterorg.rac_membrane_active_index]
+        rac_membrane_inactives = self.system_history[access_index, :, parameterorg.rac_membrane_inactive_index]
         rho_membrane_actives = self.system_history[access_index, :, parameterorg.rho_membrane_active_index]
         
         coa_signals = np.zeros(self.num_nodes, dtype=np.float64)
@@ -428,7 +429,10 @@ class Cell():
         
         conc_rho_membrane_actives = chemistry.calculate_concentrations(rho_membrane_actives, avg_edge_lengths)
         
-        self.system_history[access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64) + self.kdgdi_rac*self.kdgdi_rac_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, self.exponent_rac_autoact, self.threshold_rac_autoact)
+        conc_rac_membrane_inactives = chemistry.calculate_concentrations(rac_membrane_inactives, avg_edge_lengths)
+        
+        #(kdgdi_rac, kdgdi_rac_auto_factor, conc_rac_membrane_actives, conc_rac_membrane_inactives, exponent_rac_autoact, threshold_rac_autoact, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax)
+        self.system_history[access_index, :, parameterorg.kdgdi_rac_index] = chemistry.calculate_kdgdi_rac(self.kdgdi_rac, self.kdgdi_rac_auto_factor, conc_rac_membrane_actives, conc_rac_membrane_inactives, self.exponent_rac_autoact, self.threshold_rac_autoact, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax)#self.kdgdi_rac*np.ones(self.num_nodes, dtype=np.float64) + self.kdgdi_rac*self.kdgdi_rac_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, self.exponent_rac_autoact, self.threshold_rac_autoact)
         
         self.system_history[access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(self.num_nodes, dtype=np.float64) + self.kdgdi_rho*self.kdgdi_rho_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rho_membrane_actives, self.exponent_rho_autoact, self.threshold_rho_autoact)
         
@@ -636,6 +640,7 @@ class Cell():
             
         # ==================================
         rac_membrane_actives = self.system_history[next_tstep_system_history_access_index, :, parameterorg.rac_membrane_active_index]
+        rac_membrane_inactives = self.system_history[next_tstep_system_history_access_index, :, parameterorg.rac_membrane_inactive_index]
         rho_membrane_actives = self.system_history[next_tstep_system_history_access_index, :, parameterorg.rho_membrane_active_index]
         
         random_order_cell_indices = np.arange(num_cells)
@@ -711,10 +716,11 @@ class Cell():
         avg_edge_lengths = geometry.calculate_average_edge_length_around_nodes(edgeplus_lengths)
         
         conc_rac_membrane_actives = chemistry.calculate_concentrations(rac_membrane_actives, avg_edge_lengths)
+        conc_rac_membrane_inactives = chemistry.calculate_concentrations(rac_membrane_inactives, avg_edge_lengths)
         
         conc_rho_membrane_actives = chemistry.calculate_concentrations(rho_membrane_actives, avg_edge_lengths)
         
-        self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgdi_rac_index] = self.kdgdi_rac*np.ones(num_nodes, dtype=np.float64) + self.kdgdi_rac*self.kdgdi_rac_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, self.exponent_rac_autoact, self.threshold_rac_autoact)
+        self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgdi_rac_index] = chemistry.calculate_kdgdi_rac(self.kdgdi_rac, self.kdgdi_rac_auto_factor, conc_rac_membrane_actives, conc_rac_membrane_inactives, self.exponent_rac_autoact, self.threshold_rac_autoact, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax)#self.kdgdi_rac*np.ones(num_nodes, dtype=np.float64) + self.kdgdi_rac*self.kdgdi_rac_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rac_membrane_actives, self.exponent_rac_autoact, self.threshold_rac_autoact)
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.kdgdi_rho_index] = self.kdgdi_rho*np.ones(num_nodes, dtype=np.float64) + self.kdgdi_rho*self.kdgdi_rho_auto_factor*chemistry.calculate_rgtpase_mediated_kdgdi_increase(conc_rho_membrane_actives, self.exponent_rho_autoact, self.threshold_rho_autoact)
         
