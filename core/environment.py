@@ -588,7 +588,7 @@ class Environment():
                 datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline, this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t)
                 data_dict = datavis.graph_edge_and_areal_strains(self.T/60.0, cell_index, self.storefile_path, save_name='C={}'.format(cell_index) + '_strain_graph_T={}'.format(t-1), save_dir=save_dir_for_cell, max_tstep=t, general_data_structure=data_dict)
             
-            datavis.animate_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path, save_dir=save_dir_for_cell, max_tstep=t)
+            #datavis.animate_important_cell_variables_over_time(self.T/60.0, cell_index, self.storefile_path, save_dir=save_dir_for_cell, max_tstep=t)
             
             data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path, save_name='cell_velocities_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict, convergence_test=self.convergence_test)
             
