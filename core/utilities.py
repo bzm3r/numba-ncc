@@ -1747,9 +1747,9 @@ def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number,
     min_distance = np.min(distance_from_chemoattractant_source_per_timestep)
     
     if min_distance < chemotaxis_score_cutoff_radius:
-        return 1.0
+        return 1.0, min_distance
     else:
-        return 0.0
+        return 0.0, min_distance
         
         
         

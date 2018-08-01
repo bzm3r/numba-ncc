@@ -20,6 +20,7 @@ import shutil
 import subprocess
 from pathos.multiprocessing import ProcessPool 
 import time
+from decimal import Decimal
 plt.ioff()
 
 def set_fontsize(fontsize):
@@ -2234,25 +2235,93 @@ def graph_corridor_convergence_test_data(sub_experiment_number, test_num_nodes, 
     show_or_save_fig(fig_rgtpase, (12, 8), save_dir, "corridor_convergence", "rgtpase")
     
     
-def graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22):
     set_fontsize(fontsize)
-    
+    assert(len(test_magnitudes) == len(test_slopes))
     fig, ax = plt.subplots()
     
     indices = np.arange(chemotaxis_success_ratios.shape[0])
     width = 0.35
     ax.bar(indices, chemotaxis_success_ratios, width, color='b')
         
-    ax.set_ylabel("chemotaxis success")
-    ax.set_xlabel("chemoattractant magnitude")
-    ax.set_xticks(indices)
-    ax.set_xticklabels(np.round(test_chemo_magnitudes, decimals=2))
-    
-    ax.set_ylim([0, 1.0])
-    
+    ax.set_ylabel("success ratio")
+    ax.set_xticks(indices)    
+
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
     ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
         
-    show_or_save_fig(fig, (12, 8), save_dir, "chemotaxis_efficiency", "({}, {}, {})".format(box_width, box_height, num_cells))
+    ax.set_ylim([0, 1.0])
+         
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target", "({}, {}, {})".format(box_width, box_height, num_cells))
+
+def convert_rgba_to_rgb(rgba, background_color):
+    rgb = [0.0, 0.0, 0.0]
+    a = rgba[3]
+    
+    for i in range(3):
+        rgb[i] = ((1.0 - a)*background_color[i]) + (a*rgba[i])
+    
+    return rgb
+
+def graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_magnitudes, test_slopes, closest_to_source_per_run_per_mag, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    assert(len(test_magnitudes) == len(test_slopes))
+    fig, ax = plt.subplots()
+    
+    #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
+    closest_to_source_per_run_per_mag = np.transpose(closest_to_source_per_run_per_mag)
+    indices = np.arange(closest_to_source_per_run_per_mag.shape[1])
+    
+    violin = ax.violinplot(closest_to_source_per_run_per_mag, positions=indices, showmeans=True, showmedians=True)
+    bgcol = ax.get_facecolor()
+    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
+    violin['cbars'].set_color('g')
+    violin['cmins'].set_color('g')
+    violin['cmaxes'].set_color('g')
+    violin['cmeans'].set_color('r')
+    violin['cmedians'].set_color('b')
+#    [x.set_color('g') for x in violin['bodies']]
+        
+    ax.set_ylabel("closest distance to source ($\mu$m)")
+    ax.set_xticks(indices)
+    
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
+
+def graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_magnitudes, test_slopes, protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    assert(len(test_magnitudes) == len(test_slopes))
+    fig, ax = plt.subplots()
+    
+    #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
+    protrusion_lifetimes_per_magslope = np.transpose(protrusion_lifetimes_per_magslope)
+    indices = np.arange(len(protrusion_lifetimes_per_magslope))
+    
+    violin = ax.violinplot(protrusion_lifetimes_per_magslope, positions=indices, showmeans=True, showmedians=True)
+    bgcol = ax.get_facecolor()
+    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
+    violin['cbars'].set_color('g')
+    violin['cmins'].set_color('g')
+    violin['cmaxes'].set_color('g')
+    violin['cmeans'].set_color('r')
+    violin['cmedians'].set_color('b')
+#    [x.set_color('g') for x in violin['bodies']]
+        
+    ax.set_ylabel("protrusion lifetimes (min.)")
+    ax.set_xticks(indices)
+    
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_protrusion_lifetimes_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
     
         
 def graph_Tr_vs_Tp_test_data(sub_experiment_number, test_Trs, average_cell_persistence_times, save_dir=None, fontsize=22):

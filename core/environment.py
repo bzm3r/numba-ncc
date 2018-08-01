@@ -556,7 +556,7 @@ class Environment():
             
 # -----------------------------------------------------------------
             
-    def do_data_analysis_and_make_visuals(self, t, save_dir, animation_settings, animation_obj, produce_animations, produce_graphs, num_polar_graph_bins=10):
+    def do_data_analysis_and_make_visuals(self, t, save_dir, animation_settings, animation_obj, produce_graphs, produce_animation, num_polar_graph_bins=10):
         if self.environment_dir != None:
             data_dict = {}
         else:
@@ -622,7 +622,8 @@ class Environment():
                 with open(data_dict_pickle_path, 'wb') as f:
                     dill.dump(data_dict, f)
             
-        if produce_animations:
+        if produce_animation:
+            assert(type(animation_obj) != type(None))
             animation_obj.create_animation_from_data(save_dir, "animation.mp4", timestep_to_draw_till=t)
 
 # -----------------------------------------------------------------
@@ -754,7 +755,7 @@ class Environment():
     
 # ----------------------------------------------------------------- 
         
-    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
+    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_graphs=True, produce_animation=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
         self.animation_settings = animation_settings
         
         if self.mode == MODE_EXECUTE and self.simulation_execution_enabled:
@@ -782,7 +783,8 @@ class Environment():
             if self.environment_dir == None:
                 animation_obj = None
                 produce_intermediate_visuals = False
-                produce_final_visuals = False
+                produce_graphs = False
+                produce_animation=False
             else:
                 cell_group_indices = []
                 cell_Ls = []
@@ -794,8 +796,11 @@ class Environment():
                     cell_Ls.append(a_cell.L/1e-6)
                     cell_etas.append(a_cell.eta)
                     cell_skip_dynamics.append(a_cell.skip_dynamics)
-                    
-                animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
+                
+                if produce_animation:
+                    animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
+                else:
+                    animation_obj = None
                 
             if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
                 if self.last_timestep_when_environment_hard_saved == None:
@@ -846,15 +851,15 @@ class Environment():
             if self.environment_dir != None:
                 self.dump_to_store(self.curr_tpoint)
                 
-            if produce_final_visuals == True:
+            if produce_graphs == True or produce_animation:
                 t = self.num_timepoints
                 data_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
                 
                 if not os.path.exists(data_save_dir):
                     os.makedirs(data_save_dir)
                     
-                    print("Doing final analysis...")
-                    self.do_data_analysis_and_make_visuals(t, data_save_dir, animation_settings, animation_obj, True, True)
+                    print("Preparing final visualizations...")
+                    self.do_data_analysis_and_make_visuals(t, data_save_dir, animation_settings, animation_obj, produce_graphs, produce_animation)
                 
             simulation_time = np.round(simulation_et - simulation_st, decimals=2)
             

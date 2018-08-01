@@ -358,7 +358,7 @@ def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timeste
 
 # ===========================================================================
 
-def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, base_output_dir="B:\\numba-ncc\\output\\", no_randomization=False, total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, justify_parameters=True, run_experiments=True, remake_graphs=False, remake_animation=False, show_centroid_trail=False, show_randomized_nodes=False, convergence_test=False, Tr_vs_Tp_test=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, zoomed_in=False, show_coa_overlay=False):
+def single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, parameter_dict, base_output_dir="B:\\numba-ncc\\output\\", no_randomization=False, total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, justify_parameters=True, run_experiments=True, remake_graphs=False, remake_animation=False, show_centroid_trail=False, show_randomized_nodes=False, convergence_test=False, Tr_vs_Tp_test=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, zoomed_in=False, show_coa_overlay=False):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if zoomed_in == True:
@@ -439,7 +439,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, justify_parameters=justify_parameters, remake_graphs=remake_graphs, remake_animation=remake_animation)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, justify_parameters=justify_parameters, remake_graphs=remake_graphs, remake_animation=remake_animation)
     
     if do_final_analysis:
         centroids_persistences_speeds_per_repeat = []
@@ -447,7 +447,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
             environment_name = "RPT={}".format(rpt_number)
             environment_dir = os.path.join(experiment_dir, environment_name)
             storefile_path = eu.get_storefile_path(environment_dir)
-            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False, environment_wide_variable_defns)
+            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
             
             print(("Analyzing repeat number: ", rpt_number))
             time_unit, centroids_persistences_speeds = cu.analyze_single_cell_motion(relevant_environment, storefile_path, no_randomization)
@@ -493,7 +493,7 @@ def collate_single_cell_test_data(num_experiment_repeats, experiment_dir):
 
 # ===========================================================================
 
-def convergence_test_simple(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_nodes=np.array([]), default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, num_experiment_repeats=5, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}):
+def convergence_test_simple(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_nodes=np.array([]), default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, num_experiment_repeats=5, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}):
     
     num_tests = len(test_num_nodes)
     
@@ -511,7 +511,7 @@ def convergence_test_simple(date_str, experiment_number, sub_experiment_number, 
         
         this_parameter_dict = copy.deepcopy(parameter_dict)
         this_parameter_dict.update([("num_nodes", nn)])
-        experiment_name = single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, base_output_dir=base_output_dir, no_randomization=no_randomization, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, convergence_test=True, do_final_analysis=do_final_analysis, biased_rgtpase_distrib_defn_dict=biased_rgtpase_distrib_defn_dict)
+        experiment_name = single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, base_output_dir=base_output_dir, no_randomization=no_randomization, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, convergence_test=True, do_final_analysis=do_final_analysis, biased_rgtpase_distrib_defn_dict=biased_rgtpase_distrib_defn_dict)
             
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         
@@ -536,7 +536,7 @@ def convergence_test_simple(date_str, experiment_number, sub_experiment_number, 
 
 # ============================================================================
 
-def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_Trs=np.array([]), num_experiment_repeats=50, default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False):
+def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_Trs=np.array([]), num_experiment_repeats=50, default_coa=0.0, default_cil=0.0, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False):
     
     num_tests = len(test_Trs)
     
@@ -550,7 +550,7 @@ def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_
         
         this_parameter_dict = copy.deepcopy(parameter_dict)
         this_parameter_dict.update([("randomization_time_mean", Tr)])
-        experiment_name = single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, base_output_dir=base_output_dir, no_randomization=no_randomization, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, convergence_test=False, Tr_vs_Tp_test=True, do_final_analysis=do_final_analysis)
+        experiment_name = single_cell_polarization_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, base_output_dir=base_output_dir, no_randomization=no_randomization, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, show_centroid_trail=True, convergence_test=False, Tr_vs_Tp_test=True, do_final_analysis=do_final_analysis)
             
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         
@@ -568,7 +568,7 @@ def Tr_vs_Tp_test(date_str, experiment_number, sub_experiment_number, parameter_
     
 # ============================================================================
 
-def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, corridor_definition=["default"], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, justify_parameters=True):
+def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, corridor_definition=["default"], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, show_coa_overlay=False, justify_parameters=True):
     global_scale = 4
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
@@ -632,7 +632,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
     
     if do_final_analysis:
         all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
@@ -659,7 +659,7 @@ def make_no_rgtpase_parameter_dict(parameter_dict):
     
     return no_rgtpase_parameter_dict
     
-def collision_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8, run_experiments=True, remake_graphs=False, remake_animation=False, show_coa_overlay=False):
+def collision_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, migr_bdry_height_factor=0.8, run_experiments=True, remake_graphs=False, remake_animation=False, show_coa_overlay=False):
     global_scale = 4
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
@@ -723,13 +723,13 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=False)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=False)
 
     print("Done.")
     
 # ============================================================================
 
-def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, dist_from_block=1.0, init_polarization="opposite", num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, block_cells_width=4, block_cells_height=4, remake_graphs=False, remake_animation=False, run_experiments=True, show_coa_overlay=False, justify_parameters=True):
+def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, dist_from_block=1.0, init_polarization="opposite", num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, block_cells_width=4, block_cells_height=4, remake_graphs=False, remake_animation=False, run_experiments=True, show_coa_overlay=False, justify_parameters=True):
 
     acceptable_init_polarization_opts = ["opposite", "random", "o", "r"]
     if init_polarization not in acceptable_init_polarization_opts:
@@ -811,13 +811,13 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
     
     print("Done.")
 
 # =============================================================================
 
-def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, remake_graphs=False, run_experiments=True, remake_animation=False, show_centroid_trail=True, show_rac_random_spikes=False, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
+def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, remake_graphs=False, run_experiments=True, remake_animation=False, show_centroid_trail=True, show_rac_random_spikes=False, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if auto_calculate_num_cells:
@@ -892,7 +892,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
         
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
     
     experiment_name_format_string = "RPT={}"
     cell_centroids_persistences_speeds_per_repeat = []
@@ -914,7 +914,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
         environment_name = experiment_name_format_string.format(rpt_number)
         environment_dir = os.path.join(experiment_dir, environment_name)
         storefile_path = eu.get_storefile_path(environment_dir)
-        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False, environment_wide_variable_defns)
+        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
         
         time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds   = cu.analyze_cell_motion(relevant_environment, storefile_path, si, rpt_number)
         
@@ -947,7 +947,7 @@ def make_linear_gradient_function(source_x, source_y, max_value, slope):
     @nb.jit(nopython=True)
     def f(x):
         d = np.sqrt((x[0] - source_x)**2 + (x[1] - source_y)**2)
-        calc_value = max_value - slope*d
+        calc_value = max_value*(1 - slope*d)
         
         if calc_value > max_value:
             return max_value
@@ -1118,7 +1118,7 @@ def make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_sou
       
 # ============================================================================
             
-def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, corridor_definition=["default"], run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, convergence_test=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal", specific_timesteps_to_draw_as_svg=[], chemoattractant_source_definition=[]):
+def corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, corridor_definition=["default"], run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, convergence_test=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal", specific_timesteps_to_draw_as_svg=[], chemoattractant_source_definition=[]):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if num_cells == 0:
@@ -1262,7 +1262,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, justify_parameters=justify_parameters)
     
     drift_args = None
     if do_final_analysis:
@@ -1284,7 +1284,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
 
 # ============================================================================
     
-def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal", specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0, show_centroid_trail=False):
+def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal", specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0, show_centroid_trail=False):
     
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
@@ -1390,7 +1390,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, justify_parameters=justify_parameters)
     
     drift_args = None
     if do_final_analysis:
@@ -1413,7 +1413,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
 
 # ============================================================================
 
-def corridor_migration_symmetric_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, show_coa_overlay=False, global_scale=1, chemoattractant_source_definition=None):
+def corridor_migration_symmetric_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, corridor_height=None, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, show_coa_overlay=False, global_scale=1, chemoattractant_source_definition=None):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     
     if num_cells == 0:
@@ -1512,7 +1512,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
     
     drift_args = None
     if do_final_analysis:
@@ -1534,17 +1534,20 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
 
 # =============================================================================
 
-def chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0, chemotaxis_target_radius=160.0, box_width=1, box_height=1, box_y_placement_factor=0.5, num_cells=1):
+def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0, chemotaxis_target_radius=160.0, box_width=1, box_height=1, box_y_placement_factor=0.5, num_cells=1):
     
     test_chemo_magnitudes = sorted(test_chemo_magnitudes)
     
     chemotaxis_success_ratios = np.zeros(len(test_chemo_magnitudes), dtype=np.float64)
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
     
+    closest_to_source_per_repeat_per_magslope = np.zeros((len(test_chemo_magnitudes), num_experiment_repeats), dtype=np.float64)
+    protrusion_lifetimes_per_magslope = []
+    
     for xi, chm in enumerate(test_chemo_magnitudes):
         print("=========")
         print("mag: {}".format(chm))
-        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm, 'slope': test_chemo_slope}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, box_y_placement_factor=box_y_placement_factor, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True, chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
+        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm, 'slope': test_chemo_slope}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, box_y_placement_factor=box_y_placement_factor, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True, chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
         
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         experiment_name_format_string = "RPT={}"
@@ -1563,45 +1566,64 @@ def chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number
                     if not os.path.isfile(storefile_path):
                         raise Exception("Storefile does not exist.")
                     
-                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                     if not (relevant_environment.simulation_complete() and (relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                         raise Exception("Simulation is not complete.")
             
                 print("Data exists.")
-                
+        
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
+        
+        protrusion_lifetimes = []
+        for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
+            for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                for l, d in protrusion_lifetime_dirn:
+                    protrusion_lifetimes.append(l/60.0)
+        
+        protrusion_lifetimes_per_magslope.append(protrusion_lifetimes)
+        
         chemotaxis_success_per_repeat = []
+        closest_to_source_per_repeat = []
         for rpt_number in range(num_experiment_repeats):
             environment_name = experiment_name_format_string.format(rpt_number)
             environment_dir = os.path.join(experiment_dir, environment_name)
             storefile_path = eu.get_storefile_path(environment_dir)
             #empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
-            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False, environment_wide_variable_defns)
+            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
             
-            chemotaxis_success  = cu.analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y, chemotaxis_target_radius)
+            chemotaxis_success, closest_to_source  = cu.analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y, chemotaxis_target_radius)
             
             chemotaxis_success_per_repeat.append(chemotaxis_success)
+            closest_to_source_per_repeat.append(closest_to_source)
             
         chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat)/num_experiment_repeats
+        closest_to_source_per_repeat_per_magslope[xi] = closest_to_source_per_repeat
 
     print("=========")
     # sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22
-    datavis.graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), closest_to_source_per_repeat_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
     
     print("Complete.")
     
 # =============================================================================
 
-def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0):
+def chemotaxis_threshold_test_slopes(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_slopes=[], num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0, chemotaxis_target_radius=160.0, box_width=1, box_height=1, box_y_placement_factor=0.5, num_cells=1, halfmax_dist=625.0):
     
-    test_chemo_magnitudes = sorted(test_chemo_magnitudes)
+    test_chemo_slopes = sorted(test_chemo_slopes)
     
-    chemotaxis_success_ratios = np.zeros(len(test_chemo_magnitudes), dtype=np.float64)
+    chemotaxis_success_ratios = np.zeros(len(test_chemo_slopes), dtype=np.float64)
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
     
-    for xi, chm in enumerate(test_chemo_magnitudes):
+    closest_to_source_per_repeat_per_magslope = np.zeros((len(test_chemo_slopes), num_experiment_repeats), dtype=np.float64)
+    protrusion_lifetimes_per_magslope = []
+    required_magnitudes = [slope*halfmax_dist*2 for slope in test_chemo_slopes]
+    
+    for xi, chs in enumerate(test_chemo_slopes):
         print("=========")
-        print("mag: {}".format(chm))
-        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm, 'slope': test_chemo_slope}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=2, box_height=1, box_y_placement_factor=0.5, num_cells=2, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True)
+        print("slope: {}".format(chs))
+        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': required_magnitudes[xi], 'slope': chs}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, box_y_placement_factor=box_y_placement_factor, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True, chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
         
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         experiment_name_format_string = "RPT={}"
@@ -1620,7 +1642,79 @@ def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experime
                     if not os.path.isfile(storefile_path):
                         raise Exception("Storefile does not exist.")
                     
-                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
+                    if not (relevant_environment.simulation_complete() and (relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
+                        raise Exception("Simulation is not complete.")
+            
+                print("Data exists.")
+                
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
+        
+        protrusion_lifetimes = []
+        for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
+            for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                for l, d in protrusion_lifetime_dirn:
+                    protrusion_lifetimes.append(l/60.0)
+        
+        protrusion_lifetimes_per_magslope.append(protrusion_lifetimes)
+        
+        chemotaxis_success_per_repeat = []
+        closest_to_source_per_repeat = []
+        for rpt_number in range(num_experiment_repeats):
+            environment_name = experiment_name_format_string.format(rpt_number)
+            environment_dir = os.path.join(experiment_dir, environment_name)
+            storefile_path = eu.get_storefile_path(environment_dir)
+            #empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
+            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
+            
+            chemotaxis_success, closest_to_source  = cu.analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y, chemotaxis_target_radius)
+            
+            chemotaxis_success_per_repeat.append(chemotaxis_success)
+            closest_to_source_per_repeat.append(closest_to_source)
+            
+        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat)/num_experiment_repeats
+        closest_to_source_per_repeat_per_magslope[xi] = closest_to_source_per_repeat
+
+    print("=========")
+    # sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22
+    datavis.graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_slopes, required_magnitudes, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, required_magnitudes, test_chemo_slopes, closest_to_source_per_repeat_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, required_magnitudes, test_chemo_slopes, protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    
+    print("Complete.")
+    
+# =============================================================================
+
+def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0):
+    
+    test_chemo_magnitudes = sorted(test_chemo_magnitudes)
+    
+    chemotaxis_success_ratios = np.zeros(len(test_chemo_magnitudes), dtype=np.float64)
+    experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
+    
+    for xi, chm in enumerate(test_chemo_magnitudes):
+        print("=========")
+        print("mag: {}".format(chm))
+        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm, 'slope': test_chemo_slope}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=2, box_height=1, box_y_placement_factor=0.5, num_cells=2, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True)
+        
+        experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+        experiment_name_format_string = "RPT={}"
+        
+        if run_experiments == False:
+            if not os.path.exists(experiment_dir):
+                raise Exception("Experiment directory does not exist.")
+            else:
+                for rpt_number in range(num_experiment_repeats):
+                    environment_name = experiment_name_format_string.format(rpt_number)
+                    environment_dir = os.path.join(experiment_dir, environment_name)
+                    if not os.path.exists(environment_dir):
+                        raise Exception("Environment directory does not exist.")
+                
+                    storefile_path = eu.get_storefile_path(environment_dir)
+                    if not os.path.isfile(storefile_path):
+                        raise Exception("Storefile does not exist.")
+                    
+                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                     if not (relevant_environment.simulation_complete() and (relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                         raise Exception("Simulation is not complete.")
             
@@ -1632,7 +1726,7 @@ def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experime
             environment_dir = os.path.join(experiment_dir, environment_name)
             storefile_path = eu.get_storefile_path(environment_dir)
             #empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
-            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False, environment_wide_variable_defns)
+            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
             
             chemotaxis_success  = cu.analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y)
             
@@ -1650,7 +1744,7 @@ def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experime
     
 # =============================================================================
 
-def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], test_cils=[], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, run_experiments=True, remake_graphs=False, remake_animation=False):
+def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], test_cils=[], num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, auto_calculate_num_cells=True, num_cells=None, run_experiments=True, remake_graphs=False, remake_animation=False):
     
     test_coas = sorted(test_coas)
     test_cils = sorted(test_cils)
@@ -1662,7 +1756,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
         for yi, test_coa in enumerate(test_coas):
             print("=========")
             print(("COA = {}, CIL = {}".format(test_coa, test_cil)))
-            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=test_coa, default_cil=test_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, auto_calculate_num_cells=auto_calculate_num_cells, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation)
+            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=test_coa, default_cil=test_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, auto_calculate_num_cells=auto_calculate_num_cells, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation)
             
             experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
             experiment_name_format_string = experiment_name + "_RPT={}"
@@ -1688,7 +1782,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
                             print("Storefile does not exist.")
                             break
                         
-                        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                         if not (relevant_environment.simulation_complete() and (relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                             print("Simulation is not complete.")
                             no_data = True
@@ -1703,7 +1797,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
                 environment_name = experiment_name_format_string.format(rpt_number)
                 environment_dir = os.path.join(experiment_dir, environment_name)
                 storefile_path = eu.get_storefile_path(environment_dir)
-                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                 
                 time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds  = cu.analyze_cell_motion(relevant_environment, storefile_path, 0, rpt_number)
                 
@@ -1725,7 +1819,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
 
 # =============================================================================
 
-def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], coa_dict=[], default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis_after_running_experiments=False):
+def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], coa_dict=[], default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis_after_running_experiments=False):
     
     test_num_cells = sorted(test_num_cells)
     test_heights = sorted(test_heights)
@@ -1739,7 +1833,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
             calculated_width = int(np.ceil(float(tnc)/th))
             print("=========")
             print(("num_cells = {}, height = {}".format(tnc, th)))
-            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=calculated_width, box_height=th, num_cells=tnc, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis_after_running_experiments)
+            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=calculated_width, box_height=th, num_cells=tnc, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis_after_running_experiments)
             
             experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
             experiment_name_format_string = experiment_name + "_RPT={}"
@@ -1766,7 +1860,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
                             print("Storefile does not exist.")
                             break
                         
-                        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                         if not (relevant_environment.simulation_complete() and (relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                             print("Simulation is not complete.")
                             no_data = True
@@ -1783,7 +1877,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
                 environment_name = experiment_name_format_string.format(rpt_number)
                 environment_dir = os.path.join(experiment_dir, environment_name)
                 storefile_path = eu.get_storefile_path(environment_dir)
-                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, False)
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
                 
                 time_unit, min_x_centroid_per_timestep, max_x_centroid_per_timestep, group_centroid_x_per_timestep, group_centroid_per_timestep, group_speed_per_timestep, group_persistence_ratio, group_persistence_time, centroids_persistences_speeds   = cu.analyze_cell_motion(relevant_environment, storefile_path, 0, rpt_number)
                 
@@ -1806,7 +1900,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
     
 # =============================================================================
 
-def corridor_migration_collective_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_heights=[], test_num_cells=[], coa_dict={}, default_cil=40.0, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, graph_x_dimension="test_num_cells", produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method=""):
+def corridor_migration_collective_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_heights=[], test_num_cells=[], coa_dict={}, default_cil=40.0, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, graph_x_dimension="test_num_cells", produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method=""):
     
     assert(len(test_num_cells) == len(test_heights))
     
@@ -1835,7 +1929,7 @@ def corridor_migration_collective_tests(date_str, experiment_number, sub_experim
         print("=========")
         print(("num_cells = {}, height = {}, width = {}".format(tnc, th, tw)))
         
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=th, num_cells=tnc, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[tnc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=th, num_cells=tnc, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method)
         
         all_experiment_drift_args.append(drift_args)
             
@@ -1861,7 +1955,7 @@ def corridor_migration_collective_tests(date_str, experiment_number, sub_experim
     
 # =============================================================================
 
-def corridor_migration_coa_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], default_cil=0.0, box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
+def corridor_migration_coa_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_coas=[], default_cil=0.0, box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
 
     
     num_tests = len(test_coas)
@@ -1880,7 +1974,7 @@ def corridor_migration_coa_tests(date_str, experiment_number, sub_experiment_num
         print("=========")
         print(("coa = {}".format(tcoa)))
         
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=tcoa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=tcoa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
         
         all_experiment_drift_args.append(drift_args)
             
@@ -1906,7 +2000,7 @@ def corridor_migration_coa_tests(date_str, experiment_number, sub_experiment_num
     
 # =============================================================================
 
-def corridor_migration_cil_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_cils=[], default_coa=0.0, box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
+def corridor_migration_cil_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_cils=[], default_coa=0.0, box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
 
     
     num_tests = len(test_cils)
@@ -1925,7 +2019,7 @@ def corridor_migration_cil_tests(date_str, experiment_number, sub_experiment_num
         print("=========")
         print(("cil = {}".format(tcil)))
         
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=tcil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=tcil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
         
         all_experiment_drift_args.append(drift_args)
             
@@ -1951,7 +2045,7 @@ def corridor_migration_cil_tests(date_str, experiment_number, sub_experiment_num
     
 # =============================================================================
 
-def corridor_migration_vertex_choice_tests(date_str, experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_cil=0.0, default_coa=0.0, sub_experiment_numbers=[], test_vertex_choice_ratios_and_randomization_magnitudes=[], box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
+def corridor_migration_vertex_choice_tests(date_str, experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_cil=0.0, default_coa=0.0, sub_experiment_numbers=[], test_vertex_choice_ratios_and_randomization_magnitudes=[], box_height=1, box_width=4, corridor_height=1, num_cells=4, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
 
     assert(len(sub_experiment_numbers) == len(test_vertex_choice_ratios_and_randomization_magnitudes))
     num_tests = len(test_vertex_choice_ratios_and_randomization_magnitudes)
@@ -1975,7 +2069,7 @@ def corridor_migration_vertex_choice_tests(date_str, experiment_number, paramete
         this_pd = copy.deepcopy(parameter_dict)
         this_pd.update([("randomization_node_percentage", tvr), ("randomization_magnitude", trm)])
         
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sen, this_pd, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sen, this_pd, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, corridor_height=corridor_height, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
         
         all_experiment_drift_args.append(drift_args)
             
@@ -2002,7 +2096,7 @@ def corridor_migration_vertex_choice_tests(date_str, experiment_number, paramete
     
 # =============================================================================
 
-def corridor_migration_parameter_set_test(date_str, experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, labels=[], sub_experiment_numbers=[], parameter_update_dicts=[], default_coas=[], default_cils=[], num_cells=2, box_height=1, box_width=2, corridor_height=1, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
+def corridor_migration_parameter_set_test(date_str, experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, labels=[], sub_experiment_numbers=[], parameter_update_dicts=[], default_coas=[], default_cils=[], num_cells=2, box_height=1, box_width=2, corridor_height=1, num_experiment_repeats=1, particular_repeats=[], timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, max_animation_corridor_length=None, global_scale=1, cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
     
     assert(len(labels) == len(sub_experiment_numbers) == len(default_coas) == len(default_cils) == len(parameter_update_dicts))
     
@@ -2025,7 +2119,7 @@ def corridor_migration_parameter_set_test(date_str, experiment_number, parameter
  
         this_pd = copy.deepcopy(parameter_dict)
         this_pd.update(pud)
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sen, this_pd, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=dcoa, default_cil=dcil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sen, this_pd, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=dcoa, default_cil=dcil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=box_width, box_height=box_height, num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, max_animation_corridor_length=max_animation_corridor_length, global_scale=global_scale, cell_placement_method=cell_placement_method, justify_parameters=justify_parameters)
         
         all_experiment_drift_args.append(drift_args)
             
@@ -2052,7 +2146,7 @@ def corridor_migration_parameter_set_test(date_str, experiment_number, parameter
 # =============================================================================
     
 
-def convergence_test_corridor(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_nodes=[], coa_dict={}, default_cil=40.0, default_interaction_factor_migr_bdry_contact=30.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased uniform', np.array([0, 2*np.pi]), 0.3]}):
+def convergence_test_corridor(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_nodes=[], coa_dict={}, default_cil=40.0, default_interaction_factor_migr_bdry_contact=30.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False, biased_rgtpase_distrib_defn_dict={'default': ['unbiased uniform', np.array([0, 2*np.pi]), 0.3]}):
     
     num_tests = len(test_num_nodes)
     num_timepoints = int(total_time_in_hours*3600.0/timestep_length) + 1
@@ -2072,7 +2166,7 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
         this_parameter_dict = copy.deepcopy(parameter_dict)
         this_parameter_dict['num_nodes'] = np.array([nn], dtype=np.int64)[0]
         this_parameter_dict['interaction_factor_migr_bdry_contact'] =  default_interaction_factor_migr_bdry_contact/nn
-        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2]/nn, default_cil=default_cil/nn, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=2, box_height=1, num_cells=2, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, convergence_test=True, biased_rgtpase_distrib_defn_dict=biased_rgtpase_distrib_defn_dict)
+        experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, this_parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2]/nn, default_cil=default_cil/nn, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=2, box_height=1, num_cells=2, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, convergence_test=True, biased_rgtpase_distrib_defn_dict=biased_rgtpase_distrib_defn_dict)
             
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         
@@ -2097,7 +2191,7 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
     
 # =============================================================================
 
-def corridor_migration_init_conditions_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], max_placement_distance_factors=[], init_random_cell_placement_x_factors=[], test_widths=[], corridor_heights=[], box_placement_factors=[], coa_dict={}, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False):
+def corridor_migration_init_conditions_tests(date_str, experiment_number, sub_experiment_number, parameter_dict, experiment_set_label="", no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_num_cells=[], test_heights=[], max_placement_distance_factors=[], init_random_cell_placement_x_factors=[], test_widths=[], corridor_heights=[], box_placement_factors=[], coa_dict={}, default_cil=40.0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False):
     
     num_tests = len(test_num_cells)
     assert(np.all([len(x) == num_tests for x in [test_heights, test_widths, corridor_heights, box_placement_factors, max_placement_distance_factors, init_random_cell_placement_x_factors]]))
@@ -2116,9 +2210,9 @@ def corridor_migration_init_conditions_tests(date_str, experiment_number, sub_ex
         print("=========")
         print(("nc = {}, h = {}, w = {}, ch = {}, bpy = {}".format(nc, th, tw, ch, bpy)))
         if th != "r":
-            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[nc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=th, num_cells=nc, corridor_height=ch, box_y_placement_factor=bpy, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis)
+            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[nc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=th, num_cells=nc, corridor_height=ch, box_y_placement_factor=bpy, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis)
         else:
-            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[nc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=ch, num_cells=nc, corridor_height=ch, box_y_placement_factor=bpy, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, cell_placement_method="r", max_placement_distance_factor=mpdf, init_random_cell_placement_x_factor=ircpx)
+            experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[nc], default_cil=default_cil, num_experiment_repeats=num_experiment_repeats, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=tw, box_height=ch, num_cells=nc, corridor_height=ch, box_y_placement_factor=bpy, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=do_final_analysis, cell_placement_method="r", max_placement_distance_factor=mpdf, init_random_cell_placement_x_factor=ircpx)
             
         experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
         
@@ -2142,7 +2236,7 @@ def corridor_migration_init_conditions_tests(date_str, experiment_number, sub_ex
     
 #==============================================================================
 
-def corridor_migration_multigroup_experiment(date_str, experiment_number, baseline_parameter_dict, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6, timestep_length=2, num_nodes=16, box_width=2, box_height=1, cell_diameter=40, num_groups=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=1.2, default_intra_group_cil=20, default_inter_group_cil=40, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_final_visuals=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, animation_time_resolution='normal', remake_graphs=False, remake_animation=False):    
+def corridor_migration_multigroup_experiment(date_str, experiment_number, baseline_parameter_dict, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=6, timestep_length=2, num_nodes=16, box_width=2, box_height=1, cell_diameter=40, num_groups=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=1.2, default_intra_group_cil=20, default_inter_group_cil=40, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, animation_time_resolution='normal', remake_graphs=False, remake_animation=False):    
     num_cells_in_group = box_width*box_height
     
     experiment_name_format_string = "multigroup_corridor_migration_{}_NC=({}, {})_NG={}".format("{}", box_width, box_height, num_groups)
@@ -2228,7 +2322,7 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
     
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps, timesteps_between_generation_of_intermediate_visuals)
     
-    eu.run_template_experiments(experiment_dir, baseline_parameter_dict, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
+    eu.run_template_experiments(experiment_dir, baseline_parameter_dict, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation)
 
     print("Done.")    
 
