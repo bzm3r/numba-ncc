@@ -146,7 +146,7 @@ class Cell():
 # -----------------------------------------------------------------
     def __init__(self, cell_label, cell_group_index, cell_index,  
                  integration_params, 
-                 num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict, init_rho_gtpase_conditions=None):
+                 num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict, init_rho_gtpase_conditions=None, chemoattractant_signal_halfmax=0.0):
 
         self.verbose = verbose
         
@@ -260,6 +260,7 @@ class Cell():
         self.kgdi_rac = parameters_dict['kgdi_rac']*self.T
         self.kdgdi_rac = parameters_dict['kdgdi_rac']*self.T*(1.0/self.num_nodes)
         
+        self.chemoattractant_signal_halfmax = chemoattractant_signal_halfmax
         # ======================================================
         
         self.kgtp_rho_baseline = parameters_dict['kgtp_rho_baseline']*self.T
@@ -392,7 +393,7 @@ class Cell():
         coa_signals = np.zeros(self.num_nodes, dtype=np.float64)
         self.system_history[access_index, :, parameterorg.coa_signal_index] = coa_signals
         chemoattractant_signal_on_nodes = np.zeros(self.num_nodes, dtype=np.float64)
-        chemoattractant_signal_halfmax = 1e12
+        chemoattractant_signal_halfmax = self.chemoattractant_signal_halfmax
         self.system_history[access_index, :, parameterorg.chemoattractant_signal_on_nodes_index] = np.zeros(self.num_nodes, dtype=np.float64)
         
         intercellular_contact_factors = np.zeros(self.num_nodes)
@@ -791,7 +792,7 @@ class Cell():
             self.system_history[0, :, parameterorg.info_indices_dict[info_label]] = fetched_data
         
 # -----------------------------------------------------------------
-    def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, chemoattractant_signal_halfmax, be_talkative=False):
+    def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False):
         dynamics.print_var = True
         
         if self.skip_dynamics == False:            
@@ -809,14 +810,14 @@ class Cell():
             
             chemoattractant_signal_on_nodes = [chemoattractant_signal_fn(x*self.L/1e-6) for x in all_cells_node_coords[this_cell_index]]
             
-            rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax)
+            rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes, self.chemoattractant_signal_halfmax)
             
             #print "Integrating..."
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]
             
-            self.set_next_state(next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, chemoattractant_signal_halfmax,  close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors)
+            self.set_next_state(next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, self.chemoattractant_signal_halfmax,  close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors)
             
         else:
             self.system_history[self.get_system_history_access_index(self.curr_tpoint + 1)] = self.system_history[self.get_system_history_access_index(self.curr_tpoint)]

@@ -139,7 +139,7 @@ def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exp
         chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
         
         if chemoattractant_signal_at_node > 1e-6:
-            chemoattractant_signal = hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
+            chemoattractant_signal = chemoattractant_signal_at_node#2*chemoattractant_signal_halfmax*hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
         else:
             chemoattractant_signal = 0.0
         
@@ -148,7 +148,7 @@ def calculate_kgtp_rac(conc_rac_membrane_actives, migr_bdry_contact_factors, exp
             
         kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
         
-        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + (chemoattractant_signal + 1.0)*kgtp_rac_autoact
+        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact + chemoattractant_signal*((randomization_factors[i] + coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact)
         
     return result
 
@@ -178,7 +178,7 @@ def calculate_kdgtp_rac(conc_rho_membrane_actives, exponent_rho_mediated_rac_inh
     num_vertices = conc_rho_membrane_actives.shape[0]
     result = np.empty(num_vertices, dtype=np.float64)
     
-    strain_inhibition = tension_mediated_rac_inhibition_magnitude*hill_function(3, tension_mediated_rac_inhibition_half_strain, global_strain)
+    strain_inhibition = tension_mediated_rac_inhibition_magnitude*hill_function(10, tension_mediated_rac_inhibition_half_strain, global_strain)
     
     for i in range(num_vertices):        
         kdgtp_rho_mediated_rac_inhib = kdgtp_rho_mediated_rac_inhib_baseline*hill_function(exponent_rho_mediated_rac_inhib, threshold_rho_mediated_rac_inhib, conc_rho_membrane_actives[i])

@@ -52,7 +52,7 @@ all_parameter_labels = rho_gtpase_parameter_labels + mech_parameter_labels + spa
 
 polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None}
 
-user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'tension_mediated_rac_inhibition_magnitude': [0.75, 100.0], 'strain_calculation_type': None, 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.01, 1]}
+user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': None, 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'tension_mediated_rac_inhibition_magnitude': [0.75, 100.0], 'strain_calculation_type': None, 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': None, 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.01, 1]}
 
 
 user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0]}
@@ -129,12 +129,12 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['kdgtp_rho_mediated_rac_inhib_baseline'] = kdgtp_rac_unmodified*user_parameter_dict['kdgtp_rho_mediated_rac_inhib_multiplier'] # per second
     cell_parameter_dict['kdgtp_rac_mediated_rho_inhib_baseline'] = kdgtp_rho_unmodified*user_parameter_dict['kdgtp_rac_mediated_rho_inhib_multiplier'] # per second
     #--------------
-    kgdi = 0.15
+    #kgdi = 0.15
     kdgdi = 0.02
-    cell_parameter_dict['kgdi_rac'] = kgdi*user_parameter_dict['kgdi_multiplier'] # per second
+    cell_parameter_dict['kgdi_rac'] = kdgdi*user_parameter_dict['kgdi_multiplier'] # per second
     cell_parameter_dict['kdgdi_rac'] = kdgdi*user_parameter_dict['kdgdi_multiplier'] # per second
     #--------------
-    cell_parameter_dict['kgdi_rho'] = kgdi*user_parameter_dict['kgdi_multiplier'] # per second
+    cell_parameter_dict['kgdi_rho'] = kdgdi*user_parameter_dict['kgdi_multiplier'] # per second
     cell_parameter_dict['kdgdi_rho'] = kdgdi*user_parameter_dict['kdgdi_multiplier'] # per second
     #--------------
     cell_parameter_dict['threshold_rac_activity'] = user_parameter_dict['threshold_rac_activity_multiplier']*C_total

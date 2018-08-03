@@ -280,29 +280,26 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
 # ====================================================================
 
 def remake_graphics(remake_graphs, remake_animation, environment_dir, an_environment, animation_settings):
-    if remake_graphs:
-        print("making graphics...")
-        images_global_dir = os.path.join(environment_dir, "images_global")
-        
-        curr_tpoint = an_environment.curr_tpoint
-        draw_tpoint = curr_tpoint + 1
-        visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
-        
-        cell_group_indices = []
-        cell_Ls = []
-        cell_etas = []
-        cell_skip_dynamics = []
+    curr_tpoint = an_environment.curr_tpoint
+    draw_tpoint = curr_tpoint + 1
+    visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
     
-        for a_cell in an_environment.cells_in_environment:
-            cell_group_indices.append(a_cell.cell_group_index)
-            cell_Ls.append(a_cell.L/1e-6)
-            cell_etas.append(a_cell.eta)
-            cell_skip_dynamics.append(a_cell.skip_dynamics)
-    
+    cell_group_indices = []
+    cell_Ls = []
+    cell_etas = []
+    cell_skip_dynamics = []
+
+    for a_cell in an_environment.cells_in_environment:
+        cell_group_indices.append(a_cell.cell_group_index)
+        cell_Ls.append(a_cell.L/1e-6)
+        cell_etas.append(a_cell.eta)
+        cell_skip_dynamics.append(a_cell.skip_dynamics)
+
+    images_global_dir = os.path.join(environment_dir, "images_global")
+        
     if remake_animation:
-        if remake_animation:
-            if os.path.exists(images_global_dir) and remake_animation:
-                shutil.rmtree(images_global_dir)
+        if os.path.exists(images_global_dir):
+            shutil.rmtree(images_global_dir)
                 
         visuals_dir_content = os.listdir(visuals_save_dir)
         for content in visuals_dir_content:
@@ -312,11 +309,14 @@ def remake_graphics(remake_graphs, remake_animation, environment_dir, an_environ
                     shutil.rmtree(content_path)
                     break
                 
-        ani_sets = an_environment.animation_settings
-        ani_sets.update(animation_settings)
+    ani_sets = an_environment.animation_settings
+    ani_sets.update(animation_settings)
+    
+    animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
+    
+    print("making graphics...")
+    an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_graphs, remake_animation)
         
-        animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-        an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
 
 def determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string):
     environment_name = template_experiment_name_format_string.format(repeat_number)

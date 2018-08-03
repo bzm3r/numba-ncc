@@ -275,6 +275,7 @@ class Environment():
         self.init_random_cell_placement_x_factor = init_random_cell_placement_x_factor
         
         self.micrometer = 1e-6
+        self.chemoattractant_signal_halfmax = 0.5*self.chemoattractant_signal_fn(np.zeros(2, dtype=np.float64))
         
         if not shell_environment:
             self.num_cell_groups = len(self.cell_group_defns)
@@ -427,7 +428,7 @@ class Environment():
             if self.parameter_explorer_run and self.parameter_explorer_init_rho_gtpase_conditions != None:
                 new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict, init_rho_gtpase_conditions=self.parameter_explorer_init_rho_gtpase_conditions)
             else:
-                new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict)
+                new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict, chemoattractant_signal_halfmax=self.chemoattractant_signal_halfmax)
             
             cells_in_group.append(new_cell)
             
@@ -529,7 +530,7 @@ class Environment():
                     print(("Executing dyanmics for cell: ", cell_index))
             
             # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
-            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.chemoattractant_signal_fn, 0.5*self.chemoattractant_signal_fn(np.zeros(2, dtype=np.float64)), be_talkative=self.full_print)
+            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.chemoattractant_signal_fn, be_talkative=self.full_print)
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
