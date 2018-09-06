@@ -5,7 +5,7 @@ Created on Wed Apr 19 19:20:02 2017
 @author: Brian
 """
 
-from __future__ import print_function
+
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.ticker as ticker

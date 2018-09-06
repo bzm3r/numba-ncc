@@ -5,7 +5,7 @@ Created on Tue Jul 25 04:16:42 2017
 @author: Brian
 """
 
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -37,7 +37,7 @@ def draw_cell_arrangement(ax, cell_center_locations, cell_diameter, box_height, 
         
 def place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_cell_x_placement):
     if init_cell_x_placement < 0.0:
-        raise StandardError("negative init_cell_x_placement given: {}".format(init_cell_x_placement))
+        raise Exception("negative init_cell_x_placement given: {}".format(init_cell_x_placement))
     center_x = corridor_origin[0] + 0.5*cell_diameter + np.random.rand()*cell_diameter*init_cell_x_placement*(box_width - 1)
     center_y = corridor_origin[1] + 0.5*cell_diameter + np.random.rand()*cell_diameter*(box_height - 1)
     
@@ -49,7 +49,7 @@ def generate_theta_bin_boundaries(num_bins):
     theta_bins = np.zeros((num_bins, 2), dtype=np.float64)
     delta_theta = 2*np.pi/num_bins
     
-    for n in xrange(num_bins):
+    for n in range(num_bins):
         if n == 0:
             last_boundary = 0.0
         else:
@@ -93,7 +93,7 @@ def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
         theta_bin_probabilities[n] += delta_p
         
     if np.abs(1.0 - np.sum(theta_bin_probabilities)) > 1e-6:
-        raise StandardError("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
+        raise Exception("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
     
     return theta_bin_probabilities
 
@@ -102,7 +102,7 @@ def find_relevant_bin_index(theta, theta_bins):
         if tbin[0] <= theta < tbin[1]:
             return n
         
-    raise StandardError("could not find a bin for theta = {}! {}".format(theta, theta_bins))
+    raise Exception("could not find a bin for theta = {}! {}".format(theta, theta_bins))
     
     
 def is_collision(last_placed_cell_index, cell_centers, cell_diameter, corridor_origin, corridor_height, center_x, center_y):
@@ -129,7 +129,7 @@ def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_ind
     
     center_x, center_y = cell_centers[last_successful_anchor_index]
 
-    for ti in xrange(num_trials):
+    for ti in range(num_trials):
         theta = generate_trial_theta(theta_bins, theta_bin_probabilities)
         placement_distance = cell_diameter*((max_placement_dist - 1.0)*np.random.rand() + 1.0)
         dx, dy = placement_distance*np.cos(theta), placement_distance*np.sin(theta)
@@ -147,7 +147,7 @@ def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_ind
         
 def place_cells_randomly(num_cells, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_cell_x_placement, max_placement_distance, num_theta_bins = 20):
     if max_placement_distance < 1.0:
-        raise StandardError("max placement distance cannot be < 1.0! Given: {}".format(max_placement_distance))
+        raise Exception("max placement distance cannot be < 1.0! Given: {}".format(max_placement_distance))
     cell_centers = np.nan*np.ones((num_cells, 2), dtype=np.float64)
     cell_centers = place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_cell_x_placement)
     
@@ -198,7 +198,7 @@ corridor_origin = [0.0, 0.0]
 
 
 seed = np.random.randint(0, 100000)
-print "seed: ", seed
+print("seed: ", seed)
 np.random.seed(seed)
 cell_centers = place_cells_randomly(num_cells, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_cell_x_placement, max_placement_distance)
 

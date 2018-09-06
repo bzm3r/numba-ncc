@@ -5,7 +5,7 @@ Created on Sat Nov 25 11:02:35 2017
 @author: Brian
 """
 
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import numba as nb

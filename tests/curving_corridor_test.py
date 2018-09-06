@@ -37,7 +37,7 @@ def make_curving_migr_polygon(make_migr_space_poly, width_corridor, height_corri
         
         remaining_corridor = width_corridor - length_within_curve
         if remaining_corridor < 1e-16:
-            raise StandardError("Corridor is not long enough to fit curve!")
+            raise Exception("Corridor is not long enough to fit curve!")
             
         bottom_left = [[0 + corridor_x_offset, 0 + corridor_y_offset]]
         bottom_right = [[bottom_curve[-1][0], bottom_curve[-1][1] + remaining_corridor]]
@@ -59,7 +59,7 @@ def make_bottleneck_migr_polygon(make_migr_space_poly, width_corridor, height_co
         remaining_corridor = width_corridor - (first_slope_start + first_slope_end + second_slope_start + second_slope_end)
         
         if remaining_corridor < 1e-16:
-            raise StandardError("Width of the corridor is not long enough to support bottleneck!")
+            raise Exception("Width of the corridor is not long enough to support bottleneck!")
             
         bottom_left = [0 + corridor_x_offset, 0 + corridor_y_offset]
         first_slope_start_bottom = [0 + corridor_x_offset + first_slope_start, 0 + corridor_y_offset]

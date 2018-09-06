@@ -77,7 +77,7 @@ for n in range(20):
     et = time.time()
     times.append(et - st)
     
-print "time taken: {} s".format(np.average(times))
+print("time taken: {} s".format(np.average(times)))
     
         
         

@@ -5,7 +5,7 @@ Created on Fri Apr 01 10:42:37 2016
 @author: Brian
 """
 
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import general.exec_utils as exec_utils
@@ -39,10 +39,10 @@ def make_centroid_drift_and_delaunay_plots(environment_dirs, relevant_experiment
     
     num_envs = len(environment_dirs)
     for i, environment_dir in enumerate(environment_dirs):
-        print "processing env: {}, {}/{}".format(environment_dir, i+1, num_envs)
-        print "retrieving pickle file..."
+        print("processing env: {}, {}/{}".format(environment_dir, i+1, num_envs))
+        print("retrieving pickle file...")
         stored_env = exec_utils.retrieve_environment(os.path.join(environment_dir, "environment.pkl"), False, False)
-        print "gathering cell Ls..."
+        print("gathering cell Ls...")
         storefile_path = os.path.join(environment_dir, "store.hdf5")                
         cell_Ls = [a_cell.L/1e-6 for a_cell in stored_env.cells_in_environment]
         num_cells = stored_env.num_cells
@@ -53,15 +53,15 @@ def make_centroid_drift_and_delaunay_plots(environment_dirs, relevant_experiment
         
         # ------------------------
         
-        print "calculating cell centroids..."
-        for ci in xrange(num_cells):
+        print("calculating cell centroids...")
+        for ci in range(num_cells):
             cell_centroids_per_tstep = analysis_utils.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
             
             all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
         # ------------------------
         
-        print "calculating delaunay areas..."
+        print("calculating delaunay areas...")
         delaunay_triangulations_per_tstep = [space.Delaunay(all_cell_centroids) for all_cell_centroids in all_cell_centroids_per_tstep]
     
         convex_hull_areas = []
@@ -76,7 +76,7 @@ def make_centroid_drift_and_delaunay_plots(environment_dirs, relevant_experiment
         normalized_convex_hull_areas_and_tsteps_per_env.append((timepoints, normalized_convex_hull_areas))
         # ------------------------
         
-        print "preparing group centroid..."
+        print("preparing group centroid...")
         group_centroid_per_tstep = np.array([geometry.calculate_cluster_centroid(cell_centroids) for cell_centroids in all_cell_centroids_per_tstep])/x_scale_factor
         
         init_group_centroid_per_tstep = group_centroid_per_tstep[0]
@@ -96,17 +96,17 @@ def make_centroid_drift_and_delaunay_plots(environment_dirs, relevant_experiment
     
         # Put a legend to the right of the current axis
     ax.legend(loc='best')
-    ax.grid(which=u'both')
+    ax.grid(which='both')
     
     ax.set_title("Group centroid position vs. time")
     ax.set_ylabel("x position (scaled by group width)")
     ax.set_xlabel("time (minutes)")
     
     if save_dir == None:
-        print "No save_dir specified, showing graph..."
+        print("No save_dir specified, showing graph...")
         plt.show()
     else:
-        print "Saving graph at specified location..."
+        print("Saving graph at specified location...")
         fig.set_size_inches(12, 8)
         fig.savefig(os.path.join(save_dir, "collated_group_centroid" + ".png"), forward=True)
         plt.close(fig)
@@ -122,17 +122,17 @@ def make_centroid_drift_and_delaunay_plots(environment_dirs, relevant_experiment
     
         # Put a legend to the right of the current axis
     ax.legend(loc='best')
-    ax.grid(which=u'both')
+    ax.grid(which='both')
     
     ax.set_title("Group area vs. time")
     ax.set_ylabel("area (scaled by initial area)")
     ax.set_xlabel("time (minutes)")
     
     if save_dir == None:
-        print "No save_dir specified, showing graph..."
+        print("No save_dir specified, showing graph...")
         plt.show()
     else:
-        print "Saving graph at specified location..."
+        print("Saving graph at specified location...")
         fig.set_size_inches(12, 8)
         fig.savefig(os.path.join(save_dir, "collated_group_area" + ".png"), forward=True)
         plt.close(fig)

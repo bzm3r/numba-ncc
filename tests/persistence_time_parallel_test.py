@@ -185,7 +185,7 @@ ax_fit.plot(ts, positive_das, color='g', marker='.', ls='')
 ax_fit.plot(ts, [np.exp(-1*x/pt) for x in ts], color='r', marker='.', ls='')
 
 plt.show()
-print "pt: ", pt
+print("pt: ", pt)
 
 
 

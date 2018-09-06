@@ -51,7 +51,7 @@ def graph_coa_variation_test_data(sub_experiment_number, num_cells_to_test, test
     else:
         fig.set_size_inches(12, 8)
         save_path = os.path.join(save_dir, "coa_variation_results_{}".format(sub_experiment_number) + ".png")
-        print "save_path: ", save_path
+        print("save_path: ", save_path)
         fig.savefig(save_path, forward=True)
         plt.close(fig)
         plt.close("all")

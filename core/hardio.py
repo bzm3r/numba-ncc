@@ -6,7 +6,7 @@ Created on Fri Mar 25 14:58:28 2016
 """
 
 import h5py
-import parameterorg
+from . import parameterorg
 import numpy as np
 
 # ============================================================================== 
@@ -103,7 +103,7 @@ def get_node_coords_for_all_tsteps(cell_index, storefile_path):
         on_ram_dset = np.copy(dset)
     
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
         
     x_coords = on_ram_dset[:,:,parameterorg.x_index]
     y_coords = on_ram_dset[:,:,parameterorg.y_index]
@@ -127,7 +127,7 @@ def get_node_coords_until_tstep(cell_index, max_tstep, storefile_path):
             on_ram_dset = np.copy(dset)
         
         if on_ram_dset.shape[0] == 0:
-            raise StandardError("on_ram_dset is empty!")
+            raise Exception("on_ram_dset is empty!")
 
             
         x_coords = on_ram_dset[:max_tstep,:,parameterorg.x_index]
@@ -149,7 +149,7 @@ def get_node_coords_for_given_tsteps(cell_index, tsteps, storefile_path):
         on_ram_dset = np.copy(dset)
         
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
 
     x_coords = on_ram_dset[tsteps,:,parameterorg.x_index]
     y_coords = on_ram_dset[tsteps,:,parameterorg.y_index]
@@ -171,7 +171,7 @@ def get_node_coords(cell_index, tstep, storefile_path):
         dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
         
     x_coords = on_ram_dset[tstep,:,parameterorg.x_index]
     y_coords = on_ram_dset[tstep,:,parameterorg.y_index]
@@ -193,7 +193,7 @@ def get_cell_data_for_tsteps(cell_index, tsteps, data_labels, storefile_path):
         dset.read_direct(on_ram_dset)
 
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
     
     fetched_data = []
     for data_label in data_labels:    
@@ -214,7 +214,7 @@ def get_data_for_tsteps(cell_index, tsteps, data_label, storefile_path):
         dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
         
     if type(tsteps) != type(np.array([])) and type(tsteps) != int:
         return on_ram_dset[:,:,parameterorg.info_indices_dict[data_label]]
@@ -231,7 +231,7 @@ def get_data_until_timestep(cell_index, max_tstep, data_label, storefile_path):
         dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
     else:
         if max_tstep == None:
             return on_ram_dset[:,:,parameterorg.info_indices_dict[data_label]]
@@ -248,7 +248,7 @@ def get_multiple_data_until_timestep(cell_index, max_tstep, data_labels, data_ty
         dset.read_direct(on_ram_dset)
         
     if on_ram_dset.shape[0] == 0:
-        raise StandardError("on_ram_dset is empty!")
+        raise Exception("on_ram_dset is empty!")
         
     for data_label, data_type in zip(data_labels, data_types):
         if data_type == 'n':
@@ -280,7 +280,7 @@ def check_if_data_label_is_vector_type(data_label):
     allowed_labels = ["F", "EFplus", "EFminus", "F_rgtpase", "F_cytoplasmic", "F_adhesion", "unit_in_vec"]
     
     if data_label not in allowed_labels:
-        raise StandardError("get_vector_data_* functions are not meant to be used with given label: {}. Allowed labels are: {}".format(data_label, allowed_labels))
+        raise Exception("get_vector_data_* functions are not meant to be used with given label: {}. Allowed labels are: {}".format(data_label, allowed_labels))
       
       
                

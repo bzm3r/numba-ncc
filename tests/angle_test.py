@@ -31,4 +31,4 @@ index_directions = np.linspace(0, 2*np.pi, num=num_nodes)
 is_node_ok = [is_angle_between_range(a, b, x) for x in index_directions]
 
 for x, b in zip(index_directions, is_node_ok):
-    print "{}, {}".format(b, x/np.pi)
+    print("{}, {}".format(b, x/np.pi))

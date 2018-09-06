@@ -4,7 +4,7 @@ Created on Thu Apr 06 14:39:56 2017
 
 @author: Brian
 """
-from __future__ import division
+
 import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
@@ -259,6 +259,6 @@ rac_membrane_active = np.array([0.00193653,  0.00559409,  0.01057761,  0.0476358
 
 rho_membrane_active = np.array([0.0053378204, 0.0044661765, 0.002562339, 0.00021460297, 0.00017809241, 0.00017586575, 0.00017790902, 0.0001925137, 0.00040857607, 0.0032622439, 0.0052054818, 0.0054660486, 0.0054796417, 0.0054074698, 0.0051517044, 0.005409976], dtype=np.float64)
 
-print calculate_polarization_rating(rac_membrane_active, rho_membrane_active, 16)
+print(calculate_polarization_rating(rac_membrane_active, rho_membrane_active, 16))
 
 

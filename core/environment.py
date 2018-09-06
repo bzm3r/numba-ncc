@@ -1,14 +1,14 @@
-from __future__ import division
+
 import numpy as np
-import cell
-import parameterorg
-import geometry
+from . import cell
+from . import parameterorg
+from . import geometry
 import os
 import visualization.datavis as datavis
-import utilities as cu
+from . import utilities as cu
 import visualization.animator as animator
 import dill
-import cPickle
+import pickle
 import numba as nb
 import time
 import core.hardio as hardio
@@ -65,7 +65,7 @@ def calculate_bounding_boxes(node_coords_per_cell):
         
 def place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_random_cell_placement_x_factor):
     if init_random_cell_placement_x_factor < 0.0:
-        raise StandardError("negative init_random_cell_placement_x_factor given: {}".format(init_random_cell_placement_x_factor))
+        raise Exception("negative init_random_cell_placement_x_factor given: {}".format(init_random_cell_placement_x_factor))
     center_x = corridor_origin[0] + 0.5*cell_diameter + np.random.rand()*init_random_cell_placement_x_factor*(box_width - cell_diameter)
     center_y = corridor_origin[1] + 0.5*cell_diameter + np.random.rand()*(box_height - cell_diameter)
     
@@ -79,7 +79,7 @@ def generate_theta_bin_boundaries(num_bins):
     theta_bins = np.zeros((num_bins, 2), dtype=np.float64)
     delta_theta = 2*np.pi/num_bins
     
-    for n in xrange(num_bins):
+    for n in range(num_bins):
         if n == 0:
             last_boundary = 0.0
         else:
@@ -127,7 +127,7 @@ def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
         theta_bin_probabilities[n] += delta_p
         
     if np.abs(1.0 - np.sum(theta_bin_probabilities)) > 1e-6:
-        raise StandardError("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
+        raise Exception("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
     
     return theta_bin_probabilities
 
@@ -138,7 +138,7 @@ def find_relevant_bin_index(theta, theta_bins):
         if tbin[0] <= theta < tbin[1]:
             return n
         
-    raise StandardError("could not find a bin for theta = {}! {}".format(theta, theta_bins))
+    raise Exception("could not find a bin for theta = {}! {}".format(theta, theta_bins))
     
 # -----------------------------------------------------------------
     
@@ -166,7 +166,7 @@ def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_ind
     
     center_x, center_y = cell_centers[last_successful_anchor_index]
 
-    for ti in xrange(num_trials):
+    for ti in range(num_trials):
         theta = generate_trial_theta(theta_bins, theta_bin_probabilities)
         placement_distance = cell_diameter*((max_placement_dist - 1.0)*np.random.rand() + 1.0)
         dx, dy = placement_distance*np.cos(theta), placement_distance*np.sin(theta)
@@ -185,7 +185,7 @@ def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_ind
         
 def place_cells_randomly(num_cells, cell_diameter, corridor_origin, corridor_height, box_width, box_height, init_random_cell_placement_x_factor, max_placement_distance_factor, num_theta_bins = 20):
     if max_placement_distance_factor < 1.0:
-        raise StandardError("max placement distance cannot be < 1.0! Given: {}".format(max_placement_distance_factor))
+        raise Exception("max placement distance cannot be < 1.0! Given: {}".format(max_placement_distance_factor))
     cell_centers = np.nan*np.ones((num_cells, 2), dtype=np.float64)
     cell_centers = place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corridor_height, box_height, box_width, init_random_cell_placement_x_factor)
     
@@ -221,7 +221,7 @@ def generate_bounding_boxes_from_centers(radius, centers):
 class Environment():
     """Implementation of coupled map lattice model of a cell.
     """
-    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), external_gradient_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, shell_environment=False, graph_group_centroid_splits=False): 
+    def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64), space_migratory_bdry_polygon=np.array([], dtype=np.float64), chemoattractant_signal_fn=lambda x: 0.0, cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={}, full_print=False, persist=True, parameter_explorer_run=False, parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, shell_environment=False, graph_group_centroid_splits=False): 
         
         self.graph_group_centroid_splits = graph_group_centroid_splits
         self.convergence_test = convergence_test
@@ -259,7 +259,7 @@ class Environment():
         
         self.space_physical_bdry_polygon = space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
-        self.external_gradient_fn = external_gradient_fn
+        self.chemoattractant_signal_fn = chemoattractant_signal_fn
         self.cell_group_defns = cell_group_defns
         
         self.curr_tpoint = 0
@@ -292,7 +292,7 @@ class Environment():
             self.num_nodes= num_nodes_per_cell[0]
             for n in num_nodes_per_cell[1:]:
                 if n != self.num_nodes:
-                    raise StandardError("There exists a cell with number of nodes different from other cells!")
+                    raise Exception("There exists a cell with number of nodes different from other cells!")
         else:
             self.cells_in_environment = None
             self.num_nodes = 0
@@ -308,7 +308,7 @@ class Environment():
         self.exec_orders = np.zeros((self.num_timepoints, self.num_cells), dtype=np.int64)
         self.full_print = full_print
         
-        for cell_index in xrange(self.num_cells):
+        for cell_index in range(self.num_cells):
             if self.environment_dir != None:
                 hardio.create_cell_dataset(cell_index, self.storefile_path, self.num_nodes, parameterorg.num_info_labels)
         
@@ -325,7 +325,7 @@ class Environment():
             env = dill.load(f)
         
         if env == None:
-            raise StandardError("Couldn't open pickled environment at: {}".format(pickle_fp))
+            raise Exception("Couldn't open pickled environment at: {}".format(pickle_fp))
         else:
             self.__dict__.update(copy.deepcopy(env.__dict__))
         del env
@@ -333,11 +333,11 @@ class Environment():
 # -----------------------------------------------------------------
     def write_random_state_file(self, random_state_fp):
         with open(random_state_fp, 'wb') as f:
-            cPickle.dump(np.random.get_state(), f)
+            pickle.dump(np.random.get_state(), f)
         
     def set_random_state_from_file(self, random_state_fp):
         with open(random_state_fp, 'rb') as f:
-            np.random.set_state(cPickle.load(f))
+            np.random.set_state(pickle.load(f))
         
     def init_random_state(self, seed):
         if self.environment_dir != None:
@@ -399,7 +399,7 @@ class Environment():
         num_nodes = cell_parameter_dict['num_nodes']
         
         biased_rgtpase_distrib_defns = cell_group_defn['biased_rgtpase_distrib_defns']
-        cells_with_bias_info = biased_rgtpase_distrib_defns.keys()    
+        cells_with_bias_info = list(biased_rgtpase_distrib_defns.keys())    
             
         integration_params = self.integration_params
 
@@ -423,7 +423,7 @@ class Environment():
             
             undefined_labels = parameterorg.find_undefined_labels(cell_parameter_dict)
             if len(undefined_labels) > 0:
-                raise StandardError("The following labels are not yet defined: {}".format(undefined_labels))
+                raise Exception("The following labels are not yet defined: {}".format(undefined_labels))
                 
             if self.parameter_explorer_run and self.parameter_explorer_init_rho_gtpase_conditions != None:
                 new_cell = cell.Cell(str(cell_group_name) + '_' +  str(cell_index), cell_group_index, cell_index, integration_params, num_timesteps, self.T, self.num_cells, self.max_timepoints_on_ram, self.verbose, cell_parameter_dict, init_rho_gtpase_conditions=self.parameter_explorer_init_rho_gtpase_conditions)
@@ -449,7 +449,7 @@ class Environment():
         cell_group_bounding_box_area = abs(x_length*y_length)
         
         if total_cell_group_area > cell_group_bounding_box_area:
-            raise StandardError("Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint.")
+            raise Exception("Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint.")
         
         if cell_placement_method == "":
             num_cells_along_x = custom_floor(x_length/cell_diameter, 1e-6)
@@ -493,15 +493,15 @@ class Environment():
         cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
         cell_node_coords = np.transpose(np.array([cell_centre[0] + init_cell_radius*np.cos(cell_node_thetas), cell_centre[1] + init_cell_radius*np.sin(cell_node_thetas)]))
         
-        edge_vectors = geometry.calculate_edge_vectors(num_nodes, cell_node_coords)
+        edge_vectors = geometry.calculate_edge_vectors(cell_node_coords)
         
-        edge_lengths = geometry.calculate_2D_vector_mags(num_nodes, edge_vectors)
+        edge_lengths = geometry.calculate_2D_vector_mags(edge_vectors)
         
         length_edge_resting = np.average(edge_lengths)
         
-        area_resting = geometry.calculate_polygon_area(num_nodes, cell_node_coords)
+        area_resting = geometry.calculate_polygon_area(cell_node_coords)
         if area_resting < 0:
-            raise StandardError("Resting area was calculated to be negative.")
+            raise Exception("Resting area was calculated to be negative.")
         return cell_node_coords, length_edge_resting, area_resting
 
 # -----------------------------------------------------------------
@@ -519,18 +519,18 @@ class Environment():
             if self.verbose == True:
                 if self.full_print:
                     if cell_index != first_cell_index:
-                        print "-"*40
+                        print("-"*40)
                     else:
-                        print "="*40
+                        print("="*40)
                     
-                    print "centroid_drift: ", centroid_drifts[cell_index]
+                    print("centroid_drift: ", centroid_drifts[cell_index])
                     if recalc_geometry[cell_index]:
-                        print "**GEOMETRY RECALC IN PROGRESS**"
-                    print "Time step: {}/{}".format(t, self.num_timesteps)
-                    print "Executing dyanmics for cell: ", cell_index
+                        print("**GEOMETRY RECALC IN PROGRESS**")
+                    print("Time step: {}/{}".format(t, self.num_timesteps))
+                    print("Executing dyanmics for cell: ", cell_index)
             
-            # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, external_gradient_fn, be_talkative=False
-            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.external_gradient_fn, be_talkative=self.full_print)
+            # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
+            current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords, environment_cells_node_forces, cells_node_distance_matrix[cell_index], cells_line_segment_intersection_matrix[cell_index], self.chemoattractant_signal_fn, be_talkative=self.full_print)
             
             if current_cell.skip_dynamics == False:
                 this_cell_coords = current_cell.curr_node_coords*current_cell.L
@@ -551,7 +551,7 @@ class Environment():
             if self.verbose == True:
                 if self.full_print:
                     if cell_index == last_cell_index:
-                        print "="*40
+                        print("="*40)
 
         return cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces
             
@@ -561,14 +561,14 @@ class Environment():
         if self.environment_dir != None:
             data_dict = {}
         else:
-            raise StandardError("self.environment_dir is None!")
+            raise Exception("self.environment_dir is None!")
         
         datavis.add_to_general_data_structure(data_dict, [("T", self.T)])
         
         if produce_graphs:
             data_dict = {}
             
-            for cell_index in xrange(self.num_cells):
+            for cell_index in range(self.num_cells):
                 this_cell = self.cells_in_environment[cell_index]
                 if this_cell.skip_dynamics == True:
                     continue
@@ -632,7 +632,7 @@ class Environment():
 # -----------------------------------------------------------------
       
     def get_empty_cells(self):
-        return [self.get_empty_cell(ci) for ci in xrange(self.num_cells)]
+        return [self.get_empty_cell(ci) for ci in range(self.num_cells)]
         
 # -----------------------------------------------------------------
         
@@ -665,7 +665,7 @@ class Environment():
         
         access_index = self.get_system_history_index(self.curr_tpoint)
         
-        for cell_index in xrange(self.num_cells):
+        for cell_index in range(self.num_cells):
             this_cell = self.cells_in_environment[cell_index]
             if this_cell.last_trim_timestep < 0:
                 hardio.append_cell_data_to_dataset(cell_index, this_cell.system_history[:access_index+1], self.storefile_path)
@@ -750,8 +750,9 @@ class Environment():
     
 # ----------------------------------------------------------------- 
         
-    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_final_visuals=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
+    def execute_system_dynamics(self, animation_settings,  produce_intermediate_visuals=True, produce_graphs=True, produce_animation=True, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, given_pool_for_making_visuals=None):
         self.animation_settings = animation_settings
+        
         if self.mode == MODE_EXECUTE and self.simulation_execution_enabled:
             allowed_drift_before_geometry_recalc = self.allowed_drift_before_geometry_recalc
             
@@ -769,14 +770,16 @@ class Environment():
             curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
             
             cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes, environment_cells_node_coords)
-            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices(4, self.all_geometry_tasks, num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords, self.space_migratory_bdry_polygon, self.space_physical_bdry_polygon)
+            # num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords
+            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_cells, num_nodes, cells_bounding_box_array, environment_cells_node_coords, self.space_migratory_bdry_polygon, self.space_physical_bdry_polygon)
                 
             #cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
         
             if self.environment_dir == None:
                 animation_obj = None
                 produce_intermediate_visuals = False
-                produce_final_visuals = False
+                produce_graphs = False
+                produce_animation=False
             else:
                 cell_group_indices = []
                 cell_Ls = []
@@ -788,8 +791,11 @@ class Environment():
                     cell_Ls.append(a_cell.L/1e-6)
                     cell_etas.append(a_cell.eta)
                     cell_skip_dynamics.append(a_cell.skip_dynamics)
-                    
-                animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
+                
+                if produce_animation:
+                    animation_obj = animator.EnvironmentAnimation(self.environment_dir, self.environment_name, self.num_cells, self.num_nodes, self.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, self.storefile_path, **animation_settings)
+                else:
+                    animation_obj = None
                 
             if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
                 if self.last_timestep_when_environment_hard_saved == None:
@@ -812,7 +818,7 @@ class Environment():
                             if not os.path.exists(data_save_dir):
                                 os.makedirs(data_save_dir)
                             
-                            print "Doing intermediate analysis..."
+                            print("Doing intermediate analysis...")
                             self.do_data_analysis_and_make_visuals(t, data_save_dir, animation_settings, animation_obj, True, True)                        
                         
                     cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(t, cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces, environment_cells, centroid_drifts, recalc_geometry)
@@ -833,27 +839,27 @@ class Environment():
                     
                     self.curr_tpoint += 1
             else:
-                raise StandardError("max_t has already been reached.")
+                raise Exception("max_t has already been reached.")
             
             simulation_et = time.time()
             
             if self.environment_dir != None:
                 self.dump_to_store(self.curr_tpoint)
                 
-            if produce_final_visuals == True:
+            if produce_graphs == True or produce_animation:
                 t = self.num_timepoints
                 data_save_dir = os.path.join(self.environment_dir, 'T={}'.format(t))
                 
                 if not os.path.exists(data_save_dir):
                     os.makedirs(data_save_dir)
                     
-                    print "Doing final analysis..."
-                    self.do_data_analysis_and_make_visuals(t, data_save_dir, animation_settings, animation_obj, True, True)
+                    print("Preparing final visualizations...")
+                    self.do_data_analysis_and_make_visuals(t, data_save_dir, animation_settings, animation_obj, produce_graphs, produce_animation)
                 
             simulation_time = np.round(simulation_et - simulation_st, decimals=2)
             
             if self.verbose == True:
-                print "Time taken to complete simulation: {}s".format(simulation_time)
+                print(("Time taken to complete simulation: {}s".format(simulation_time)))
                     
             return simulation_time
         else:

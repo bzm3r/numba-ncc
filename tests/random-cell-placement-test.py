@@ -5,7 +5,7 @@ Created on Tue Jul 25 04:16:42 2017
 @author: Brian
 """
 
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -47,7 +47,7 @@ def generate_theta_bin_boundaries(num_bins):
     theta_bins = np.zeros((num_bins, 2), dtype=np.float64)
     delta_theta = 2*np.pi/num_bins
     
-    for n in xrange(num_bins):
+    for n in range(num_bins):
         if n == 0:
             last_boundary = 0.0
         else:
@@ -91,7 +91,7 @@ def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
         theta_bin_probabilities[n] += delta_p
         
     if np.abs(1.0 - np.sum(theta_bin_probabilities)) > 1e-6:
-        raise StandardError("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
+        raise Exception("theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(theta_bin_probabilities, np.sum(theta_bin_probabilities), delta_p, interesting_bins))
     
     return theta_bin_probabilities
 
@@ -100,7 +100,7 @@ def find_relevant_bin_index(theta, theta_bins):
         if tbin[0] <= theta < tbin[1]:
             return n
         
-    raise StandardError("could not find a bin for theta = {}! {}".format(theta, theta_bins))
+    raise Exception("could not find a bin for theta = {}! {}".format(theta, theta_bins))
     
     
 def is_collision(last_placed_cell_index, cell_bounding_boxes, cell_diameter, corridor_origin, corridor_height, test_min_x, test_min_y):
@@ -136,7 +136,7 @@ def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_ind
     anchor_bb = cell_bounding_boxes[last_successful_anchor_index]
     center_x, center_y = (anchor_bb[0] + anchor_bb[1])/2., (anchor_bb[2] + anchor_bb[3])/2.
 
-    for ti in xrange(num_trials):
+    for ti in range(num_trials):
         theta = generate_trial_theta(theta_bins, theta_bin_probabilities)
         placement_distance = cell_diameter*((max_placement_dist - min_placement_dist)*np.random.rand() + min_placement_dist)
         dx, dy = placement_distance*np.cos(theta), placement_distance*np.sin(theta)
@@ -201,7 +201,7 @@ corridor_origin = [0.0, 0.0]
 
 
 seed = np.random.randint(0, 100000)
-print "seed: ", seed
+print("seed: ", seed)
 np.random.seed(seed)
 cell_bounding_boxes = place_cells_randomly(num_cells, cell_diameter, corridor_origin, corridor_height, box_height, box_width, min_placement_distance, max_placement_distance)
 cell_centers = generate_centers_from_bounding_boxes(cell_bounding_boxes)

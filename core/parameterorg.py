@@ -6,8 +6,8 @@ Created on Fri Jun  5 22:10:15 2015
 """
 
 import numpy as np
-import environment
-import geometry
+from . import environment
+from . import geometry
 import copy
 
 #g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
@@ -15,7 +15,7 @@ import copy
 
 output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'interaction_factors_intercellular_contact_per_celltype', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
-output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'external_gradient_on_nodes']
+output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'chemoattractant_signal_on_nodes']
 
 output_info_labels = output_mech_labels + output_chem_labels
 
@@ -73,11 +73,11 @@ for parameter_dict in [polygon_model_parameters, user_rho_gtpase_biochemistry_pa
 def verify_user_parameters(justify_parameters, user_parameter_dict):
     global all_user_parameters_with_justifications
     
-    for key in user_parameter_dict.keys():
+    for key in list(user_parameter_dict.keys()):
         try:
             justification = all_user_parameters_with_justifications[key]
         except:
-            raise StandardError("Unknown parameter given: {}".format(key))
+            raise Exception("Unknown parameter given: {}".format(key))
 
         if justify_parameters and justification != None:
             value = user_parameter_dict[key]
@@ -85,9 +85,9 @@ def verify_user_parameters(justify_parameters, user_parameter_dict):
             if type(justification) == list:
                 assert(len(justification) == 2)
                 if not (justification[0] <= value <= justification[1]):
-                    raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
+                    raise Exception("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
             elif value != justification:
-                raise StandardError("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
+                raise Exception("Parameter {} violates justification ({}) with value {}".format(key, justification, value))
     
 #-----------------------------------------------------------------
 
@@ -157,8 +157,8 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     
     cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
     cell_node_coords = np.transpose(np.array([init_cell_radius*np.cos(cell_node_thetas), init_cell_radius*np.sin(cell_node_thetas)]))
-    edge_vectors = geometry.calculate_edge_vectors(num_nodes, cell_node_coords)
-    edge_lengths = geometry.calculate_2D_vector_mags(num_nodes, edge_vectors)
+    edge_vectors = geometry.calculate_edge_vectors(cell_node_coords)
+    edge_lengths = geometry.calculate_2D_vector_mags(edge_vectors)
         
     length_edge_resting = np.average(edge_lengths)
 
@@ -198,10 +198,10 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
 def expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
         interaction_factors_intercellular_contact_per_celltype_defn = this_cell_group_defn['interaction_factors_intercellular_contact_per_celltype']
         
-        num_defns = len(interaction_factors_intercellular_contact_per_celltype_defn.keys())
+        num_defns = len(list(interaction_factors_intercellular_contact_per_celltype_defn.keys()))
         
         if num_defns != num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
+            raise Exception("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
         
         interaction_factors_intercellular_contact_per_celltype = []
         for cgi in range(num_cell_groups):
@@ -218,10 +218,10 @@ def expand_interaction_factors_intercellular_contact_per_celltype_array(num_cell
 def expand_interaction_factors_coa_per_celltype_array(num_cell_groups, cell_group_defns, this_cell_group_defn):
         interaction_factors_coa_per_celltype_defn = this_cell_group_defn['interaction_factors_coa_per_celltype']
         
-        num_defns = len(interaction_factors_coa_per_celltype_defn.keys())
+        num_defns = len(list(interaction_factors_coa_per_celltype_defn.keys()))
         
         if num_defns != num_cell_groups:
-            raise StandardError("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
+            raise Exception("Number of cell groups does not equal number of keys in interaction_factors_intercellular_contact_per_celltype_defn.")
         
         interaction_factors_coa_per_celltype = []
         for cgi in range(num_cell_groups):
@@ -237,7 +237,7 @@ def expand_interaction_factors_coa_per_celltype_array(num_cell_groups, cell_grou
 # ==============================================================
 
 def find_undefined_labels(cell_group_parameter_dict):
-    given_labels = cell_group_parameter_dict.keys()
+    given_labels = list(cell_group_parameter_dict.keys())
     undefined_labels = []
     global all_parameter_labels
     
@@ -250,7 +250,7 @@ def find_undefined_labels(cell_group_parameter_dict):
     
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), external_gradient_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
+def make_environment_given_user_cell_group_defns(animation_settings, environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_signal_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
     
     num_cell_groups = len(user_cell_group_defns)
         
@@ -265,6 +265,6 @@ def make_environment_given_user_cell_group_defns(environment_name='', num_timest
         
         
     
-    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, external_gradient_fn=external_gradient_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions, cell_placement_method=cell_placement_method, max_placement_distance_factor=max_placement_distance_factor, init_random_cell_placement_x_factor=init_random_cell_placement_x_factor, convergence_test=convergence_test, graph_group_centroid_splits=graph_group_centroid_splits)
+    the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run, chemoattractant_signal_fn=chemoattractant_signal_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions, cell_placement_method=cell_placement_method, max_placement_distance_factor=max_placement_distance_factor, init_random_cell_placement_x_factor=init_random_cell_placement_x_factor, convergence_test=convergence_test, graph_group_centroid_splits=graph_group_centroid_splits)
     
     return the_environment

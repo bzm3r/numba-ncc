@@ -5,7 +5,7 @@ Created on Fri Nov 06 16:53:39 2015
 @author: Brian
 """
 
-from __future__ import division
+
 import core.parameterorg as parameterorg
 import core.environment as environment
 import numpy as np
@@ -21,8 +21,8 @@ import dill
 MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 def convert_parameter_override_dictionary_into_keyvalue_tuple_list(base_parameter_override_dict, other_parameter_override_dict):
-    labels_in_base_dict = base_parameter_override_dict.keys()
-    labels_in_other_dict = other_parameter_override_dict.keys()
+    labels_in_base_dict = list(base_parameter_override_dict.keys())
+    labels_in_other_dict = list(other_parameter_override_dict.keys())
     
     keyvalue_tuple_list = []    
     for label in labels_in_base_dict:
@@ -38,7 +38,7 @@ def convert_parameter_override_dictionary_into_keyvalue_tuple_list(base_paramete
     
 def update_pd(pd, key, orig_value, new_value):
     if pd[key] != orig_value:
-        raise StandardError("Key {} does not have orig_value {}, instead {}".format(key, orig_value, pd[key]))
+        raise Exception("Key {} does not have orig_value {}, instead {}".format(key, orig_value, pd[key]))
     else:
         new_pd = copy.deepcopy(pd)
         new_pd.update([(key, new_value)])
@@ -58,7 +58,7 @@ def update_pd_with_keyvalue_tuples(pd, keyvalue_tuples):
             pass
         
         if pd[key] != orig_value:
-            raise StandardError("Key {} does not have orig_value {}, instead {}".format(key, orig_value, pd[key]))
+            raise Exception("Key {} does not have orig_value {}, instead {}".format(key, orig_value, pd[key]))
         else:
             new_pd.update([(key, new_value)])
         
@@ -114,7 +114,7 @@ def make_template_experiment_description_file(experiment_description, environmen
     notes_content.append("======= VARIABLE SETTINGS =======\n\n")
     
     for n, cell_group_defn in enumerate(user_cell_group_defns):
-        print cell_group_defn.keys()
+        print((list(cell_group_defn.keys())))
         pd = cell_group_defn['parameter_dict']
         sorted_pd_keys = sorted(pd.keys())
         tuple_list = [(key, pd[key]) for key in sorted_pd_keys]
@@ -188,9 +188,9 @@ def get_pickled_env_path(env_dir):
 # ========================================================================
 
 
-def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
+def run_experiments(experiment_directory, environment_name_format_strings, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_signal_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, produce_intermediate_visuals=True, produce_graphs=True, produce_animation=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, extend_simulation=False, new_num_timesteps=None):
     
-    for repeat_number in xrange(num_experiment_repeats):
+    for repeat_number in range(num_experiment_repeats):
         for subexperiment_index, user_cell_group_defns in enumerate(user_cell_group_defns_per_subexperiment):
             environment_name_format_string = environment_name_format_strings[subexperiment_index]
             environment_name = environment_name_format_string.format(subexperiment_index, repeat_number)
@@ -199,46 +199,46 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
             PO_set_string = "P0 SET {}, RPT {}".format(subexperiment_index, repeat_number)
             an_environment = None
             if os.path.exists(environment_dir):
-                print PO_set_string + " directory exists."
+                print((PO_set_string + " directory exists."))
                 
                 storefile_path = os.path.join(environment_dir, "store.hdf5")
                 env_pkl_path = os.path.join(environment_dir, "environment.pkl")
                 
                 if os.path.exists(storefile_path) and os.path.exists(env_pkl_path):
-                    print PO_set_string + ' stored environment exists.'
-                    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, simulation_execution_enabled=run_experiments)
+                    print((PO_set_string + ' stored environment exists.'))
+                    an_environment = retrieve_environment(env_pkl_path, produce_graphs, produce_animation, produce_intermediate_visuals, simulation_execution_enabled=run_experiments)
                     if run_experiments:
-                        print "Checking to see if simulation has been completed..."
+                        print("Checking to see if simulation has been completed...")
                         if an_environment.simulation_complete() == True:
                             
                             if extend_simulation != True:
-                                print "Simulation has been completed. Continuing..."
+                                print("Simulation has been completed. Continuing...")
                                 del an_environment
                                 continue
                             else:
                                 assert(new_num_timesteps != None)
                                 assert(new_num_timesteps >= an_environment.num_timesteps)
-                                print "Extending simulation run time..."
+                                print("Extending simulation run time...")
                                 an_environment.extend_simulation_runtime(new_num_timesteps)
                                 assert(an_environment.simulation_complete() == False)
                         else:
-                            print "Simulation incomplete. Finishing..."
+                            print("Simulation incomplete. Finishing...")
                             if extend_simulation == True:
                                 assert(new_num_timesteps != None)
                                 assert(new_num_timesteps >= an_environment.num_timesteps)
-                                print "Extending simulation run time..."
+                                print("Extending simulation run time...")
                                 an_environment.extend_simulation_runtime(new_num_timesteps)
                                 assert(an_environment.simulation_complete() == False)
                 else:
                     if delete_and_rerun_experiments_without_stored_env == True:
-                        print PO_set_string + " directory exists, but stored environment missing -- deleting and re-running experiment."
+                        print((PO_set_string + " directory exists, but stored environment missing -- deleting and re-running experiment."))
                         shutil.rmtree(environment_dir)
                     else:
-                        print PO_set_string + " directory exists, but stored environment missing. Continuing regardless."
+                        print((PO_set_string + " directory exists, but stored environment missing. Continuing regardless."))
                         continue
             
-            print "RUNNING " + PO_set_string
-            print "environment_dir: {}".format(environment_dir)
+            print(("RUNNING " + PO_set_string))
+            print(("environment_dir: {}".format(environment_dir)))
             
             if an_environment == None:
                 os.makedirs(environment_dir)
@@ -246,16 +246,16 @@ def run_experiments(experiment_directory, environment_name_format_strings, envir
                 
                 make_experiment_description_file(experiment_descriptions_per_subexperiment[subexperiment_index], environment_dir, environment_wide_variable_defns, user_cell_group_defns)    
                     
-                print "Creating environment..."
+                print("Creating environment...")
                 parameter_overrides = [x['parameter_override_dict'] for x in user_cell_group_defns]
                 
-                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
+                an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, parameter_overrides=parameter_overrides, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_signal_fn=chemoattractant_signal_fn_per_subexperiment[subexperiment_index], **environment_wide_variable_defns)
                 
             an_environment.full_print = full_print
             
-            simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
+            simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
                 
-            print "Simulation run time: {}s".format(simulation_time)
+            print(("Simulation run time: {}s".format(simulation_time)))
             
 # =======================================================================
 
@@ -280,42 +280,43 @@ def run_simple_experiment_and_return_cell(environment_wide_variable_defns, user_
 # ====================================================================
 
 def remake_graphics(remake_graphs, remake_animation, environment_dir, an_environment, animation_settings):
-    if remake_animation or remake_graphs:
-        print "making graphics..."
-        images_global_dir = os.path.join(environment_dir, "images_global")
+    curr_tpoint = an_environment.curr_tpoint
+    draw_tpoint = curr_tpoint + 1
+    visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
+    
+    cell_group_indices = []
+    cell_Ls = []
+    cell_etas = []
+    cell_skip_dynamics = []
+
+    for a_cell in an_environment.cells_in_environment:
+        cell_group_indices.append(a_cell.cell_group_index)
+        cell_Ls.append(a_cell.L/1e-6)
+        cell_etas.append(a_cell.eta)
+        cell_skip_dynamics.append(a_cell.skip_dynamics)
+
+    images_global_dir = os.path.join(environment_dir, "images_global")
         
-        if remake_animation:
-            if os.path.exists(images_global_dir) and remake_animation:
-                shutil.rmtree(images_global_dir)
+    if remake_animation:
+        if os.path.exists(images_global_dir):
+            shutil.rmtree(images_global_dir)
                 
-        ani_sets = an_environment.animation_settings
-        ani_sets.update(animation_settings)
-        curr_tpoint = an_environment.curr_tpoint
-        draw_tpoint = curr_tpoint + 1
-        visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
-        
-        if os.path.exists(visuals_save_dir) and remake_animation:
-            visuals_dir_content = os.listdir(visuals_save_dir)
-            for content in visuals_dir_content:
-                content_path = os.path.join(visuals_save_dir, content)
-                if os.path.isdir(content_path):
-                    if content[:8] == "images_n":
-                        shutil.rmtree(content_path)
-                        break
-        
-        cell_group_indices = []
-        cell_Ls = []
-        cell_etas = []
-        cell_skip_dynamics = []
+        visuals_dir_content = os.listdir(visuals_save_dir)
+        for content in visuals_dir_content:
+            content_path = os.path.join(visuals_save_dir, content)
+            if os.path.isdir(content_path):
+                if content[:8] == "images_n":
+                    shutil.rmtree(content_path)
+                    break
+                
+    ani_sets = an_environment.animation_settings
+    ani_sets.update(animation_settings)
     
-        for a_cell in an_environment.cells_in_environment:
-            cell_group_indices.append(a_cell.cell_group_index)
-            cell_Ls.append(a_cell.L/1e-6)
-            cell_etas.append(a_cell.eta)
-            cell_skip_dynamics.append(a_cell.skip_dynamics)
+    animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
     
-        animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
-        an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_animation, remake_graphs)
+    print("making graphics...")
+    an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_graphs, remake_animation)
+        
 
 def determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string):
     environment_name = template_experiment_name_format_string.format(repeat_number)
@@ -327,12 +328,12 @@ def check_validity_of_new_num_timesteps(new_num_timesteps):
     type_num_new_timesteps = type(new_num_timesteps)
     
     if  type_num_new_timesteps != int:
-        raise StandardError("Type of new_num_timesteps is {}!".format(type_num_new_timesteps))
+        raise Exception("Type of new_num_timesteps is {}!".format(type_num_new_timesteps))
     elif new_num_timesteps < 1:
-        raise StandardError("new_num_timesteps < 1, given: {}".format(new_num_timesteps))
+        raise Exception("new_num_timesteps < 1, given: {}".format(new_num_timesteps))
     
         
-def check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments):
+def check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_graphs, produce_animation, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments):
     if not run_experiments:
         return "check aborted, no simulation execution expected", None, False
     
@@ -356,7 +357,7 @@ def check_if_simulation_exists_and_is_complete(environment_dir, experiment_strin
         else:
             return "pickled environment does not exist", None, False
 
-    an_environment = retrieve_environment(env_pkl_path, produce_final_visuals, produce_intermediate_visuals, environment_wide_variable_defns, simulation_execution_enabled=run_experiments)
+    an_environment = retrieve_environment(env_pkl_path, produce_graphs, produce_animation, produce_intermediate_visuals, environment_wide_variable_defns, simulation_execution_enabled=run_experiments)
     
     if an_environment.simulation_complete() == True:
         if extend_simulation != True:
@@ -372,37 +373,37 @@ def check_if_simulation_exists_and_is_complete(environment_dir, experiment_strin
     else:
         return "simulation incomplete", an_environment, False
     
-def create_environment(environment_name, environment_dir, experiment_description, parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, external_gradient_fn):
+def create_environment(environment_name, environment_dir, experiment_description, parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_signal_fn, animation_settings):
     os.makedirs(environment_dir)
     autogenerate_debug_file(environment_dir)
     make_template_experiment_description_file(experiment_description, environment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns)    
     
-    an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, external_gradient_fn=external_gradient_fn, justify_parameters=justify_parameters, **environment_wide_variable_defns)
+    an_environment = parameterorg.make_environment_given_user_cell_group_defns(animation_settings, environment_name=environment_name, environment_dir=environment_dir, user_cell_group_defns=user_cell_group_defns, chemoattractant_signal_fn=chemoattractant_signal_fn, justify_parameters=justify_parameters, **environment_wide_variable_defns)
     
-    return an_environment
+    return an_environment, animation_settings
 
-def run_template_experiments(experiment_directory, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, external_gradient_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_final_visuals=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
+def run_template_experiments(experiment_directory, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_signal_fn_per_subexperiment, num_experiment_repeats=1, elapsed_timesteps_before_producing_intermediate_graphs=2500, elapsed_timesteps_before_producing_intermediate_animations=5000, animation_settings={}, produce_intermediate_visuals=True, produce_graphs=True, produce_animation=True, full_print=False, delete_and_rerun_experiments_without_stored_env=True, run_experiments=False, extend_simulation=False, new_num_timesteps=None, justify_parameters=True, remake_graphs=False, remake_animation=False):
     
     template_experiment_name_format_string = "RPT={}"
-    for repeat_number in xrange(num_experiment_repeats):
+    for repeat_number in range(num_experiment_repeats):
         for subexperiment_index, user_cell_group_defns in enumerate(copy.deepcopy(user_cell_group_defns_per_subexperiment)):
             environment_name, environment_dir = determine_environment_name_and_dir(repeat_number, experiment_directory, template_experiment_name_format_string)
             
             experiment_string = "RPT {}".format(repeat_number)
-            message, an_environment, simulation_complete = check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_final_visuals, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments)
+            message, an_environment, simulation_complete = check_if_simulation_exists_and_is_complete(environment_dir, experiment_string, environment_wide_variable_defns, produce_graphs, produce_animation, produce_intermediate_visuals, extend_simulation, new_num_timesteps, delete_and_rerun_experiments_without_stored_env, run_experiments)
             
-            print "{}: {}".format(environment_name, message)
+            print(("{}: {}".format(environment_name, message)))
             
             if message in ["environment dir does not exist", "pickled environment does not exist, rerun requested", "storefile does not exist, rerun requested", "simulation incomplete"]:
                 if run_experiments:
                     "running simulation..."
                     if message != "simulation incomplete":
-                        an_environment = create_environment(environment_name, environment_dir, experiment_descriptions_per_subexperiment[subexperiment_index], parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, external_gradient_fn_per_subexperiment[subexperiment_index])
+                        an_environment, animation_settings = create_environment(environment_name, environment_dir, experiment_descriptions_per_subexperiment[subexperiment_index], parameter_dict, justify_parameters, environment_wide_variable_defns, user_cell_group_defns, chemoattractant_signal_fn_per_subexperiment[subexperiment_index], animation_settings)
                     
                     an_environment.full_print = full_print
                     
-                    simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_final_visuals=produce_final_visuals, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
-                    print "Simulation run time: {}s".format(simulation_time)
+                    simulation_time = an_environment.execute_system_dynamics(animation_settings,  produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs, elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations)
+                    print(("Simulation run time: {}s".format(simulation_time)))
                     
             if (message == "simulation incomplete" and run_experiments) or message == "simulation complete":
                 remake_graphics(remake_graphs, remake_animation, environment_dir, an_environment, animation_settings)
@@ -413,9 +414,9 @@ def run_template_experiments(experiment_directory, parameter_dict, environment_w
 
 def raise_scriptname_error(scriptname, message=None):
     if message == None:
-        raise StandardError("Given script name does not follow template YYYY_MMM_DD_experiment_script_X: {}".format(scriptname))
+        raise Exception("Given script name does not follow template YYYY_MMM_DD_experiment_script_X: {}".format(scriptname))
     else:
-        raise StandardError("{}: {}".format(message, scriptname))
+        raise Exception("{}: {}".format(message, scriptname))
     
 def check_if_date_is_proper(date_pieces, scriptname):
     if not date_pieces[0].isnumeric():
@@ -462,16 +463,17 @@ def load_empty_env(empty_env_pickle_path):
 
 # ================================================================
 
-def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False):
+def retrieve_environment(empty_env_pickle_path, produce_intermediate_visuals, produce_graphs, produce_animation, environment_wide_variable_defns, simulation_execution_enabled=False):
     env = load_empty_env(empty_env_pickle_path)
     
     if env != None:
         env.environment_dir = os.path.split(empty_env_pickle_path)[0]
         env.init_from_store(environment_wide_variable_defns, simulation_execution_enabled=simulation_execution_enabled)
         env.produce_intermediate_visuals = produce_intermediate_visuals
-        env.produce_final_visuals = produce_final_visuals
+        env.produce_graphs = produce_graphs
+        env.produce_animation = produce_animation
     else:
-        raise StandardError("Could not load environment pickle file at: {}".format(empty_env_pickle_path))
+        raise Exception("Could not load environment pickle file at: {}".format(empty_env_pickle_path))
     
     return env
     

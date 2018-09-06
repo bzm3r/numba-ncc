@@ -20,10 +20,10 @@ def format_time(num):
 st = time.time()
 cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, all_cells_node_coords)
 et = time.time()
-print "create_initial_bounding_box_polygon_array: {}s".format(format_time(et - st))
+print("create_initial_bounding_box_polygon_array: {}s".format(format_time(et - st)))
 
 last_updated_cell_index = np.random.randint(0, 50)
-print "cell index to update: ", last_updated_cell_index
+print("cell index to update: ", last_updated_cell_index)
 
 st = time.time()
 
@@ -35,13 +35,13 @@ geometry_tasks_per_cell = np.array([geometry.create_dist_and_line_segment_intere
 distance_squared_matrix, line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_cells, num_nodes_per_cell, cells_bounding_box_array, all_cells_node_coords)
 et = time.time()
 
-print "create_initial_line_segment_intersection_and_dist_squared_matrices: {}s".format(format_time(et - st))
+print("create_initial_line_segment_intersection_and_dist_squared_matrices: {}s".format(format_time(et - st)))
 
 st = time.time()
 
-for ci in xrange(num_cells):
+for ci in range(num_cells):
 #    distance_squared_matrix, line_segment_intersection_matrix = geometry.update_line_segment_intersection_and_dist_squared_matrices(num_threads, geometry_tasks_per_cell[ci], num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, sequential=False)
     distance_squared_matrix, line_segment_intersection_matrix =  geometry.update_line_segment_intersection_and_dist_squared_matrices_old(ci, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix)
 et = time.time()
 
-print "update_line_segment_intersection_and_dist_squared_matrices: {}s".format(format_time(et - st))
+print("update_line_segment_intersection_and_dist_squared_matrices: {}s".format(format_time(et - st)))

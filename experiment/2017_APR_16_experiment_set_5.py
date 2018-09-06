@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import general.exec_utils as eu
 import general.experiment_templates as ets

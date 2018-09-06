@@ -4,7 +4,7 @@ Created on Mon May 11 14:22:06 2015
 
 @author: Brian
 """
-from __future__ import division
+
 import numpy as np
 import math
 import numba as nb
@@ -19,7 +19,7 @@ def calculate_cluster_centroid(points):
 @nb.jit(nopython=True)  
 def calculate_centroid(polygon_coords):
     num_vertices = polygon_coords.shape[0]
-    A = calculate_polygon_area(num_vertices, polygon_coords)
+    A = calculate_polygon_area(polygon_coords)
     
     Cx = 0.0
     Cy = 0.0
@@ -133,7 +133,8 @@ def calculate_2D_vector_mag(vector):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def calculate_2D_vector_mags(num_vectors, vectors):
+def calculate_2D_vector_mags(vectors):
+    num_vectors = vectors.shape[0]
     vector_mags = np.empty(num_vectors)
     
     for i in range(num_vectors):
@@ -208,7 +209,8 @@ def normalize_2D_vector(vector):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)         
-def normalize_vectors(num_vectors, vectors):
+def normalize_vectors(vectors):
+    num_vectors = vectors.shape[0]
     normalized_vectors = np.empty((num_vectors, 2), dtype=np.float64)
     
     for i in range(num_vectors):
@@ -224,10 +226,11 @@ def normalize_vectors(num_vectors, vectors):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_edge_vectors(num_nodes, node_coords):
-    edge_displacement_vectors = np.empty((num_nodes, 2), dtype=np.float64)
-    for i in range(num_nodes):
-        i_plus1 = (i+1)%num_nodes
+def calculate_edge_vectors(node_coords):
+    num_vertices = node_coords.shape[0]
+    edge_displacement_vectors = np.empty((num_vertices, 2), dtype=np.float64)
+    for i in range(num_vertices):
+        i_plus1 = (i+1)%num_vertices
         
         xA, yA = node_coords[i]
         xB, yB = node_coords[i_plus1]
@@ -264,10 +267,11 @@ def roll_2D_vectors(roll_number, num_vectors, vectors):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def sum_2D_vectors(num_elements, v1s, v2s):
-    result = np.empty((num_elements, 2), dtype=np.float64)
+def sum_2D_vectors(v1s, v2s):
+    num_vectors = v1s.shape[0]
+    result = np.empty((num_vectors, 2), dtype=np.float64)
     
-    for i in range(num_elements):
+    for i in range(num_vectors):
         v1 = v1s[i]
         v2 = v2s[i]
         
@@ -281,10 +285,11 @@ def sum_2D_vectors(num_elements, v1s, v2s):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def difference_2D_vectors(num_elements, v1s, v2s):
-    result = np.empty((num_elements, 2), dtype=np.float64)
+def difference_2D_vectors(v1s, v2s):
+    num_vectors = v1s.shape[0]
+    result = np.empty((num_vectors, 2), dtype=np.float64)
     
-    for i in range(num_elements):
+    for i in range(num_vectors):
         v1 = v1s[i]
         v2 = v2s[i]
         
@@ -299,19 +304,19 @@ def difference_2D_vectors(num_elements, v1s, v2s):
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
 def calculate_unit_inside_pointing_vecs(node_coords):
-    num_nodes = node_coords.shape[0]
+    num_vertices = node_coords.shape[0]
     
-    unit_inside_pointing_vecs = np.empty((num_nodes, 2), dtype=np.float64)
+    unit_inside_pointing_vecs = np.empty((num_vertices, 2), dtype=np.float64)
     
     tangent_vector = np.empty(2, dtype=np.float64)
     
-    for i in range(num_nodes):
-        i_plus_1 = (i + 1)%num_nodes
+    for i in range(num_vertices):
+        i_plus_1 = (i + 1)%num_vertices
         
         edge_vector_to_plus = node_coords[i_plus_1] - node_coords[i]
         edge_vector_to_plus_normalized = normalize_2D_vector(edge_vector_to_plus)
         
-        i_minus_1 = (i - 1)%num_nodes
+        i_minus_1 = (i - 1)%num_vertices
         
         edge_vector_from_minus = node_coords[i] - node_coords[i_minus_1]
         edge_vectors_from_minus_normalized = normalize_2D_vector(edge_vector_from_minus)
@@ -331,9 +336,9 @@ def calculate_unit_inside_pointing_vecs(node_coords):
 @nb.jit(nopython=True)  
 def calculate_unit_inside_pointing_vecs_per_timestep(node_coords_per_timestep):
     num_timesteps = node_coords_per_timestep.shape[0]
-    num_nodes = node_coords_per_timestep.shape[1]
+    num_vertices = node_coords_per_timestep.shape[1]
     
-    unit_inside_pointing_vecs_per_timestep = np.empty((num_timesteps, num_nodes, 2), dtype=np.float64)
+    unit_inside_pointing_vecs_per_timestep = np.empty((num_timesteps, num_vertices, 2), dtype=np.float64)
     
     for t in range(num_timesteps):
         unit_inside_pointing_vecs_per_timestep[t] = calculate_unit_inside_pointing_vecs(node_coords_per_timestep[t])
@@ -342,19 +347,19 @@ def calculate_unit_inside_pointing_vecs_per_timestep(node_coords_per_timestep):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def calculate_tangent_vecs_and_inside_pointing_vecs(num_nodes, node_coords):
+def calculate_tangent_vecs_and_inside_pointing_vecs(num_vertices, node_coords):
 
-    unit_inside_pointing_vecs = np.empty((num_nodes, 2), dtype=np.float64)
-    tangent_vectors = np.empty((num_nodes, 2), dtype=np.float64)
+    unit_inside_pointing_vecs = np.empty((num_vertices, 2), dtype=np.float64)
+    tangent_vectors = np.empty((num_vertices, 2), dtype=np.float64)
     
     tangent_vector = np.empty(2, dtype=np.float64)
-    for i in range(num_nodes):
-        i_plus_1 = (i + 1)%num_nodes
+    for i in range(num_vertices):
+        i_plus_1 = (i + 1)%num_vertices
         
         edge_vector_to_plus = calculate_vector_from_p1_to_p2_given_vectors(node_coords[i], node_coords[i_plus_1])
         edge_vector_to_plus_normalized = normalize_2D_vector(edge_vector_to_plus)
         
-        i_minus_1 = (i - 1)%num_nodes
+        i_minus_1 = (i - 1)%num_vertices
         
         edge_vector_from_minus = calculate_vector_from_p1_to_p2_given_vectors(node_coords[i_minus_1], node_coords[i])
         edge_vectors_from_minus_normalized = normalize_2D_vector(edge_vector_from_minus)
@@ -469,24 +474,24 @@ def calculate_bounding_box_polygon(polygon):
     
     for i in range(4):
         if i < 2:
-            bounding_box_polygon[i, 1] = min_y
+            bounding_box_polygon[i][1] = min_y
             if i%2 == 0:
-                bounding_box_polygon[i, 0] = min_x
+                bounding_box_polygon[i][0] = min_x
             else:
-                bounding_box_polygon[i, 0] = max_x 
+                bounding_box_polygon[i][0] = max_x 
         else:
-            bounding_box_polygon[i, 1] = max_y
+            bounding_box_polygon[i][1] = max_y
             if i%2 == 1:
-                bounding_box_polygon[i, 0] = min_x
+                bounding_box_polygon[i][0] = min_x
             else:
-                bounding_box_polygon[i, 0] = max_x 
+                bounding_box_polygon[i][0] = max_x 
     
     
     return bounding_box_polygon
 
 # -----------------------------------------------------------------
 #@nb.jit(nopython=True)    
-def create_initial_bounding_box_polygon_array(num_cells, num_nodes_per_cell, environment_cells_node_coords):
+def create_initial_bounding_box_polygon_array(num_cells, num_vertices_per_cell, environment_cells_node_coords):
     bounding_box_polygon_array = np.zeros((num_cells, 4), dtype=np.float64)
 
     for ci in range(num_cells):
@@ -507,15 +512,16 @@ def is_point_in_polygon_bounding_box_given_bounding_box(test_point, min_x, max_x
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def is_point_in_polygon_bounding_box(test_point, num_vertices, polygon):
+def is_point_in_polygon_bounding_box(test_point, polygon):
     
-    min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(num_vertices, polygon)
+    min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(polygon)
     
-    return is_point_in_polygon_bounding_box(test_point, min_x, max_x, min_y, max_y)
+    return is_point_in_polygon_bounding_box_given_bounding_box(test_point, min_x, max_x, min_y, max_y)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)   
-def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
+def is_point_in_polygon_without_bb_check(test_point, polygon):
+    num_vertices = polygon.shape[0]
     wn = 0
     test_point_y = test_point[1]
     
@@ -553,23 +559,23 @@ def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def is_point_in_polygon(test_point, num_vertices, polygon):
-    is_test_point_in_poly_bb = is_point_in_polygon_bounding_box(test_point, num_vertices, polygon)
+def is_point_in_polygon(test_point, polygon):
+    is_test_point_in_poly_bb = is_point_in_polygon_bounding_box(test_point, polygon)
     
     if is_test_point_in_poly_bb == 0:
         return 0
     else:
-        return is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon)
+        return is_point_in_polygon_without_bb_check(test_point, polygon)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)    
-def is_point_in_polygon_given_bounding_box(test_point, num_vertices, polygon, min_x, max_x, min_y, max_y):
+def is_point_in_polygon_given_bounding_box(test_point, polygon, min_x, max_x, min_y, max_y):
     is_test_point_in_poly_bb = is_point_in_polygon_bounding_box_given_bounding_box(test_point, min_x, max_x, min_y, max_y)
     
     if is_test_point_in_poly_bb == 0:
         return 0
     else:
-        return is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon)
+        return is_point_in_polygon_without_bb_check(test_point, polygon)
 
 # -----------------------------------------------------------------       
 @nb.jit(nopython=True)  
@@ -589,7 +595,8 @@ def is_point_in_polygons(point, polygons):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
+def are_points_inside_polygon(points, polygon):
+    num_points = points.shape[0]
     results = np.zeros(num_points, dtype=np.int64)
     
     min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(polygon)
@@ -597,40 +604,58 @@ def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
     for index in range(num_points):
         test_point = points[index]
         
-        results[index] = is_point_in_polygon_given_bounding_box(test_point, num_poly_vertices, polygon, min_x, max_x, min_y, max_y)
+        results[index] = is_point_in_polygon_given_bounding_box(test_point, polygon, min_x, max_x, min_y, max_y)
         
     return results
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def check_if_nodes_inside_other_cells(this_cell_index, num_nodes, num_cells, all_cells_node_coords):
-    are_nodes_inside_other_cells = np.zeros((num_nodes, num_cells), dtype=np.int64)
+def are_points_inside_polygons(points, polygons):
+    num_points = points.shape[0]
+    results = np.zeros(num_points, dtype=np.int64)
+    
+    for index in range(num_points):
+        test_point = points[index]
+        for polygon in polygons:
+            min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(polygon)
+            if is_point_in_polygon_given_bounding_box(test_point, polygon, min_x, max_x, min_y, max_y) == 1:
+                results[index] = 1
+                continue
+            
+    return results
+
+# -----------------------------------------------------------------
+@nb.jit(nopython=True)  
+def check_if_nodes_inside_other_cells(this_cell_index, num_vertices, num_cells, all_cells_node_coords):
+    are_nodes_inside_other_cells = np.zeros((num_vertices, num_cells), dtype=np.int64)
     
     this_cell_node_coords = all_cells_node_coords[this_cell_index]
     
     for other_ci in range(num_cells):
         if other_ci !=  this_cell_index:
-            are_nodes_inside_current_cell = are_points_inside_polygon(num_nodes, this_cell_node_coords, num_nodes, all_cells_node_coords[other_ci])
-            for ni in range(num_nodes):
+            are_nodes_inside_current_cell = are_points_inside_polygon(this_cell_node_coords, all_cells_node_coords[other_ci])
+            for ni in range(num_vertices):
                 are_nodes_inside_other_cells[ni][other_ci] = are_nodes_inside_current_cell[ni]
                     
     return are_nodes_inside_other_cells
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
-def are_nodes_inside_physical_boundary(this_cell_index, num_nodes, all_cells_node_coords, exists_space_physical_bdry_polygon, space_physical_bdry_polygon):
+def are_nodes_inside_physical_boundary(this_cell_index, num_vertices, all_cells_node_coords, exists_space_physical_bdry_polygon, space_physical_bdry_polygon):
     
     if exists_space_physical_bdry_polygon:
-        return are_points_inside_polygon(num_nodes, all_cells_node_coords[this_cell_index], space_physical_bdry_polygon.shape[0], space_physical_bdry_polygon)
+        return are_points_inside_polygon(num_vertices, all_cells_node_coords[this_cell_index], space_physical_bdry_polygon.shape[0], space_physical_bdry_polygon)
     else:
-        return np.ones(num_nodes, dtype=np.int64)
+        return np.ones(num_vertices, dtype=np.int64)
         
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def calculate_polygon_area(num_vertices, vertex_coords):
+def calculate_polygon_area(vertex_coords):
     '''
     http://geomalgorithms.com/a01-_area.html
     '''
+    num_vertices = vertex_coords.shape[0]
+    
     area = 0
     for i in range(num_vertices):
         j = (i + 1)%num_vertices
@@ -641,12 +666,13 @@ def calculate_polygon_area(num_vertices, vertex_coords):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def calculate_edgeplus_lengths(num_nodes, node_coords):
-    edgeplus_lengths = np.zeros(num_nodes, dtype=np.float64)
+def calculate_edgeplus_lengths(node_coords):
+    num_vertices = node_coords.shape[0]
+    edgeplus_lengths = np.zeros(num_vertices, dtype=np.float64)
     
-    for ni in range(num_nodes):
+    for ni in range(num_vertices):
         this_node_coord = node_coords[ni]
-        plus_node_coord = node_coords[(ni + 1)%num_nodes]
+        plus_node_coord = node_coords[(ni + 1)%num_vertices]
 
         edgeplus_lengths[ni] = calculate_dist_between_points_given_vectors(this_node_coord, plus_node_coord)
     
@@ -654,59 +680,36 @@ def calculate_edgeplus_lengths(num_nodes, node_coords):
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)     
-def calculate_average_edge_length_around_nodes(num_nodes, edgeplus_lengths):
-    avg_edge_lengths = np.zeros(num_nodes, dtype=np.float64)
+def calculate_average_edge_length_around_nodes(edgeplus_lengths):
+    num_vertices = edgeplus_lengths.shape[0]
+    avg_edge_lengths = np.zeros(num_vertices, dtype=np.float64)
     
-    for ni in range(num_nodes):
+    for ni in range(num_vertices):
         this_node_edgeplus_length = edgeplus_lengths[ni]
-        last_node_edgeplus_length = edgeplus_lengths[(ni - 1)%num_nodes]
+        last_node_edgeplus_length = edgeplus_lengths[(ni - 1)%num_vertices]
 
         avg_edge_lengths[ni] = 0.5*this_node_edgeplus_length + 0.5*last_node_edgeplus_length
     
     return avg_edge_lengths
     
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)     
-def calculate_edgeminus_lengths(num_nodes, node_coords):
-    edgeminus_lengths = np.zeros(num_nodes, dtype=np.float64)
-    
-    for ni in range(num_nodes):
-        this_node_coord = node_coords[ni]
-        minus_node_coord = node_coords[(ni - 1)%num_nodes]
-
-        edgeminus_lengths[ni] = calculate_dist_between_points_given_vectors(this_node_coord, minus_node_coord)
-    
-    return edgeminus_lengths
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)  
-def calculate_average_edge_lengths(num_nodes, node_coords):
-    edgeplus_lengths = calculate_edgeplus_lengths(num_nodes, node_coords)
-    edgeminus_lengths = calculate_edgeminus_lengths(num_nodes, node_coords)
-    
-    average_edge_lengths = np.zeros(num_nodes, dtype=np.float64)
-    
-    for ni in range(num_nodes):
-        average_edge_lengths[ni] = 0.5*edgeplus_lengths[ni] + 0.5*edgeminus_lengths[ni]
-        
-    return average_edge_lengths
-    
-# -----------------------------------------------------------------
 @nb.jit(nopython=True)    
-def calculate_perimeter(num_nodes, node_coords):
-    edgeplus_lengths  = calculate_edgeplus_lengths(num_nodes, node_coords)
+def calculate_perimeter(node_coords):
+    num_vertices = node_coords.shape[0]
+    edgeplus_lengths  = calculate_edgeplus_lengths(node_coords)
 
     perimeter = 0.0  
-    for ni in range(num_nodes):
+    for ni in range(num_vertices):
         perimeter += edgeplus_lengths[ni]
     
     return perimeter
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
-def multiply_vectors_by_scalars(num_elements, vectors, scalars):
-    result = np.empty((num_elements, 2))
-    for i in range(num_elements):
+def multiply_vectors_by_scalars(vectors, scalars):
+    num_vectors = vectors.shape[0]
+    result = np.empty((num_vectors, 2))
+    for i in range(num_vectors):
         x, y = vectors[i]
         scalar = scalars[i]
         result[i, 0] = scalar*x
@@ -716,10 +719,11 @@ def multiply_vectors_by_scalars(num_elements, vectors, scalars):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
-def multiply_vectors_by_scalar(num_elements, vectors, scalar):
-    result = np.empty((num_elements, 2))
+def multiply_vectors_by_scalar(vectors, scalar):
+    num_vectors = vectors.shape[0]
+    result = np.empty((num_vectors, 2))
     
-    for i in range(num_elements):
+    for i in range(num_vectors):
         x, y = vectors[i]
         result[i, 0] = scalar*x
         result[i, 1] = scalar*y
@@ -736,16 +740,16 @@ def calculate_squared_dist(p1, p2):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
-def create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, init_all_cells_node_coords):
-    distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
+def create_initial_distance_squared_matrix(num_cells, num_vertices_per_cell, init_all_cells_node_coords):
+    distance_squared_matrix = -1*np.ones((num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell), dtype=np.float64)
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
     
     for ci in range(num_cells):
-        for ni in range(num_nodes_per_cell):
+        for ni in range(num_vertices_per_cell):
             for other_ci in range(num_cells):
                 if ci != other_ci:
                     relevant_info_update_tracker_slice = info_update_tracker[ci][ni][other_ci]
-                    for other_ni in range(num_nodes_per_cell):
+                    for other_ni in range(num_vertices_per_cell):
                         if relevant_info_update_tracker_slice[other_ni] != 1:
                             info_update_tracker[ci][ni][other_ci][other_ni] = 1
                             info_update_tracker[other_ci][other_ni][ci][ni] = 1
@@ -761,16 +765,16 @@ def create_initial_distance_squared_matrix(num_cells, num_nodes_per_cell, init_a
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
-def update_distance_squared_matrix_old(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
+def update_distance_squared_matrix_old(last_updated_cell_index, num_cells, num_vertices_per_cell, all_cells_node_coords, distance_squared_matrix):
     
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
     
-    for ni in range(num_nodes_per_cell):
+    for ni in range(num_vertices_per_cell):
         for other_ci in range(num_cells):
             if other_ci != last_updated_cell_index:
                 relevant_info_update_tracker_slice = info_update_tracker[last_updated_cell_index][ni][other_ci]
-                for other_ni in range(num_nodes_per_cell):
+                for other_ni in range(num_vertices_per_cell):
                     if relevant_info_update_tracker_slice[other_ni] != 1:
                         info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
                         info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
@@ -786,7 +790,7 @@ def update_distance_squared_matrix_old(last_updated_cell_index, num_cells, num_n
 
 # -----------------------------------------------------------------
 #@nb.jit(nopython=True)      
-def update_distance_squared_matrix(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
+def update_distance_squared_matrix(num_threads, given_tasks, num_cells, num_vertices_per_cell, all_cells_node_coords, distance_squared_matrix):
     
     num_tasks = given_tasks.shape[0]
     if num_tasks != 0:
@@ -860,10 +864,10 @@ def calculate_dist_between_points_given_coords(p1x, p1y, p2x, p2y):
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)          
-def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array):
-    closest_nodes_on_other_cells = -1*np.ones((num_nodes, num_cells), dtype=np.int64)
+def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_vertices, this_ci, dist_squared_array):
+    closest_nodes_on_other_cells = -1*np.ones((num_vertices, num_cells), dtype=np.int64)
     
-    for ni in range(num_nodes):
+    for ni in range(num_vertices):
         this_node_dist_squared_array = dist_squared_array[ni]
         for ci in range(num_cells):
             if ci != this_ci:
@@ -871,7 +875,7 @@ def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_n
                 closest_node_dist = -1
                 
                 this_node_dist_squared_wrt_other_cell = this_node_dist_squared_array[ci]
-                for other_ni in range(num_nodes):
+                for other_ni in range(num_vertices):
                     dist_bw_nodes = this_node_dist_squared_wrt_other_cell[other_ni]
                     
                     if other_ni == 0 or dist_bw_nodes < closest_node_dist:
@@ -884,13 +888,13 @@ def find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_n
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)                            
-def calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni):
+def calculate_closest_point_dist_squared(num_vertices, this_nc, other_cell_node_coords, closest_ni):
     closest_point_node_indices = np.zeros(2, dtype=np.int64)
     closest_point_node_indices[0] = closest_ni
     closest_point_node_indices[1] = -1
     
-    closest_ni_plus1 = (closest_ni + 1)%num_nodes  
-    closest_ni_minus1 = (closest_ni - 1)%num_nodes
+    closest_ni_plus1 = (closest_ni + 1)%num_vertices  
+    closest_ni_minus1 = (closest_ni - 1)%num_vertices
     
     closest_nc = other_cell_node_coords[closest_ni]
     closest_nc_plus1 = other_cell_node_coords[closest_ni_plus1]
@@ -928,19 +932,19 @@ def closeness_smoothening_linear_function(zero_until, one_at, x):
         return m*x + b
     
 @nb.jit(nopython=True)      
-def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria_0_until, closeness_dist_squared_criteria_1_at, all_cells_node_coords, are_nodes_inside_other_cells):
-    close_points_exist = np.zeros((num_nodes, num_cells), dtype=np.int64)
-    close_points = np.zeros((num_nodes, num_cells, 2), dtype=np.float64)
-    close_points_node_indices = np.zeros((num_nodes, num_cells, 2), dtype=np.int64)
-    close_points_node_projection_factors = np.ones((num_nodes, num_cells), dtype=np.float64)
-    close_point_smoothness_factors = np.zeros((num_nodes, num_cells), dtype=np.float64)
+def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_vertices, this_ci, this_cell_node_coords, dist_squared_array, closeness_dist_squared_criteria_0_until, closeness_dist_squared_criteria_1_at, all_cells_node_coords, are_nodes_inside_other_cells):
+    close_points_exist = np.zeros((num_vertices, num_cells), dtype=np.int64)
+    close_points = np.zeros((num_vertices, num_cells, 2), dtype=np.float64)
+    close_points_node_indices = np.zeros((num_vertices, num_cells, 2), dtype=np.int64)
+    close_points_node_projection_factors = np.ones((num_vertices, num_cells), dtype=np.float64)
+    close_point_smoothness_factors = np.zeros((num_vertices, num_cells), dtype=np.float64)
     
-    closest_nodes_on_other_cells = find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_nodes, this_ci, dist_squared_array)
+    closest_nodes_on_other_cells = find_closest_node_on_other_cells_for_each_node_on_this_cell(num_cells, num_vertices, this_ci, dist_squared_array)
     
     closeness_dist_criteria_0_until = np.sqrt(closeness_dist_squared_criteria_0_until)
     closeness_dist_criteria_1_at = np.sqrt(closeness_dist_squared_criteria_1_at)
     
-    for ni in range(num_nodes):
+    for ni in range(num_vertices):
         closest_nodes_to_this_node = closest_nodes_on_other_cells[ni]
         relevant_dist_squared_array_slice = dist_squared_array[ni]
         this_nc = this_cell_node_coords[ni]
@@ -952,7 +956,7 @@ def do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this
                 
                 other_cell_node_coords = all_cells_node_coords[ci]
                 
-                closest_point_dist_squared, closest_point_coords, closest_node_indices, projection_factor = calculate_closest_point_dist_squared(num_nodes, this_nc, other_cell_node_coords, closest_ni)
+                closest_point_dist_squared, closest_point_coords, closest_node_indices, projection_factor = calculate_closest_point_dist_squared(num_vertices, this_nc, other_cell_node_coords, closest_ni)
                 
                 if closest_point_dist_squared != -1 and closest_point_dist_squared < closeness_dist_squared_criteria_0_until:
                     close_points_exist[ni][ci] = 1
@@ -1169,8 +1173,9 @@ def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y)
     return 0
 
 # -----------------------------------------------------------------
-nb.jit(nopython=True)      
+@nb.jit(nopython=True)      
 def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon):
+    num_intersections = 0
     coords_a = all_polygon_coords[pi_a, vi_a]
     coords_b = all_polygon_coords[pi_b, vi_b]
     
@@ -1181,12 +1186,12 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
     elif check_if_line_segment_from_node_self_intersects(coords_b, coords_a, all_polygon_coords[pi_b], vi_b) == 1:
         return 100000
     else:
-        if space_migratory_bdry_polygon.shape[0] != 0:
+        if space_migratory_bdry_polygon.size != 0:
             if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
-                    return 100000
-        if space_physical_bdry_polygon.shape[0] != 0:
+                return 100000
+        if space_physical_bdry_polygon.size != 0:
             if check_if_line_segment_intersects_polygon(coords_a, coords_b, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
-                    return 100000
+                return 100000
     
     num_intersections = 0    
     num_polygons = all_polygon_coords.shape[0]
@@ -1201,24 +1206,56 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
                     
     return num_intersections
 
+# -----------------------------------------------------------
+    
+@nb.jit(nopython=True)      
+def check_if_line_segment_going_from_vertex_of_one_polygon_to_point_passes_through_any_polygon(pi_a, vi_a, point, all_polygon_coords, all_polygons_bounding_box_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon):
+    num_intersections = 0
+    coords_a = all_polygon_coords[pi_a, vi_a]
+    
+    normal_to_line_segment = rotate_2D_vector_CCW(point - coords_a)
+    
+#    if check_if_line_segment_from_node_self_intersects(coords_a, point, all_polygon_coords[pi_a], vi_a) == 1:
+#        return 100000
+#    else:
+    if space_migratory_bdry_polygon.shape[0] > 0:
+        if check_if_line_segment_intersects_polygon(coords_a, point, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
+            return 100000
+    if space_physical_bdry_polygon.shape[0] > 0:
+        if check_if_line_segment_intersects_polygon(coords_a, point, normal_to_line_segment, space_migratory_bdry_polygon, -1) == 1:
+            return 100000
+    
+    num_intersections = 0    
+    num_polygons = all_polygon_coords.shape[0]
+    for pi in range(num_polygons):
+        if pi == pi_a:
+            continue
+        else:
+            min_x, max_x, min_y, max_y = all_polygons_bounding_box_coords[pi]
+            if check_if_line_segment_intersects_box(coords_a, point, min_x, max_x, min_y, max_y) == 1:
+                if check_if_line_segment_intersects_polygon(coords_a, point, normal_to_line_segment, all_polygon_coords[pi], -1) == 1:
+                    num_intersections += 1
+                    
+    return num_intersections
+
 # -----------------------------------------------------------------
   
 @nb.jit(nopython=True)      
-def create_initial_line_segment_intersection_matrix(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
-    line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
+def create_initial_line_segment_intersection_matrix(num_cells, num_vertices_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords, space_migratory_bdry_corridor, space_physical_bdry_polygon):
+    line_segment_intersection_matrix = -1*np.ones((num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell), dtype=np.int64)
     info_update_tracker = np.zeros_like(line_segment_intersection_matrix, dtype=np.int64)
     
     for ci in range(num_cells):
-        for ni in range(num_nodes_per_cell):
+        for ni in range(num_vertices_per_cell):
             for other_ci in range(num_cells):
                 if ci != other_ci:
                     relevant_info_update_tracker_slice = info_update_tracker[ci][ni][other_ci]
-                    for other_ni in range(num_nodes_per_cell):
+                    for other_ni in range(num_vertices_per_cell):
                         if relevant_info_update_tracker_slice[other_ni] != 1:
                             info_update_tracker[ci][ni][other_ci][other_ni] = 1
                             info_update_tracker[other_ci][other_ni][ci][ni] = 1
                             
-                            does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(ci, ni, other_ci, other_ni, init_all_cells_node_coords, init_cells_bounding_box_array)
+                            does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(ci, ni, other_ci, other_ni, init_all_cells_node_coords, init_cells_bounding_box_array, space_migratory_bdry_corridor, space_physical_bdry_polygon)
                             
                             line_segment_intersection_matrix[ci][ni][other_ci][other_ni] = does_line_segment_between_nodes_intersect
                             line_segment_intersection_matrix[other_ci][other_ni][ci][ni] = does_line_segment_between_nodes_intersect
@@ -1229,21 +1266,21 @@ def create_initial_line_segment_intersection_matrix(num_cells, num_nodes_per_cel
 # -----------------------------------------------------------------
  
 @nb.jit(nopython=True)      
-def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, line_segment_intersection_matrix):
+def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, num_vertices_per_cell, all_cells_node_coords, cells_bounding_box_array, space_migratory_bdry_corridor, space_physical_bdry_polygon, line_segment_intersection_matrix):
     
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(line_segment_intersection_matrix, dtype=np.int64)
     
-    for ni in range(num_nodes_per_cell):
+    for ni in range(num_vertices_per_cell):
         for other_ci in range(num_cells):
             if other_ci != last_updated_cell_index:
                 relevant_info_update_tracker_slice = info_update_tracker[last_updated_cell_index][ni][other_ci]
-                for other_ni in range(num_nodes_per_cell):
+                for other_ni in range(num_vertices_per_cell):
                     if relevant_info_update_tracker_slice[other_ni] != 1:
                         info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
                         info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
                         
-                        does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(last_updated_cell_index, ni, other_ci, other_ni, all_cells_node_coords, cells_bounding_box_array)
+                        does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(last_updated_cell_index, ni, other_ci, other_ni, all_cells_node_coords, cells_bounding_box_array, space_migratory_bdry_corridor, space_physical_bdry_polygon)
                             
                         line_segment_intersection_matrix[last_updated_cell_index][ni][other_ci][other_ni] = does_line_segment_between_nodes_intersect
                         line_segment_intersection_matrix[other_ci][other_ni][last_updated_cell_index][ni] = does_line_segment_between_nodes_intersect
@@ -1253,23 +1290,23 @@ def update_line_segment_intersection_matrix(last_updated_cell_index, num_cells, 
 # -----------------------------------------------------------------
     
 @nb.jit(nopython=True)      
-def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords):
-    distance_squared_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
-    line_segment_intersection_matrix = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.int64)
+def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_cells, num_vertices_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon):
+    distance_squared_matrix = -1*np.ones((num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell), dtype=np.float64)
+    line_segment_intersection_matrix = -1*np.ones((num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell), dtype=np.int64)
     
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
     
     for ci in range(num_cells):
-        for ni in range(num_nodes_per_cell):
+        for ni in range(num_vertices_per_cell):
             for other_ci in range(num_cells):
                 if ci != other_ci:
                     relevant_info_update_tracker_slice = info_update_tracker[ci][ni][other_ci]
-                    for other_ni in range(num_nodes_per_cell):
+                    for other_ni in range(num_vertices_per_cell):
                         if relevant_info_update_tracker_slice[other_ni] != 1:
                             info_update_tracker[ci][ni][other_ci][other_ni] = 1
                             info_update_tracker[other_ci][other_ni][ci][ni] = 1
                             
-                            does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(ci, ni, other_ci, other_ni, init_all_cells_node_coords, init_cells_bounding_box_array)
+                            does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(ci, ni, other_ci, other_ni, init_all_cells_node_coords, init_cells_bounding_box_array, space_migratory_bdry_polygon, space_physical_bdry_polygon)
                             
                             line_segment_intersection_matrix[ci][ni][other_ci][other_ni] = does_line_segment_between_nodes_intersect
                             line_segment_intersection_matrix[other_ci][other_ni][ci][ni] = does_line_segment_between_nodes_intersect
@@ -1285,13 +1322,8 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices_old(num_c
 
 # -----------------------------------------------------------------
 
-#@nb.jit('void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
-#@nb.jit(nopython=True, nogil=True)
-def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, task_addresses):
-    """
-    Function under test.
-    """
-    
+@nb.jit(nopython=True, nogil=True)
+def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_segment_intersect_matrix, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, task_addresses):    
     for n in range(task_addresses.shape[0]):
         a_ci, a_ni, b_ci, b_ni = task_addresses[n][0], task_addresses[n][1], task_addresses[n][2], task_addresses[n][3]
         dist_squared = calculate_squared_dist(polygons[a_ci][a_ni], polygons[b_ci][b_ni])
@@ -1305,10 +1337,6 @@ def dist_squared_and_line_segment_calculation_worker(dist_squared_matrix, line_s
         
 @nb.jit('void(float64[:,:,:,:], float64[:,:,:], int64[:,:])', nopython=True, nogil=True)
 def dist_squared_calculation_worker(dist_squared_matrix, polygons, task_addresses):
-    """
-    Function under test.
-    """
-    
     for n in range(task_addresses.shape[0]):
         a_ci, a_ni, b_ci, b_ni = task_addresses[n][0], task_addresses[n][1], task_addresses[n][2], task_addresses[n][3]
         dist_squared = calculate_squared_dist(polygons[a_ci][a_ni], polygons[b_ci][b_ni])
@@ -1318,28 +1346,28 @@ def dist_squared_calculation_worker(dist_squared_matrix, polygons, task_addresse
 
 
 @nb.jit(nopython=True)
-def create_dist_and_line_segment_interesection_test_args_relative_to_specific_cell(specific_cell_index, num_cells, num_nodes_per_cell):
+def create_dist_and_line_segment_interesection_test_args_relative_to_specific_cell(specific_cell_index, num_cells, num_vertices_per_cell):
     tasks = []
     
-    for ni in range(num_nodes_per_cell):
+    for ni in range(num_vertices_per_cell):
         for other_ci in range(num_cells):
             if other_ci != specific_cell_index:
-                for other_ni in range(num_nodes_per_cell):
+                for other_ni in range(num_vertices_per_cell):
                     tasks.append((specific_cell_index, ni, other_ci, other_ni))
                     
     return tasks
 
 @nb.jit(nopython=True, nogil=True)
-def create_dist_and_line_segment_interesection_test_args(num_cells, num_nodes_per_cell):
-    info_update_tracker = -1*np.ones((num_cells, num_nodes_per_cell, num_cells, num_nodes_per_cell), dtype=np.float64)
+def create_dist_and_line_segment_interesection_test_args(num_cells, num_vertices_per_cell):
+    info_update_tracker = -1*np.ones((num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell), dtype=np.float64)
     tasks = []
     
     for ci in range(num_cells):
-        for ni in range(num_nodes_per_cell):
+        for ni in range(num_vertices_per_cell):
             for other_ci in range(num_cells):
                 if ci != other_ci:
                     relevant_info_update_tracker_slice = info_update_tracker[ci][ni][other_ci]
-                    for other_ni in range(num_nodes_per_cell):
+                    for other_ni in range(num_vertices_per_cell):
                         if relevant_info_update_tracker_slice[other_ni] != 1:
                             info_update_tracker[ci][ni][other_ci][other_ni] = 1
                             info_update_tracker[other_ci][other_ni][ci][ni] = 1
@@ -1347,11 +1375,11 @@ def create_dist_and_line_segment_interesection_test_args(num_cells, num_nodes_pe
                             
     return tasks
 
-def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threads, tasks, num_cells, num_nodes, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=False):
+def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threads, tasks, num_cells, num_vertices, polygon_bounding_boxes, polygons, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=True):
     num_tasks = tasks.shape[0]
     
-    dist_squared_matrix = -1*np.ones((num_cells, num_nodes, num_cells, num_nodes), dtype=np.float64)
-    line_segment_intersect_matrix = -1*np.ones((num_cells, num_nodes, num_cells, num_nodes), dtype=np.int64)
+    dist_squared_matrix = -1*np.ones((num_cells, num_vertices, num_cells, num_vertices), dtype=np.float64)
+    line_segment_intersect_matrix = -1*np.ones((num_cells, num_vertices, num_cells, num_vertices), dtype=np.int64)
     
     if num_tasks != 0:
         chunklen = (num_tasks + num_threads - 1) // num_threads
@@ -1377,15 +1405,15 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices(num_threa
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
-def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, distance_squared_matrix):
+def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_vertices_per_cell, all_cells_node_coords, distance_squared_matrix):
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(distance_squared_matrix, dtype=np.int64)
     
-    for ni in range(num_nodes_per_cell):
+    for ni in range(num_vertices_per_cell):
         for other_ci in range(num_cells):
             if other_ci != last_updated_cell_index:
                 relevant_info_update_tracker_slice = info_update_tracker[last_updated_cell_index][ni][other_ci]
-                for other_ni in range(num_nodes_per_cell):
+                for other_ni in range(num_vertices_per_cell):
                     if relevant_info_update_tracker_slice[other_ni] != 1:
                         info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
                         info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
@@ -1401,21 +1429,22 @@ def update_dist_squared_matrix(last_updated_cell_index, num_cells, num_nodes_per
 
 # ---------------------------------------------------------------------------------
 @nb.jit(nopython=True)
-def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_cell_index, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix):
+def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_cell_index, num_cells, num_vertices_per_cell, all_cells_node_coords, cells_bounding_box_array, space_migratory_bdry_polygon, space_physical_bdry_polygon, distance_squared_matrix, line_segment_intersection_matrix):
     
     # 1 if info has been updated, 0 otherwise
     info_update_tracker = np.zeros_like(line_segment_intersection_matrix, dtype=np.int64)
     
-    for ni in range(num_nodes_per_cell):
+    for ni in range(num_vertices_per_cell):
         for other_ci in range(num_cells):
+            pass
             if other_ci != last_updated_cell_index:
                 relevant_info_update_tracker_slice = info_update_tracker[last_updated_cell_index][ni][other_ci]
-                for other_ni in range(num_nodes_per_cell):
+                for other_ni in range(num_vertices_per_cell):
                     if relevant_info_update_tracker_slice[other_ni] != 1:
                         info_update_tracker[last_updated_cell_index][ni][other_ci][other_ni] = 1
                         info_update_tracker[other_ci][other_ni][last_updated_cell_index][ni] = 1
 
-                        does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(last_updated_cell_index, ni, other_ci, other_ni, all_cells_node_coords, cells_bounding_box_array)
+                        does_line_segment_between_nodes_intersect = check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(last_updated_cell_index, ni, other_ci, other_ni, all_cells_node_coords, cells_bounding_box_array, space_migratory_bdry_polygon, space_physical_bdry_polygon)
                             
                         line_segment_intersection_matrix[last_updated_cell_index][ni][other_ci][other_ni] = does_line_segment_between_nodes_intersect
                         line_segment_intersection_matrix[other_ci][other_ni][last_updated_cell_index][ni] = does_line_segment_between_nodes_intersect
@@ -1429,7 +1458,7 @@ def update_line_segment_intersection_and_dist_squared_matrices_old(last_updated_
                             
     return distance_squared_matrix, line_segment_intersection_matrix
 
-def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_nodes_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=False):
+def update_line_segment_intersection_and_dist_squared_matrices(num_threads, given_tasks, num_cells, num_vertices_per_cell, all_cells_node_coords, cells_bounding_box_array, distance_squared_matrix, line_segment_intersection_matrix, space_migratory_bdry_polygon, space_physical_bdry_polygon, sequential=False):
 
     num_tasks = given_tasks.shape[0]
     
@@ -1458,7 +1487,7 @@ def update_line_segment_intersection_and_dist_squared_matrices(num_threads, give
 # -------------------------------------------------------------------
 @nb.jit(nopython=True)
 def calculate_centroid_dift(prev_cell_centroids, curr_cell_centroids):
-    num_cells, num_nodes = prev_cell_centroids.shape
+    num_cells, num_vertices = prev_cell_centroids.shape
     drift = 0.0
     
     for ci in range(num_cells):
@@ -1473,7 +1502,7 @@ def calculate_centroid_dift(prev_cell_centroids, curr_cell_centroids):
     
     
 if __name__ == '__main__':
-    print "=============== geometry.py ===================="
+    print("=============== geometry.py ====================")
     polygon = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float64)
-    unit_inside_pointing_vecs = calculate_unit_inside_pointing_vecs(4, polygon)
-    print "================================================"
+    unit_inside_pointing_vecs = calculate_unit_inside_pointing_vecs(polygon)
+    print("================================================")

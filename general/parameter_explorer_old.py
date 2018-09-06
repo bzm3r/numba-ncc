@@ -1,4 +1,4 @@
-from __future__ import division
+
 from sklearn.utils.extmath import cartesian
 import core.parameterorg as parameterorg
 import numpy as np
@@ -98,7 +98,7 @@ def generate_random_update_based_on_current_state(num_new_updates, parameter_dic
 
 def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=3, seeds=None, total_time_in_hours=3.):
     
-    print "Preparing tasks (randomization={})...".format(randomization)
+    print("Preparing tasks (randomization={})...".format(randomization))
     task_list = []
     
     for u in trial_updates:
@@ -110,13 +110,13 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomiz
             task_list.append(exptempls.setup_polarization_experiment(trial_dict, total_time_in_hours=total_time_in_hours, seed=seeds[n]))
 
     if worker_pool != None:
-        print "running tasks in parallel..."
+        print("running tasks in parallel...")
         result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
     else:
-        print "running tasks in sequence..."
+        print("running tasks in sequence...")
         result_cells = [executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list]
     
-    print "analyzing results..."
+    print("analyzing results...")
     i = 0
     result_cells_per_pd = []
     while i < len(task_list):
@@ -151,7 +151,7 @@ def rate_results_and_find_best_update(current_best_score, current_dict, scores_a
             combined_score = np.average(combined_score_with_randomization, combined_score_no_randomization)
             
         if combined_score > current_best_score:
-            print "possible new score: {}, {}, {}".format(combined_score, np.round(score_without_randomization, decimals=2), np.round(score_with_randomization, decimals=2))
+            print("possible new score: {}, {}, {}".format(combined_score, np.round(score_without_randomization, decimals=2), np.round(score_with_randomization, decimals=2)))
             new_best_score = combined_score
             new_best_update = u
             new_dict = copy.deepcopy(current_dict)
@@ -170,11 +170,11 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -225,9 +225,9 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
     
     while not stop_criterion_met:
         improvement = False
-        print "current best score: ", current_best_score
+        print("current best score: ", current_best_score)
         
-        print "preparing modded dicts..."
+        print("preparing modded dicts...")
         trial_updates = generate_random_update_based_on_current_state(num_new_dicts_to_generate, current_dict, mod_labels, mod_deltas, mod_min_max)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats_no_randomization, seeds=seeds, total_time_in_hours=total_time_in_hours)
@@ -240,18 +240,18 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         current_best_score, current_best_update, current_dict, improvement = rate_results_and_find_best_update(current_best_score, current_dict, scores_and_updates_no_randomization, best_updates, scores_and_updates_with_randomization=scores_and_updates_with_randomization)
         
         if current_best_score > required_score:
-            print "Success! Stop criterion met!"
+            print("Success! Stop criterion met!")
             stop_criterion_met = True
             
         if improvement:
-            print "improvement seen!"
+            print("improvement seen!")
             num_tries_with_no_improvement = 0
         else:
-            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            print("no improvement. ({})".format(num_tries_with_no_improvement))
             num_tries_with_no_improvement += 1
             if num_tries_with_no_improvement > 50:
-                print "no improvement seen for a while...retrying from new initial conditions!"
-                print "Too many tries with no improvement. Stopping."
+                print("no improvement seen for a while...retrying from new initial conditions!")
+                print("Too many tries with no improvement. Stopping.")
                 stop_criterion_met = True
             
     return best_updates
@@ -271,11 +271,11 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -289,8 +289,8 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
     stop_criterion_met = False
     
     while not stop_criterion_met:
-        print "==========================="
-        print "current_polarization_score: ", current_polarization_score
+        print("===========================")
+        print("current_polarization_score: ", current_polarization_score)
         
         dprs = []
         for label_index, loop_data in enumerate(zip(mod_labels, mod_min_max, mod_deltas)):
@@ -337,7 +337,7 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
         dprs = np.array([bounded(v, [-1., 1.]) for v in dprs])
         
         for l, dv in zip(mod_labels, dprs):
-            print "{}: {}".format(l, dv)
+            print("{}: {}".format(l, dv))
             
         old_update = copy.deepcopy(current_best_update)
         old_values = np.array([cbu[1] for cbu in current_best_update])
@@ -345,14 +345,14 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
         new_values = np.array([bounded(v + w*d, lims) for v, w, d, lims in zip(old_values, dprs, mod_deltas, mod_min_max)])
         
         if np.all(new_values/old_values == 1.0):
-            print "No improvement possible :("
+            print("No improvement possible :(")
             stop_criterion_met = True
             continue
         
-        current_best_update = zip(mod_labels, new_values)
+        current_best_update = list(zip(mod_labels, new_values))
         
         for old_cbu, new_cbu in zip(old_update, current_best_update):
-            print "{}: {}, {}".format(old_cbu[0], np.round(new_cbu[1]/old_cbu[1], decimals=3), new_cbu[1])
+            print("{}: {}, {}".format(old_cbu[0], np.round(new_cbu[1]/old_cbu[1], decimals=3), new_cbu[1]))
             
         current_dict.update(current_best_update)
         
@@ -361,7 +361,7 @@ def parameter_explorer_polarization_slope_follower(modification_program, require
         current_polarization_score = np.average([cu.calculate_rgtpase_polarity_score_from_cell(rc, significant_difference=0.2, weigh_by_timepoint=False)[0] for rc in result_cells])
             
         if current_polarization_score >= required_polarization_score:
-            print "Success!"
+            print("Success!")
             stop_criterion_met = True
             continue
             
@@ -375,10 +375,10 @@ def create_task_value_arrays(parameter_exploration_program, num_processes):
         given_parameter_labels.append(parameter_label)
         given_parameter_values.append(np.floor(np.linspace(start_value, end_value, num=range_resolution)))
 
-    all_parameter_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    all_parameter_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     for parameter_label in given_parameter_labels:
         if parameter_label not in all_parameter_labels:
-            raise StandardError("Parameter label {} not in accepted parameter dictionary.".format(parameter_label))
+            raise Exception("Parameter label {} not in accepted parameter dictionary.".format(parameter_label))
     
     task_value_arrays = cartesian(tuple(given_parameter_values))
     num_combinations = len(task_value_arrays)
@@ -424,7 +424,7 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
             stored_parameter_exploration_program = dill.load(f)
         
         if stored_parameter_exploration_program != parameter_exploration_program:
-            raise StandardError("Stored exploration program does not match given exploration program! stored: {} || given: {}".format(stored_parameter_exploration_program, parameter_exploration_program))
+            raise Exception("Stored exploration program does not match given exploration program! stored: {} || given: {}".format(stored_parameter_exploration_program, parameter_exploration_program))
             
         given_parameter_labels, given_parameter_values, task_value_arrays, chunky_task_value_array_indices = create_task_value_arrays(parameter_exploration_program, num_processes)
     else:
@@ -450,14 +450,14 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
     for ci, task_index_chunk in enumerate(chunky_task_value_array_indices[ci_offset:]):
         chunk_index = ci + ci_offset
         st = time.time()
-        print "Executing task chunk %d/%d..." %(chunk_index + 1, num_task_chunks)
+        print("Executing task chunk %d/%d..." %(chunk_index + 1, num_task_chunks))
         results = np.zeros((num_processes, len(given_parameter_labels) + 1), dtype=np.float64)
         
         update_dicts = []
         task_chunk = []
         for task_index in task_index_chunk:
             task_value_array = task_value_arrays[task_index]
-            update_dict = dict(zip(given_parameter_labels, task_value_array))
+            update_dict = dict(list(zip(given_parameter_labels, task_value_array)))
             parameter_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
             parameter_dict.update(update_dict)
             update_dicts.append(update_dict)
@@ -476,19 +476,19 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
         results = np.array([np.append([cu.calculate_rgtpase_polarity_score_from_cell(a_cell, significant_difference=0.2, weigh_by_timepoint=False)[0]], task_value_arrays[ti]) for a_cell, ti in zip(loop_result_cells, task_index_chunk)])
         
         current_polarity_ratings = results[:,0]
-        print "polarity ratings: ", current_polarity_ratings
+        print("polarity ratings: ", current_polarity_ratings)
         max_pr = np.max(current_polarity_ratings)
         if max_pr > best_pr:
             best_pr = max_pr
         
         et = time.time()
-        print "Time: ", np.round(et - st, decimals=1)
-        print "best_pr: ", best_pr
+        print("Time: ", np.round(et - st, decimals=1))
+        print("best_pr: ", best_pr)
         
-        print "Storing results..."
+        print("Storing results...")
         hardio.append_parameter_exploration_data_to_dataset(ci + ci_offset, results, storefile_path)
         
-    print "Storing last batch of results..."
+    print("Storing last batch of results...")
     hardio.append_parameter_exploration_data_to_dataset(ci + ci_offset, results, storefile_path)
 
     return storefile_path
@@ -496,7 +496,7 @@ def parameter_explorer_asymmetry_criteria(parameter_exploration_name, parameter_
 # =====================================================================
 
 def get_result_as_dict_update(results, index, labels):
-    return zip(labels, results[index][1:])
+    return list(zip(labels, results[index][1:]))
     
 if __name__ == '__main__':
 #    init_rho_gtpase_conditions = {'rac_membrane_active': np.array([  1.93310585e-02,   1.59639324e-02,   2.52662711e-02,

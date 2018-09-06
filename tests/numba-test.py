@@ -177,4 +177,4 @@ def testfn(a, b):
             
     return x
 
-print testfn(num_nodes, num_cells)
+print(testfn(num_nodes, num_cells))

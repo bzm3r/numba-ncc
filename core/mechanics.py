@@ -5,7 +5,7 @@ Created on Tue May 12 13:26:37 2015
 @author: Brian
 """
 
-import geometry
+from . import geometry
 import numpy as np
 import numba as nb
 
@@ -30,13 +30,13 @@ def calculate_phys_space_bdry_contact_factors(num_nodes, this_cell_coords, space
     if space_physical_bdry_polygons.size == 0:
         return np.zeros(len(this_cell_coords))
     else:
-        return geometry.are_points_inside_polygons(num_nodes, this_cell_coords, space_physical_bdry_polygons)
+        return geometry.are_points_inside_polygons(this_cell_coords, space_physical_bdry_polygons)
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)    
 def calculate_migr_bdry_contact_factors(num_nodes, this_cell_coords, space_migratory_bdry_polygon, migr_bdry_contact_factor_mag):
     
-    are_nodes_in_migr_space = geometry.are_points_inside_polygon(num_nodes, this_cell_coords, space_migratory_bdry_polygon.shape[0], space_migratory_bdry_polygon)
+    are_nodes_in_migr_space = geometry.are_points_inside_polygon(this_cell_coords, space_migratory_bdry_polygon.shape[0], space_migratory_bdry_polygon)
     
     result = np.zeros(num_nodes, dtype=np.float64)
     for i in range(num_nodes):
@@ -63,22 +63,16 @@ def calculate_local_strains(this_cell_coords, length_edge_resting):
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
 def calculate_cytoplasmic_force(num_nodes, this_cell_coords, area_resting, stiffness_cytoplasmic, unit_inside_pointing_vectors):
-    current_area = abs(geometry.calculate_polygon_area(num_nodes, this_cell_coords))
+    current_area = abs(geometry.calculate_polygon_area(this_cell_coords))
         
     if current_area < area_resting:
         area_strain = (current_area - area_resting)/area_resting
         force_mag = area_strain*stiffness_cytoplasmic/num_nodes
         
-        return geometry.multiply_vectors_by_scalar(num_nodes, unit_inside_pointing_vectors, force_mag)
+        return geometry.multiply_vectors_by_scalar(unit_inside_pointing_vectors, force_mag)
     else:
         return np.zeros((num_nodes, 2))
 
-
-#    area_strain = (current_area - area_resting)/area_resting
-#    force_mag = area_strain*stiffness_cytoplasmic/num_nodes
-#    
-#    return geometry.multiply_vectors_by_scalar(num_nodes, unit_inside_pointing_vectors, force_mag)
-        
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)  
 def calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, length_edge_resting):
@@ -98,9 +92,9 @@ def calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, le
         edge_vectors_to_minus[i, 0] = edge_vector_to_minus[0]
         edge_vectors_to_minus[i, 1] = edge_vector_to_minus[1]
     
-    plus_dirn_edge_length = geometry.calculate_2D_vector_mags(num_nodes, edge_vectors_to_plus)
+    plus_dirn_edge_length = geometry.calculate_2D_vector_mags(edge_vectors_to_plus)
     
-    minus_dirn_edge_length = geometry.calculate_2D_vector_mags(num_nodes, edge_vectors_to_minus)
+    minus_dirn_edge_length = geometry.calculate_2D_vector_mags(edge_vectors_to_minus)
     
     edge_strains_plus = np.empty(num_nodes, dtype=np.float64)
     edge_strains_minus = np.empty(num_nodes, dtype=np.float64)
@@ -115,8 +109,8 @@ def calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, le
         
         local_average_strains[i] = 0.5*edge_strain_plus + 0.5*edge_strain_minus
     
-    unit_edge_disp_vecs_plus = geometry.normalize_vectors(num_nodes, edge_vectors_to_plus)
-    unit_edge_disp_vecs_minus = geometry.normalize_vectors(num_nodes, edge_vectors_to_minus)
+    unit_edge_disp_vecs_plus = geometry.normalize_vectors(edge_vectors_to_plus)
+    unit_edge_disp_vecs_minus = geometry.normalize_vectors(edge_vectors_to_minus)
     
     EFplus_mags = np.zeros(num_nodes, dtype=np.float64)
     EFminus_mags = np.zeros(num_nodes, dtype=np.float64)
@@ -124,9 +118,9 @@ def calculate_spring_edge_forces(num_nodes, this_cell_coords, stiffness_edge, le
         EFplus_mags[i] = edge_strains_plus[i]*stiffness_edge
         EFminus_mags[i] = edge_strains_minus[i]*stiffness_edge
         
-    EFplus = geometry.multiply_vectors_by_scalars(num_nodes, unit_edge_disp_vecs_plus, EFplus_mags)
+    EFplus = geometry.multiply_vectors_by_scalars(unit_edge_disp_vecs_plus, EFplus_mags)
     
-    EFminus = geometry.multiply_vectors_by_scalars(num_nodes, unit_edge_disp_vecs_minus, EFminus_mags)
+    EFminus = geometry.multiply_vectors_by_scalars(unit_edge_disp_vecs_minus, EFminus_mags)
     
     return local_average_strains, EFplus, EFminus
 
@@ -164,7 +158,7 @@ def calculate_rgtpase_mediated_forces(num_nodes, this_cell_coords, rac_membrane_
         rgtpase_mediated_force_mags[ni] = -1*force_mag
             
     result = np.empty((num_nodes, 2), dtype=np.float64)
-    result = geometry.multiply_vectors_by_scalars(num_nodes, unit_inside_pointing_vectors, rgtpase_mediated_force_mags)
+    result = geometry.multiply_vectors_by_scalars(unit_inside_pointing_vectors, rgtpase_mediated_force_mags)
     
     return result 
 

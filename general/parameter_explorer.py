@@ -1,4 +1,4 @@
-from __future__ import division
+
 import core.parameterorg as parameterorg
 import numpy as np
 import core.utilities as cu
@@ -230,7 +230,7 @@ def generate_comprehensive_exploration_updates_based_on_current_given_update(giv
 
 def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_and_updates_without_randomization=None, randomization=False, num_experiment_repeats=3, seeds=None, total_time_in_hours=3.):
     
-    print "Preparing tasks (randomization={})...".format(randomization)
+    print("Preparing tasks (randomization={})...".format(randomization))
     task_list = []
     
     for i, u in enumerate(trial_updates):
@@ -251,13 +251,13 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_a
             
 
     if worker_pool != None:
-        print "running tasks in parallel..."
+        print("running tasks in parallel...")
         result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
     else:
-        print "running tasks in sequence..."
+        print("running tasks in sequence...")
         result_cells = [executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list]
     
-    print "analyzing results..."
+    print("analyzing results...")
     i = 0
     result_cells_per_pd = []
     while i < len(task_list):
@@ -284,7 +284,7 @@ def run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, scores_a
 
 def run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict, trial_updates, scores_and_updates_without_randomization=None, num_experiment_repeats=3, seeds=None, total_time_in_hours=3., should_be_polarized_by_in_hours=0.5):
     randomization = False
-    print "Preparing tasks (randomization={})...".format(randomization)
+    print("Preparing tasks (randomization={})...".format(randomization))
     task_list = []
     
     for i, u in enumerate(trial_updates):
@@ -308,13 +308,13 @@ def run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict
             
 
     if worker_pool != None:
-        print "running tasks in parallel..."
+        print("running tasks in parallel...")
         result_cells = worker_pool.map(executils.run_simple_experiment_and_return_cell_worker, task_list)
     else:
-        print "running tasks in sequence..."
+        print("running tasks in sequence...")
         result_cells = [executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list]
     
-    print "analyzing results..."
+    print("analyzing results...")
     i = 0
     result_cells_per_pd = []
     while i < len(task_list):
@@ -364,7 +364,7 @@ def rate_results_and_find_best_update(current_best_score, current_dict, current_
             combined_score = combined_score*combined_score_with_randomization #np.average([combined_score_with_randomization, combined_score_no_randomization])
         
         if combined_score > new_best_score:
-            print "possible new score: {}, {}, {}".format(combined_score, np.round(score_without_randomization, decimals=4), np.round(score_with_randomization, decimals=4))
+            print("possible new score: {}, {}, {}".format(combined_score, np.round(score_without_randomization, decimals=4), np.round(score_with_randomization, decimals=4)))
             new_best_score = combined_score
             new_best_update = u
             current_dict.update(u)
@@ -392,7 +392,7 @@ def rate_results_and_find_best_update_no_randomization_variant(current_best_scor
         combined_score_no_randomization = polarization_score_global#difference_factor*polarization_score_global*speed_score
         
         if combined_score_no_randomization > new_best_score:
-            print "possible new score: {}".format(combined_score_no_randomization)
+            print("possible new score: {}".format(combined_score_no_randomization))
             new_best_score = combined_score_no_randomization
             new_best_update = u
             current_dict.update(u)
@@ -413,11 +413,11 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -452,15 +452,15 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         seeds = [None]*num_experiment_repeats
     elif type(seed) == list:
         if len(seed) != num_experiment_repeats:
-            raise StandardError("Not enough seeds given!")
+            raise Exception("Not enough seeds given!")
         else:
             seeds = seed
     
     while not stop_criterion_met:
         improvement = False
-        print "current best score: ", current_best_score
+        print("current best score: ", current_best_score)
         
-        print "preparing modded dicts..."
+        print("preparing modded dicts...")
         trial_updates = generate_random_updates_based_on_current_state(num_new_dicts_to_generate, current_dict, mod_labels, mod_deltas, mod_min_max)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_no_randomization)
@@ -473,18 +473,18 @@ def parameter_explorer_polarization_wanderer(modification_program, required_scor
         current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES, scores_and_updates_with_randomization=scores_and_updates_with_randomization)
         
         if current_best_score > required_score:
-            print "Success! Stop criterion met!"
+            print("Success! Stop criterion met!")
             stop_criterion_met = True
             
         if improvement:
-            print "improvement seen!"
+            print("improvement seen!")
             num_tries_with_no_improvement = 0
         else:
-            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            print("no improvement. ({})".format(num_tries_with_no_improvement))
             num_tries_with_no_improvement += 1
             if num_tries_with_no_improvement > max_loops:
-                print "no improvement seen for a while...retrying from new initial conditions!"
-                print "Too many tries with no improvement. Stopping."
+                print("no improvement seen for a while...retrying from new initial conditions!")
+                print("Too many tries with no improvement. Stopping.")
                 stop_criterion_met = True
             
     return BEST_UPDATES
@@ -501,11 +501,11 @@ def parameter_explorer_polarization_wanderer_no_randomization_variant(modificati
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -530,15 +530,15 @@ def parameter_explorer_polarization_wanderer_no_randomization_variant(modificati
         seeds = [None]*num_experiment_repeats
     elif type(seed) == list:
         if len(seed) != num_experiment_repeats:
-            raise StandardError("Not enough seeds given!")
+            raise Exception("Not enough seeds given!")
         else:
             seeds = seed
     
     while not stop_criterion_met:
         improvement = False
-        print "current best score: ", current_best_score
+        print("current best score: ", current_best_score)
         
-        print "preparing modded dicts..."
+        print("preparing modded dicts...")
         trial_updates = generate_random_updates_based_on_current_state(num_new_dicts_to_generate, current_dict, mod_labels, mod_deltas, mod_min_max)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts_no_randomization_variant(worker_pool, current_dict, trial_updates, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours, should_be_polarized_by_in_hours=should_be_polarized_by_in_hours)
@@ -546,18 +546,18 @@ def parameter_explorer_polarization_wanderer_no_randomization_variant(modificati
         current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update_no_randomization_variant(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES)
         
         if current_best_score > required_score:
-            print "Success! Stop criterion met!"
+            print("Success! Stop criterion met!")
             stop_criterion_met = True
             
         if improvement:
-            print "improvement seen!"
+            print("improvement seen!")
             num_tries_with_no_improvement = 0
         else:
-            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            print("no improvement. ({})".format(num_tries_with_no_improvement))
             num_tries_with_no_improvement += 1
             if num_tries_with_no_improvement > max_loops:
-                print "no improvement seen for a while...retrying from new initial conditions!"
-                print "Too many tries with no improvement. Stopping."
+                print("no improvement seen for a while...retrying from new initial conditions!")
+                print("Too many tries with no improvement. Stopping.")
                 stop_criterion_met = True
             
     return BEST_UPDATES
@@ -572,11 +572,11 @@ def parameter_explorer_polarization_conservative_wanderer(modification_program, 
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -607,9 +607,9 @@ def parameter_explorer_polarization_conservative_wanderer(modification_program, 
     
     while not stop_criterion_met:
         improvement = False
-        print "current best score: ", current_best_score
+        print("current best score: ", current_best_score)
         
-        print "preparing modded dicts..."
+        print("preparing modded dicts...")
         trial_updates = generate_comprehensive_exploration_updates_based_on_current_given_update(current_best_update, mod_labels, mod_deltas, mod_min_max)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats_no_randomization, seeds=seeds, total_time_in_hours=total_time_in_hours)
@@ -622,18 +622,18 @@ def parameter_explorer_polarization_conservative_wanderer(modification_program, 
         current_best_score, current_best_update, current_dict, improvement, BEST_UPDATES = rate_results_and_find_best_update(current_best_score, current_dict, current_best_update, scores_and_updates_no_randomization, BEST_UPDATES, scores_and_updates_with_randomization=scores_and_updates_with_randomization)
         
         if current_best_score > required_score:
-            print "Success! Stop criterion met!"
+            print("Success! Stop criterion met!")
             stop_criterion_met = True
             
         if improvement:
-            print "improvement seen!"
+            print("improvement seen!")
             num_tries_with_no_improvement = 0
         else:
-            print "no improvement. ({})".format(num_tries_with_no_improvement)
+            print("no improvement. ({})".format(num_tries_with_no_improvement))
             num_tries_with_no_improvement += 1
             if num_tries_with_no_improvement > 50:
-                print "no improvement seen for a while...retrying from new initial conditions!"
-                print "Too many tries with no improvement. Stopping."
+                print("no improvement seen for a while...retrying from new initial conditions!")
+                print("Too many tries with no improvement. Stopping.")
                 stop_criterion_met = True
             
     return BEST_UPDATES
@@ -726,11 +726,11 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     standard_parameter_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -754,7 +754,7 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
         seeds = [None]*num_experiment_repeats
     
     #--------------------
-    print "Preparing initial population..."
+    print("Preparing initial population...")
     init_updates = generate_random_updates_based_on_current_state(max_population_size, standard_parameter_dict, mod_labels, mod_deltas, mod_min_max)
     
     if init_population != None:
@@ -775,14 +775,14 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
     
     max_pop_score, med_pop_score, avg_pop_score, min_pop_score = rate_overall_fitness(ordered_update_list)
     
-    print "max, med, avg, min: {}, {}, {}, {}".format(np.round(max_pop_score, decimals=4), np.round(med_pop_score, decimals=4), np.round(avg_pop_score, decimals=4), np.round(min_pop_score, decimals=4))
+    print("max, med, avg, min: {}, {}, {}, {}".format(np.round(max_pop_score, decimals=4), np.round(med_pop_score, decimals=4), np.round(avg_pop_score, decimals=4), np.round(min_pop_score, decimals=4)))
     
     num_loops = 0
     num_loops_with_no_improvement = 0
     while max_pop_score < required_score and num_loops_with_no_improvement < 1000:
-        print "======================================="
-        print "Loop: {}".format(num_loops)
-        print "no improvement: {}".format(num_loops_with_no_improvement)
+        print("=======================================")
+        print("Loop: {}".format(num_loops))
+        print("no improvement: {}".format(num_loops_with_no_improvement))
         new_trial_updates = generate_trials_from_population(ordered_update_list, mod_deltas, mod_min_max, mutation_probability=mutation_probability)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, standard_parameter_dict, new_trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats_no_randomization, seeds=seeds, total_time_in_hours=total_time_in_hours)
@@ -807,12 +807,12 @@ def parameter_explorer_polarization_evolution(modification_program, required_sco
             
         max_pop_score, med_pop_score, avg_pop_score, min_pop_score = new_max_pop_score, new_med_pop_score, new_avg_pop_score, new_min_pop_score
             
-        print "max, med, avg, min: {}, {}, {}, {}".format(np.round(max_pop_score, decimals=4), np.round(med_pop_score, decimals=4), np.round(avg_pop_score, decimals=4), np.round(min_pop_score, decimals=4))
+        print("max, med, avg, min: {}, {}, {}, {}".format(np.round(max_pop_score, decimals=4), np.round(med_pop_score, decimals=4), np.round(avg_pop_score, decimals=4), np.round(min_pop_score, decimals=4)))
         
         num_loops += 1
         
         BEST_UPDATES = copy.deepcopy(ordered_update_list)
-        print "======================================="
+        print("=======================================")
         
     return ordered_update_list
 
@@ -829,8 +829,8 @@ def calculate_simulated_annealing_acceptance_probability(new_score, current_scor
         ap = np.exp(-c*(delta_e/temperature))
     
 
-    print "delta_e:", delta_e
-    print "ap: ", ap
+    print("delta_e:", delta_e)
+    print("ap: ", ap)
 
     
     return ap
@@ -844,11 +844,11 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
     mod_min_max = [x[1:3] for x in modification_program]
     mod_labels = [x[0] for x in modification_program]
     
-    acceptable_labels = parameterorg.all_user_parameters_with_justifications.keys()
+    acceptable_labels = list(parameterorg.all_user_parameters_with_justifications.keys())
     
     for ml in mod_labels:
         if ml not in acceptable_labels:
-            raise StandardError("{} not in acceptable parameter labels list.".format(ml))
+            raise Exception("{} not in acceptable parameter labels list.".format(ml))
         
     global STANDARD_PARAMETER_DICT
     current_dict = copy.deepcopy(STANDARD_PARAMETER_DICT)
@@ -864,7 +864,7 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
         if current_dict['randomization_scheme'] != None:
             default_dict_has_randomization_scheme = True
     
-    print "Determining initial score..."
+    print("Determining initial score...")
     worker_pool = None
     if not sequential:
         worker_pool = multiproc.Pool(processes=num_processes, maxtasksperchild=750)
@@ -878,7 +878,7 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
         seeds = [None]*num_experiment_repeats
     elif type(seed) == list:
         if len(seed) != num_experiment_repeats:
-            raise StandardError("Not enough seeds given!")
+            raise Exception("Not enough seeds given!")
         else:
             seeds = seed
             
@@ -896,19 +896,19 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
     else:
         with_randomization_polarization_score, with_randomization_persistence_score = 1., 1.
         
-    print "nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score
-    print "wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score
+    print("nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score)
+    print("wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score)
         
     current_score = 0.25*(no_randomization_polarization_score + no_randomization_speed_score)*(with_randomization_polarization_score + with_randomization_persistence_score)
     
-    print "initial score: ", current_score    
-    print "=================="
+    print("initial score: ", current_score)    
+    print("==================")
     max_temperature = annealing_schedule[0]
     for temperature in annealing_schedule:
-        print "temperature: ", temperature
-        print "current score: ", current_score
+        print("temperature: ", temperature)
+        print("current score: ", current_score)
         
-        print "preparing modded dicts..."
+        print("preparing modded dicts...")
         trial_updates = generate_random_update_based_on_current_state_simulated_annealing_variant(current_dict, mod_labels, mod_deltas, mod_min_max)
         
         scores_and_updates_no_randomization = run_and_score_trial_dicts(worker_pool, current_dict, trial_updates, randomization=False, num_experiment_repeats=num_experiment_repeats, seeds=seeds, total_time_in_hours=total_time_in_hours_no_randomization)
@@ -924,15 +924,15 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
         else:
             with_randomization_polarization_score, with_randomization_persistence_score = 1., 1.
             
-        print "nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score
-        print "wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score
+        print("nr_ps, nr_ss: ", no_randomization_polarization_score, no_randomization_speed_score)
+        print("wr_ps, wr_pers: ", with_randomization_polarization_score, with_randomization_polarization_score)
             
         new_score = 0.25*(no_randomization_polarization_score + no_randomization_speed_score)*(with_randomization_polarization_score + with_randomization_persistence_score)
         
         acceptance_probability = calculate_simulated_annealing_acceptance_probability(new_score, current_score, temperature, max_temperature)
-        print "acceptance probability: ", acceptance_probability
+        print("acceptance probability: ", acceptance_probability)
         if np.random.rand() < acceptance_probability:
-            print "accepted."
+            print("accepted.")
             if default_dict_has_randomization_scheme:
                 current_update = scores_and_updates_with_randomization[0][1]
             else:
@@ -942,9 +942,9 @@ def parameter_explorer_polarization_simulated_annealing(modification_program, re
             current_dict.update(current_update)
             BEST_UPDATES.append(current_update)
         else:
-            print "rejected."
+            print("rejected.")
             
-        print "=================="
+        print("==================")
             
     return BEST_UPDATES
 

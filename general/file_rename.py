@@ -17,13 +17,13 @@ import dill
 def rename_experiment(sub_dir, current_dir, original_st, final_st, trial_run=False):
     current_sub_dir = os.path.join(current_dir, sub_dir)
     
-    print "-----"
-    print "in sub dir: ", sub_dir
+    print("-----")
+    print("in sub dir: ", sub_dir)
     
     parse_result_obj = parse.parse(original_st, sub_dir)
     
     if parse_result_obj == None:
-        raise StandardError("parse result object was None!")
+        raise Exception("parse result object was None!")
         
     sub_experiment_index, randomization_tag, total_num_cells, group_width, group_height, group_height, box_y_placement_factor, coa, cil, repeat_number = parse_result_obj.fixed
     
@@ -44,13 +44,13 @@ def rename_experiment(sub_dir, current_dir, original_st, final_st, trial_run=Fal
             dill.dump(this_env, f)
     else:
         
-        print "Environment in folder: ", new_dir
-        print "Would update environment_dir to: ", new_dir
-        print "Would update empty_self_pickle_path to: ", os.path.join(new_dir, "environment.pkl")
-        print "Would update storefile_path to: ", os.path.join(current_sub_dir, "store.hdf5")
-        print "Would rename this dir to: ", new_dir
+        print("Environment in folder: ", new_dir)
+        print("Would update environment_dir to: ", new_dir)
+        print("Would update empty_self_pickle_path to: ", os.path.join(new_dir, "environment.pkl"))
+        print("Would update storefile_path to: ", os.path.join(current_sub_dir, "store.hdf5"))
+        print("Would rename this dir to: ", new_dir)
     
-    print "-----"
+    print("-----")
     return
 
     
@@ -68,7 +68,7 @@ trial_run = False
 for folder in sub_folders:
     parse_result_obj = parse.parse(original_string_template, folder)
     
-    print "processing: ", folder
+    print("processing: ", folder)
     if parse_result_obj != None:
         parse_result = parse_result_obj.fixed
         
@@ -83,7 +83,7 @@ for folder in sub_folders:
             os.rename(current_dir, new_dir)
             current_dir = new_dir
         else:
-            print "Would rename current directory to: ", os.path.join(folder_to_scan, new_dir_name)
+            print("Would rename current directory to: ", os.path.join(folder_to_scan, new_dir_name))
         
         for dir_item in current_dir_items:
             if not os.path.isdir(os.path.join(current_dir, dir_item)):
@@ -96,10 +96,10 @@ for folder in sub_folders:
             current_name = os.path.join(current_dir, sub_dir)
             new_name = os.path.join(current_dir, sub_dir)
         
-        print "=================="
+        print("==================")
     else:
-        print "skipping!"
-        print "=================="
+        print("skipping!")
+        print("==================")
         continue
 
 

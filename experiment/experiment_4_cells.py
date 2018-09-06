@@ -1,4 +1,4 @@
-from __future__ import division
+
 import parameterorg
 import animator
 import numpy as np
@@ -40,7 +40,7 @@ for po_set_index, candidate_po_set in enumerate(all_po_sets):
     NUM_TIMESTEPS = 1500
     NUM_EXPERIMENT_REPEATS = 3
     
-    for x in xrange(NUM_EXPERIMENT_REPEATS):
+    for x in range(NUM_EXPERIMENT_REPEATS):
         environment_name = base_environment_name + '_NT={}_RPT={}'.format(NUM_TIMESTEPS, x+1)
         
         corridor_height = 50e-6
@@ -48,22 +48,22 @@ for po_set_index, candidate_po_set in enumerate(all_po_sets):
         
         space_physical_bdry_polygon = np.array([])
         
-        print "Creating environment..."
+        print("Creating environment...")
         an_environment = parameterorg.make_environment_given_user_cell_group_defns(environment_name, NUM_TIMESTEPS, user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, parameter_overrides=candidate_po_set, verbose=True, environment_filepath=environment_dir)
         
-        print "Executing dynamics..."
+        print("Executing dynamics...")
         an_environment.execute_system_dynamics_for_all_times()
         
         a_cell = an_environment.cells_in_environment[0]
         
         symmetry_output_labels, symmetry_output_values, symmetry_output_arrays = analysis.calculate_rgtpase_symmetries(a_cell)
-        symmetry_results = dict(zip(symmetry_output_labels, symmetry_output_values))
+        symmetry_results = dict(list(zip(symmetry_output_labels, symmetry_output_values)))
         
         datavis.graph_important_cell_variables_over_time(a_cell, symmetry_ratings_dict=symmetry_results, save_name=environment_name + '_important_cell_vars_graph', save_dir=environment_dir)
         
         datavis.graph_rates(a_cell, save_name=environment_name + '_strains_and_rates_graph', save_dir=environment_dir)
         
-        print "Making animation..."
+        print("Making animation...")
         height_in_pixels = 400
         width_in_pixels = 400
         origin_offset_in_micrometers = 5
@@ -74,4 +74,4 @@ for po_set_index, candidate_po_set in enumerate(all_po_sets):
         
         animation_obj.create_animation_from_data(duration=5)
         
-        print "Done."
+        print("Done.")

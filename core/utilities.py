@@ -5,11 +5,11 @@ Created on Sat Jun  6 12:21:52 2015
 @author: brian
 """
 
-from __future__ import division
+
 import numpy as np
-import geometry as geometry
-import hardio as hardio
-import parameterorg as parameterorg
+from . import geometry as geometry
+from . import hardio as hardio
+from . import parameterorg as parameterorg
 import general.moore_data_table as moore_data_table
 import numba as nb
 import copy
@@ -570,9 +570,9 @@ def get_event_tsteps(event_type, cell_index, storefile_path):
         relevant_data_per_tstep =  np.any(polarity_loss_occurred, axis=1)
         
     if relevant_data_per_tstep == None:
-        raise StandardError("Unknown event type given!")
+        raise Exception("Unknown event type given!")
         
-    event_tsteps = [n for n in xrange(relevant_data_per_tstep.shape[0]) if relevant_data_per_tstep[n] == 1]
+    event_tsteps = [n for n in range(relevant_data_per_tstep.shape[0]) if relevant_data_per_tstep[n] == 1]
     
     return event_tsteps
 
@@ -639,7 +639,7 @@ def determine_relevant_table_points(x, labels, type="row"):
     num_labels = len(labels)
     
     if not(is_ascending(num_labels, labels)):
-        raise StandardError("Labels are not ascending!")
+        raise Exception("Labels are not ascending!")
     
     lower_bound_index = None
     for n in range(num_labels - 1):
@@ -687,7 +687,7 @@ def determine_index_lb_ub_for_value_given_list(given_value, num_elements, given_
                 break
             
     if ilb == -1 or iub == -1 or ilb >= num_elements or iub >= num_elements:
-        raise StandardError("Did not find one of ilb, iub!")
+        raise Exception("Did not find one of ilb, iub!")
     else:
         return ilb, iub
             
@@ -820,7 +820,7 @@ def smoothen_contact_start_end_tuples(contact_start_end_arrays, min_tsteps_betwe
     num_start_end_arrays = contact_start_end_arrays.shape[0]
     
     num_smoothened_contact_start_end_arrays = 0
-    for n in xrange(num_start_end_arrays-1):
+    for n in range(num_start_end_arrays-1):
         this_start, this_end = contact_start_end_arrays[n]
         next_start, next_end = contact_start_end_arrays[n+1]
 
@@ -985,7 +985,7 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
     elif time_unit == "sec":
         T = relevant_environment.T
     else:
-        raise StandardError("Unknown time unit given: ", time_unit)
+        raise Exception("Unknown time unit given: ", time_unit)
         
     cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*relevant_environment.cells_in_environment[0].L/1e-6
     num_tsteps = cell_centroids.shape[0]
@@ -1021,11 +1021,11 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
     elif time_unit == "sec":
         T = relevant_environment.T
     else:
-        raise StandardError("Unknown time unit given: ", time_unit)
+        raise Exception("Unknown time unit given: ", time_unit)
         
     centroids_persistences_speeds_protrusionlifetimes = []
     for n in range(num_cells):
-        print "    Analyzing cell {}...".format(n)
+        print("    Analyzing cell {}...".format(n))
         if n == 48:
             pass
         
@@ -1375,14 +1375,14 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
     
     # ------------------------
     
-    for ci in xrange(num_cells):
+    for ci in range(num_cells):
         cell_centroids_per_tstep = calculate_cell_centroids_until_tstep(ci, num_timepoints, storefile_path)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
         
     # ------------------------
     if num_cells < 0:
-        raise StandardError("Negative number of cells given!")
+        raise Exception("Negative number of cells given!")
         
     if num_cells == 0:
         return np.zeros(num_timepoints, dtype=np.float64)
@@ -1521,7 +1521,7 @@ def calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints,
     
     all_cell_coords_per_tstep = np.zeros((num_timepoints, num_cells, num_nodes, 2), dtype=np.float64)
     
-    for ci in xrange(num_cells):
+    for ci in range(num_cells):
         all_cell_coords_per_tstep[:, ci, :, :] = hardio.get_node_coords_until_tstep(ci, num_timepoints, storefile_path)
         
     group_aspect_ratio_per_tstep = determine_group_aspect_ratio_per_tstep(all_cell_coords_per_tstep)
@@ -1534,7 +1534,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
     
     # ------------------------
     
-    for ci in xrange(num_cells):
+    for ci in range(num_cells):
         cell_centroids_per_tstep = calculate_cell_centroids_until_tstep(ci, num_timepoints, storefile_path)
         
         all_cell_centroids_per_tstep[:, ci, :] = cell_centroids_per_tstep
@@ -1542,7 +1542,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
     
     # ------------------------
     if num_cells < 0:
-        raise StandardError("Negative number of cells given!")
+        raise Exception("Negative number of cells given!")
     
     cell_subgroups_per_timestep = []
     if num_cells == 0:

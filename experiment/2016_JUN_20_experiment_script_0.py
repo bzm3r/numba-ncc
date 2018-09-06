@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 from general.exec_utils import *
 import analysis
@@ -103,7 +103,7 @@ num_sub_experiments = len(parameter_override_dicts_per_sub_experiment)
 
 environment_name_format_strings = []
 user_cell_group_defns_per_subexperiment = []
-for si in xrange(num_sub_experiments):
+for si in range(num_sub_experiments):
     user_cell_group_defns = []
     
     environment_name_format_strings.append( form_base_environment_name_format_string(EXPERIMENT_NUMBER, np.sum(NUM_CELLS_IN_BOXES), str(np.round(TOTAL_TIME/(3600.), decimals=2))+"h", NUM_TIMESTEPS, NUM_NODES, HEIGHT_MIGR_CORRIDOR, WIDTH_MIGR_CORRIDOR))
@@ -137,11 +137,11 @@ if __name__ == '__main__':
         
     if False == True:
         # ================================================================
-        for si in xrange(len(parameter_override_dicts_per_sub_experiment)):
+        for si in range(len(parameter_override_dicts_per_sub_experiment)):
             environment_name_format_string = environment_name_format_strings[si]
             extracted_results = []
             group_labels = []
-            for rpt_number in xrange(NUM_EXPERIMENT_REPEATS):
+            for rpt_number in range(NUM_EXPERIMENT_REPEATS):
                 group_labels.append("({}, {})".format(si, rpt_number))
                 environment_name = environment_name_format_string.format(si, rpt_number)
                 environment_dir = get_environment_directory_path(experiment_dir, environment_name)
