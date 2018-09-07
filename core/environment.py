@@ -618,7 +618,7 @@ class Environment():
                 with open(data_dict_pickle_path, 'wb') as f:
                     dill.dump(data_dict, f)
             
-        if produce_animations:
+        if produce_animations and animation_obj != None:
             animation_obj.create_animation_from_data(save_dir, "animation.mp4", timestep_to_draw_till=t)
 
 # -----------------------------------------------------------------
@@ -628,7 +628,7 @@ class Environment():
         empty_cell.system_history = None
         
         return empty_cell
-        
+
 # -----------------------------------------------------------------
       
     def get_empty_cells(self):

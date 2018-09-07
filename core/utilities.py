@@ -1724,7 +1724,32 @@ def calculate_mean_and_deviation(data):
     deviation = np.sqrt(np.var(data))
     
     return mean, deviation
+
+def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y, chemotaxis_score_cutoff_radius):
         
+    num_cells = relevant_environment.num_cells
+    
+    all_node_coords = np.empty((0, 2), dtype=np.float64)
+    for ci in range(num_cells):
+        print(("    Analyzing cell {}...".format(ci)))
+        
+        node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(ci, storefile_path)
+        
+        for ni in range(node_coords_per_tstep.shape[1]):
+            all_node_coords = np.append(all_node_coords, node_coords_per_tstep[:,ni,:], axis=0)
+        #cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*relevant_environment.cells_in_environment[n].L/1e-6
+        
+        #all_cell_centroids = np.append(all_cell_centroids, cell_centroids, axis=0)
+            
+    distance_from_chemoattractant_source_per_timestep = np.linalg.norm(all_node_coords - np.array([source_x, source_y]), axis=1)
+    
+    min_distance = np.min(distance_from_chemoattractant_source_per_timestep)
+    
+    if min_distance < chemotaxis_score_cutoff_radius:
+        return 1.0, min_distance
+    else:
+        return 0.0, min_distance
+
         
         
 #    

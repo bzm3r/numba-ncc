@@ -36,7 +36,7 @@ def calculate_phys_space_bdry_contact_factors(num_nodes, this_cell_coords, space
 @nb.jit(nopython=True)    
 def calculate_migr_bdry_contact_factors(num_nodes, this_cell_coords, space_migratory_bdry_polygon, migr_bdry_contact_factor_mag):
     
-    are_nodes_in_migr_space = geometry.are_points_inside_polygon(this_cell_coords, space_migratory_bdry_polygon.shape[0], space_migratory_bdry_polygon)
+    are_nodes_in_migr_space = geometry.are_points_inside_polygon(this_cell_coords, space_migratory_bdry_polygon)
     
     result = np.zeros(num_nodes, dtype=np.float64)
     for i in range(num_nodes):

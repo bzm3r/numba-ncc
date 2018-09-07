@@ -672,7 +672,7 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
 
 # =============================================================================
         
-def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22):
+def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, experiment_dir, total_time_in_hours, fontsize=22, chemoattraction_source_coords=None):
     set_fontsize(fontsize)
     max_x_data_lim = 0.0
     min_x_data_lim = 0.0
@@ -711,6 +711,11 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
         relative_group_centroid_per_timestep = group_centroid_per_timestep - group_centroid_per_timestep[0]
         print("Plotting group centroid for rpt {}...".format(rpt_number))
         ax_time.plot(relative_group_centroid_per_timestep[:,0], relative_group_centroid_per_timestep[:,1], marker=None, color=colors.color_list300[rpt_number%300], linewidth=2)
+    
+    if type(chemoattraction_source_coords) != type(None):
+        chemoattraction_source_coords = chemoattraction_source_coords - all_cell_centroids_per_repeat[0][0][0]
+        max_x_data_lim = np.max([np.abs(chemoattraction_source_coords[0]), max_x_data_lim])
+        ax_time.plot([chemoattraction_source_coords[0]], [chemoattraction_source_coords[1]], ls='', marker='.', color='g', markersize=20)
         
     mean_persistence_ratio = np.round(np.average(all_cell_persistence_ratios_per_repeat), 2)
     std_persistence_ratio = np.round(np.std(all_cell_persistence_ratios_per_repeat), 2)
@@ -724,7 +729,10 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_time.set_ylabel("$\mu m$")
     ax_time.set_xlabel("$\mu m$")
 
-    y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
+    if type(chemoattraction_source_coords) == type(None):
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
+    else:
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim), np.abs(chemoattraction_source_coords[1])])
     
     if max_x_data_lim > 0.0:
         max_x_data_lim = 1.1*max_x_data_lim
@@ -2315,6 +2323,94 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     ax.set_title("mean separation after 30 min.={} $\mu$m\nstd={} $\mu$m".format(np.round(mean, decimals=2), np.round(std, decimals=2)))
     
     show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
+    
+def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    assert(len(test_magnitudes) == len(test_slopes))
+    fig, ax = plt.subplots()
+    
+    indices = np.arange(chemotaxis_success_ratios.shape[0])
+    width = 0.35
+    ax.bar(indices, chemotaxis_success_ratios, width, color='b')
+        
+    ax.set_ylabel("success ratio")
+    ax.set_xticks(indices)    
+
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        
+    ax.set_ylim([0, 1.0])
+         
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target", "({}, {}, {})".format(box_width, box_height, num_cells))
+
+def convert_rgba_to_rgb(rgba, background_color):
+    rgb = [0.0, 0.0, 0.0]
+    a = rgba[3]
+    
+    for i in range(3):
+        rgb[i] = ((1.0 - a)*background_color[i]) + (a*rgba[i])
+    
+    return rgb
+
+def graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_magnitudes, test_slopes, closest_to_source_per_run_per_mag, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    assert(len(test_magnitudes) == len(test_slopes))
+    fig, ax = plt.subplots()
+    
+    #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
+    closest_to_source_per_run_per_mag = np.transpose(closest_to_source_per_run_per_mag)
+    indices = np.arange(closest_to_source_per_run_per_mag.shape[1])
+    
+    violin = ax.violinplot(closest_to_source_per_run_per_mag, positions=indices, showmeans=True, showmedians=True)
+    bgcol = ax.get_facecolor()
+    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
+    violin['cbars'].set_color('g')
+    violin['cmins'].set_color('g')
+    violin['cmaxes'].set_color('g')
+    violin['cmeans'].set_color('r')
+    violin['cmedians'].set_color('b')
+#    [x.set_color('g') for x in violin['bodies']]
+        
+    ax.set_ylabel("closest distance to source ($\mu$m)")
+    ax.set_xticks(indices)
+    
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
+
+def graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_magnitudes, test_slopes, protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    assert(len(test_magnitudes) == len(test_slopes))
+    fig, ax = plt.subplots()
+    
+    #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
+    protrusion_lifetimes_per_magslope = np.transpose(protrusion_lifetimes_per_magslope)
+    indices = np.arange(len(protrusion_lifetimes_per_magslope))
+    
+    violin = ax.violinplot(protrusion_lifetimes_per_magslope, positions=indices, showmeans=True, showmedians=True)
+    bgcol = ax.get_facecolor()
+    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
+    violin['cbars'].set_color('g')
+    violin['cmins'].set_color('g')
+    violin['cmaxes'].set_color('g')
+    violin['cmeans'].set_color('r')
+    violin['cmedians'].set_color('b')
+#    [x.set_color('g') for x in violin['bodies']]
+        
+    ax.set_ylabel("protrusion lifetimes (min.)")
+    ax.set_xticks(indices)
+    
+    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_protrusion_lifetimes_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
 
         
     
