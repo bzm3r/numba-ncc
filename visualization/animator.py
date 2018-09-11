@@ -1415,11 +1415,11 @@ class EnvironmentAnimation():
             self.image_drawn_array[t] = 1
             drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format))
     
-#        pool = ProcessPool(nodes=4)
-#        pool.map(draw_animation_frame, drawing_tasks)
-#        
-        for task in drawing_tasks:
-            draw_animation_frame(task)
+        pool = ProcessPool(nodes=4)
+        pool.map(draw_animation_frame, drawing_tasks)
+
+#         for task in drawing_tasks:
+#             draw_animation_frame(task)
             
         et = time.time()
         print("Time taken to draw images: {} s".format(np.round(et - st, decimals=3)))

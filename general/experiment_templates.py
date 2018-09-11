@@ -1542,7 +1542,7 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
     
     closest_to_source_per_repeat_per_magslope = np.zeros((len(test_chemo_magnitudes), num_experiment_repeats), dtype=np.float64)
-    protrusion_lifetimes_per_magslope = []
+    protrusion_lifetimes_and_directions_per_magslope = []
     
     for xi, chm in enumerate(test_chemo_magnitudes):
         print("=========")
@@ -1573,14 +1573,15 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
                 print("Data exists.")
         
         all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat,all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(num_experiment_repeats, experiment_dir)
-        
-        protrusion_lifetimes = []
+
+        protrusion_lifetimes_and_directions = []
         for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
             for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                 for l, d in protrusion_lifetime_dirn:
-                    protrusion_lifetimes.append(l/60.0)
-        
-        protrusion_lifetimes_per_magslope.append(protrusion_lifetimes)
+                    protrusion_lifetimes_and_directions.append((l, d))
+
+        datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12,
+                                            save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
         
         chemotaxis_success_per_repeat = []
         closest_to_source_per_repeat = []
@@ -1603,7 +1604,7 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
     # sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22
     datavis.graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=experiment_set_directory)
     datavis.graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), closest_to_source_per_repeat_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
-    datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
+    #datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), protrusion_lifetimes_and_directions_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
     
     print("Complete.")
     

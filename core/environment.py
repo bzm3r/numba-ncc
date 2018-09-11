@@ -557,7 +557,7 @@ class Environment():
             
 # -----------------------------------------------------------------
             
-    def do_data_analysis_and_make_visuals(self, t, save_dir, animation_settings, animation_obj, produce_animations, produce_graphs, num_polar_graph_bins=10):
+    def do_data_analysis_and_make_visuals(self, t, save_dir, animation_settings, animation_obj, produce_graphs, produce_animation, num_polar_graph_bins=10):
         if self.environment_dir != None:
             data_dict = {}
         else:
@@ -591,17 +591,17 @@ class Environment():
             data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells, self.num_nodes, t, self.T/60.0, self.storefile_path, save_dir=save_dir, general_data_structure=data_dict, graph_group_centroid_splits=self.graph_group_centroid_splits)
             
             data_dict = datavis.graph_centroid_related_data([c.skip_dynamics for c in self.cells_in_environment], self.num_cells, self.num_timepoints, self.T/60.0, "min.", cell_Ls, self.storefile_path, save_name='centroid_data_T={}'.format(t-1), save_dir=save_dir, max_tstep=t, general_data_structure=data_dict)
-            
-            protrusion_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
-            protrusion_lifetime_and_direction_data = [x[1] for x in protrusion_data_per_cell]
-            datavis.add_to_general_data_structure(data_dict, [("all_cell_protrusion_lifetimes_and_directions", protrusion_lifetime_and_direction_data)])
-            protrusion_start_end_cause_data = [x[2] for x in protrusion_data_per_cell]
-            protrusion_lifetime_and_direction_data_compiled = np.zeros((0, 2), dtype=np.float64)
-            for cell_data in protrusion_lifetime_and_direction_data:
-                protrusion_lifetime_and_direction_data_compiled = np.append(protrusion_lifetime_and_direction_data_compiled, np.array(cell_data), axis=0)
-                
-            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data_compiled, num_polar_graph_bins, save_dir=save_dir, save_name="protrusion_dirn_and_lifetime")
-            datavis.graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction_data, protrusion_start_end_cause_data, num_polar_graph_bins, save_dir=save_dir)
+
+            protrusion_lifetime_and_direction_data_per_cell = cu.collate_protrusion_data(self.num_cells, self.T, self.storefile_path, max_tstep=t)
+            datavis.add_to_general_data_structure(data_dict, [("all_cell_protrusion_lifetimes_and_directions", protrusion_lifetime_and_direction_data_per_cell)])
+
+            all_cell_protrusion_lifetime_and_direction_data = []
+
+            for cell_data in protrusion_lifetime_and_direction_data_per_cell:
+                all_cell_protrusion_lifetime_and_direction_data += cell_data
+
+            all_cell_protrusion_lifetime_and_direction_data = np.array(all_cell_protrusion_lifetime_and_direction_data)
+            datavis.graph_protrusion_lifetimes_radially(all_cell_protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=save_dir, save_name="protrusion_dirn_and_lifetime")
             
 #            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
 #            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
@@ -618,7 +618,7 @@ class Environment():
                 with open(data_dict_pickle_path, 'wb') as f:
                     dill.dump(data_dict, f)
             
-        if produce_animations and animation_obj != None:
+        if produce_animation:
             animation_obj.create_animation_from_data(save_dir, "animation.mp4", timestep_to_draw_till=t)
 
 # -----------------------------------------------------------------

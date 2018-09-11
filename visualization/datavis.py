@@ -878,58 +878,56 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
 # =============================================================================
 
 def generate_theta_bins(num_bins):
-    delta = 2*np.pi/num_bins
-    start = 0.5*delta
-    
-    bin_bounds = []
-    current = start
-    for n in range(num_bins - 1):
-        bin_bounds.append([current, current + delta])
-        current += delta
-    bin_bounds.append([2*np.pi - 0.5*delta, start])
-    bin_bounds = np.array(bin_bounds)
-    bin_mids = np.average(bin_bounds, axis=1)
-    bin_mids[-1] = 0.0
-    
-    return bin_bounds, bin_mids, delta
+    bin_midpoints, bin_size = np.linspace(0.0, 2.0*np.pi, num=num_bins, endpoint=False, retstep=True)
+    bin_size = 2*np.pi/num_bins
+
+    bin_bounds = np.zeros((num_bins, 2), dtype=np.float64)
+    bin_bounds[:, 0] = (bin_midpoints - 0.5*bin_size)%(2*np.pi)
+    bin_bounds[:, 1] = (bin_midpoints + 0.5*bin_size)%(2*np.pi)
+
+    return bin_bounds, bin_midpoints, bin_size
 
 # =============================================================================
 
 def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, save_name=None, fontsize=40, general_data_structure=None):
     set_fontsize(fontsize)
-    bin_bounds, bin_midpoints, delta = generate_theta_bins(num_polar_graph_bins)
-    binned_direction_data = [[] for x in range(num_polar_graph_bins)]    
+    bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
+    binned_direction_data = [[] for x in range(num_polar_graph_bins)]
+
     for protrusion_result in protrusion_lifetime_and_direction_data:
         lifetime, direction = protrusion_result
-        lifetime = lifetime/60.0
         
         binned = False
-        for n in range(num_polar_graph_bins - 1):
-            a, b = bin_bounds[n]
-            if a <= direction < b:
-                binned = True
-                binned_direction_data[n].append(lifetime)
-                break
-            
-        if binned == False:
-            binned_direction_data[-1].append(lifetime)
-    
+        for n in range(num_polar_graph_bins):
+            mp = bin_midpoints[n]
+            if n == 0:
+                if np.abs(direction - mp) <= bin_size*0.5 or np.abs(direction - (mp + 2*np.pi)) <= bin_size*0.5:
+                    binned = True
+                    binned_direction_data[n].append(lifetime)
+                    break
+            else:
+                if np.abs(direction - mp) <= bin_size*0.5:
+                    binned = True
+                    binned_direction_data[n].append(lifetime)
+                    break
+
+        if not binned:
+            raise Exception("Could not bin direction: {}".format(direction))
+
     fig = plt.figure(figsize=(10, 10))
+
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
-    #bplots = []
-    bplot = ax.boxplot(binned_direction_data, positions=bin_midpoints, showfliers=False, whis=0.0, showcaps=False, patch_artist=True, medianprops=dict(linewidth=0))
-    #for bplot in bplots:
-    for pa in bplot['boxes']:
-        pa.set_facecolor('blue')
-        pa.set_alpha(0.5)
-            
-    theta_labels = ["{}".format(int(np.round(np.degrees(theta)))) + "$^\circ$".format(theta) for theta in bin_midpoints]
-    ax.set_xticklabels(theta_labels)
-    
-    max_yticks = 5
-    yloc = plt.MaxNLocator(max_yticks)
-    ax.yaxis.set_major_locator(yloc)
-    
+
+    avg_binned_direction_data = [np.average(x) for x in binned_direction_data]
+
+    bars = ax.bar(bin_midpoints, avg_binned_direction_data, width=bin_size, bottom=0.0)
+
+    for bar in bars:
+        bar.set_facecolor('green')
+        bar.set_alpha(0.25)
+
+    for bi in range(num_polar_graph_bins):
+        ax.text(bin_midpoints[bi], avg_binned_direction_data[bi], "{}".format(len(binned_direction_data[bi])), fontdict={'size': 0.5*fontsize})
     #label_position=ax.get_rlabel_position()
     #ax.text(np.pi, ax.get_rmax()/2., 't (min.)', rotation=0.0,ha='center',va='center')
 
@@ -2383,34 +2381,35 @@ def graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_m
         
     show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
 
-def graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_magnitudes, test_slopes, protrusion_lifetimes_per_magslope, box_width, box_height, num_cells, save_dir=None, fontsize=22):
-    set_fontsize(fontsize)
-    assert(len(test_magnitudes) == len(test_slopes))
-    fig, ax = plt.subplots()
-    
-    #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
-    protrusion_lifetimes_per_magslope = np.transpose(protrusion_lifetimes_per_magslope)
-    indices = np.arange(len(protrusion_lifetimes_per_magslope))
-    
-    violin = ax.violinplot(protrusion_lifetimes_per_magslope, positions=indices, showmeans=True, showmedians=True)
-    bgcol = ax.get_facecolor()
-    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
-    violin['cbars'].set_color('g')
-    violin['cmins'].set_color('g')
-    violin['cmaxes'].set_color('g')
-    violin['cmeans'].set_color('r')
-    violin['cmedians'].set_color('b')
-#    [x.set_color('g') for x in violin['bodies']]
-        
-    ax.set_ylabel("protrusion lifetimes (min.)")
-    ax.set_xticks(indices)
-    
-    xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
-    ax.set_xticklabels(xlabels)
-    ax.set_xlabel("(gradient, magnitude at source)")
-    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
-        
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_protrusion_lifetimes_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
+def graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_magnitudes, test_slopes, protrusion_lifetimes_and_directions_per_magslope, box_width, box_height, num_cells, save_dir=None, fontsize=22):
+    return None
+#     set_fontsize(fontsize)
+#     assert(len(test_magnitudes) == len(test_slopes))
+#     fig, ax = plt.subplots()
+#
+#     #closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
+#     protrusion_lifetimes_per_magslope = np.transpose(protrusion_lifetimes_per_magslope)
+#     indices = np.arange(len(protrusion_lifetimes_per_magslope))
+#
+#     violin = ax.violinplot(protrusion_lifetimes_per_magslope, positions=indices, showmeans=True, showmedians=True)
+#     bgcol = ax.get_facecolor()
+#     [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
+#     violin['cbars'].set_color('g')
+#     violin['cmins'].set_color('g')
+#     violin['cmaxes'].set_color('g')
+#     violin['cmeans'].set_color('r')
+#     violin['cmedians'].set_color('b')
+# #    [x.set_color('g') for x in violin['bodies']]
+#
+#     ax.set_ylabel("protrusion lifetimes (min.)")
+#     ax.set_xticks(indices)
+#
+#     xlabels = ["{},\n{}".format(s, m) for s, m in zip([40.0*x  for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+#     ax.set_xticklabels(xlabels)
+#     ax.set_xlabel("(gradient, magnitude at source)")
+#     ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+#
+#     show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_protrusion_lifetimes_violins", "({}, {}, {})".format(box_width, box_height, num_cells))
 
         
     
