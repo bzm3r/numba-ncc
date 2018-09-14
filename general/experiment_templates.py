@@ -1596,6 +1596,25 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
             
             chemotaxis_success_per_repeat.append(chemotaxis_success)
             closest_to_source_per_repeat.append(closest_to_source)
+
+        success_protrusion_lifetimes_and_directions = []
+        fail_protrusion_lifetimes_and_directions = []
+        for i, protrusion_lifetime_dirn_per_cell in enumerate(all_cell_protrusion_lifetimes_and_directions_per_repeat):
+            if chemotaxis_success_per_repeat[i] == 1:
+                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                    for l, d in protrusion_lifetime_dirn:
+                        success_protrusion_lifetimes_and_directions.append((l, d))
+            else:
+                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                    for l, d in protrusion_lifetime_dirn:
+                        fail_protrusion_lifetimes_and_directions.append((l, d))
+
+        datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12,
+                                                    save_dir=experiment_dir, save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(np.sum(chemotaxis_success_per_repeat)))
+
+        datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12,
+                                                    save_dir=experiment_dir,
+                                                    save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(num_experiment_repeats - np.sum(chemotaxis_success_per_repeat)))
             
         chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat)/num_experiment_repeats
         closest_to_source_per_repeat_per_magslope[xi] = closest_to_source_per_repeat
