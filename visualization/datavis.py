@@ -766,7 +766,7 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_box.xaxis.set_ticks_position('none') 
     
     print("plotting protrusion lifetimes radially...")
-    graph_protrusion_lifetimes_radially(all_protrusion_lifetimes_and_average_directions, 12, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
+    graph_protrusion_lifetimes_radially(all_protrusion_lifetimes_and_average_directions, 12, total_time_in_hours*60.0, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
     
     print("showing/saving figures...")
     show_or_save_fig(fig_time, (12, 6), experiment_dir, "collated_cell_data", "")
@@ -889,45 +889,43 @@ def generate_theta_bins(num_bins):
 
 # =============================================================================
 
-def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=None, save_name=None, fontsize=40, general_data_structure=None):
+def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, total_simulation_time_in_minutes, save_dir=None, save_name=None, fontsize=40, general_data_structure=None):
+    num_polar_graph_bins = 16
     set_fontsize(fontsize)
     bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
     binned_direction_data = [[] for x in range(num_polar_graph_bins)]
 
+    assert(bin_midpoints[0] < 1e-6)
+    rotation_theta = np.random.rand()*2*np.pi
     for protrusion_result in protrusion_lifetime_and_direction_data:
         lifetime, direction = protrusion_result
-        
+
+        direction = (rotation_theta + direction) % (2*np.pi)
         binned = False
-        for n in range(num_polar_graph_bins):
+        for n in range(1, num_polar_graph_bins):
             mp = bin_midpoints[n]
-            if n == 0:
-                if np.abs(direction - mp) <= bin_size*0.5 or np.abs(direction - (mp + 2*np.pi)) <= bin_size*0.5:
-                    binned = True
-                    binned_direction_data[n].append(lifetime)
-                    break
-            else:
-                if np.abs(direction - mp) <= bin_size*0.5:
-                    binned = True
-                    binned_direction_data[n].append(lifetime)
-                    break
+            if np.abs(direction - mp) <= bin_size*0.5:
+                binned = True
+                binned_direction_data[n].append(lifetime)
+                break
 
         if not binned:
-            raise Exception("Could not bin direction: {}".format(direction))
+            binned_direction_data[0].append(lifetime)
 
     fig = plt.figure(figsize=(10, 10))
 
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
 
-    avg_binned_direction_data = [np.average(x) for x in binned_direction_data]
+    summed_x_direction_data = [np.sum(x)/total_simulation_time_in_minutes for x in binned_direction_data]
 
-    bars = ax.bar(bin_midpoints, avg_binned_direction_data, width=bin_size, bottom=0.0)
+    bars = ax.bar(bin_midpoints, summed_x_direction_data, width=bin_size, bottom=0.0)
 
     for bar in bars:
         bar.set_facecolor('green')
         bar.set_alpha(0.25)
 
     for bi in range(num_polar_graph_bins):
-        ax.text(bin_midpoints[bi], avg_binned_direction_data[bi], "{}".format(len(binned_direction_data[bi])), fontdict={'size': 0.5*fontsize})
+        ax.text(bin_midpoints[bi], summed_x_direction_data[bi], "{}".format(len(binned_direction_data[bi])), fontdict={'size': 0.5*fontsize})
     #label_position=ax.get_rlabel_position()
     #ax.text(np.pi, ax.get_rmax()/2., 't (min.)', rotation=0.0,ha='center',va='center')
 

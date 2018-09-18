@@ -317,6 +317,7 @@ class Cell():
         self.randomization_time_mean = int(parameters_dict['randomization_time_mean']*60.0/T)
         self.randomization_time_variance_factor = parameters_dict['randomization_time_variance_factor']
         self.next_randomization_event_tpoint = None
+        self.grace_tpoint = None
         self.randomization_magnitude = parameters_dict['randomization_magnitude']
         self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
         self.randomization_node_percentage = parameters_dict["randomization_node_percentage"]
@@ -482,10 +483,10 @@ class Cell():
             variance = self.randomization_time_variance_factor*mean
             
         step_shift = max(1, np.int(np.abs(np.random.normal(loc=mean, scale=variance))))
-            
+        grace_tpoint = self.curr_tpoint + int(0.33*step_shift)
         next_randomization_event_tpoint = self.curr_tpoint + step_shift
         
-        return next_randomization_event_tpoint
+        return next_randomization_event_tpoint, grace_tpoint
 
 # -----------------------------------------------------------------     
     def check_if_randomization_criteria_met(self, t):
@@ -609,7 +610,7 @@ class Cell():
         # RANDOMIZATION
         if self.randomization_scheme == 0:
             if self.next_randomization_event_tpoint == None:
-                self.next_randomization_event_tpoint = self.calculate_when_randomization_event_occurs()
+                self.next_randomization_event_tpoint, self.grace_tpoint = self.calculate_when_randomization_event_occurs()
                         
             if new_tpoint == self.next_randomization_event_tpoint:
                 self.next_randomization_event_tpoint = None
@@ -621,13 +622,16 @@ class Cell():
                     
         elif self.randomization_scheme == 1:
             if self.next_randomization_event_tpoint == None:
-                self.next_randomization_event_tpoint = self.calculate_when_randomization_event_occurs()
+                self.next_randomization_event_tpoint, self.grace_tpoint = self.calculate_when_randomization_event_occurs()
                 
             if new_tpoint == self.next_randomization_event_tpoint:
                 self.next_randomization_event_tpoint = None
                 
                 # randomization event has occurred, so renew Rac kgtp rate multipliers
                 self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(self.randomization_type)
+
+            if new_tpoint == self.grace_tpoint:
+                self.randomization_rac_kgtp_multipliers = np.ones(self.num_nodes, dtype=np.float64)
                 
             # store the Rac randomization factors for this timestep
             self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers

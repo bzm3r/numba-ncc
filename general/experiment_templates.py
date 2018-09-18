@@ -1580,8 +1580,7 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
                 for l, d in protrusion_lifetime_dirn:
                     protrusion_lifetimes_and_directions.append((l, d))
 
-        datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12,
-                                            save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
+        datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
         
         chemotaxis_success_per_repeat = []
         closest_to_source_per_repeat = []
@@ -1609,10 +1608,10 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
                     for l, d in protrusion_lifetime_dirn:
                         fail_protrusion_lifetimes_and_directions.append((l, d))
 
-        datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12,
+        datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0,
                                                     save_dir=experiment_dir, save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(np.sum(chemotaxis_success_per_repeat)))
 
-        datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12,
+        datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0,
                                                     save_dir=experiment_dir,
                                                     save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(num_experiment_repeats - np.sum(chemotaxis_success_per_repeat)))
             

@@ -491,7 +491,11 @@ class Environment():
         cell_centre = calc_bounding_box_centre(bounding_box)
         
         cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
-        cell_node_coords = np.transpose(np.array([cell_centre[0] + init_cell_radius*np.cos(cell_node_thetas), cell_centre[1] + init_cell_radius*np.sin(cell_node_thetas)]))
+        cell_node_coords = np.transpose(np.array([init_cell_radius*np.cos(cell_node_thetas), init_cell_radius*np.sin(cell_node_thetas)]))
+
+        # rotation_theta = np.random.rand()*2*np.pi
+        # cell_node_coords = np.array([geometry.rotate_2D_vector_CCW_by_theta(rotation_theta, x) for x in cell_node_coords], dtype=np.float64)
+        cell_node_coords = np.array([[x + cell_centre[0], y + cell_centre[1]] for x, y in cell_node_coords], dtype=np.float64)
         
         edge_vectors = geometry.calculate_edge_vectors(cell_node_coords)
         
@@ -601,7 +605,7 @@ class Environment():
                 all_cell_protrusion_lifetime_and_direction_data += cell_data
 
             all_cell_protrusion_lifetime_and_direction_data = np.array(all_cell_protrusion_lifetime_and_direction_data)
-            datavis.graph_protrusion_lifetimes_radially(all_cell_protrusion_lifetime_and_direction_data, num_polar_graph_bins, save_dir=save_dir, save_name="protrusion_dirn_and_lifetime")
+            datavis.graph_protrusion_lifetimes_radially(all_cell_protrusion_lifetime_and_direction_data, num_polar_graph_bins, t*self.T/60.0, save_dir=save_dir, save_name="protrusion_dirn_and_lifetime")
             
 #            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
 #            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
