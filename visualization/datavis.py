@@ -878,39 +878,43 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
 # =============================================================================
 
 def generate_theta_bins(num_bins):
-    bin_midpoints, bin_size = np.linspace(0.0, 2.0*np.pi, num=num_bins, endpoint=False, retstep=True)
-    bin_size = 2*np.pi/num_bins
+    delta = 2 * np.pi / num_bins
+    start = 0.5 * delta
 
-    bin_bounds = np.zeros((num_bins, 2), dtype=np.float64)
-    bin_bounds[:, 0] = (bin_midpoints - 0.5*bin_size)%(2*np.pi)
-    bin_bounds[:, 1] = (bin_midpoints + 0.5*bin_size)%(2*np.pi)
+    bin_bounds = []
+    current = start
+    for n in range(num_bins - 1):
+        bin_bounds.append([current, current + delta])
+        current += delta
+    bin_bounds.append([2 * np.pi - 0.5 * delta, start])
+    bin_bounds = np.array(bin_bounds)
+    bin_mids = np.average(bin_bounds, axis=1)
+    bin_mids[-1] = 0.0
 
-    return bin_bounds, bin_midpoints, bin_size
+    return bin_bounds, bin_mids, delta
 
 # =============================================================================
 
 def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, num_polar_graph_bins, total_simulation_time_in_minutes, save_dir=None, save_name=None, fontsize=40, general_data_structure=None):
     num_polar_graph_bins = 16
     set_fontsize(fontsize)
+
     bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
     binned_direction_data = [[] for x in range(num_polar_graph_bins)]
-
-    assert(bin_midpoints[0] < 1e-6)
-    rotation_theta = np.random.rand()*2*np.pi
     for protrusion_result in protrusion_lifetime_and_direction_data:
         lifetime, direction = protrusion_result
+        lifetime = lifetime / 60.0
 
-        direction = (rotation_theta + direction) % (2*np.pi)
         binned = False
-        for n in range(1, num_polar_graph_bins):
-            mp = bin_midpoints[n]
-            if np.abs(direction - mp) <= bin_size*0.5:
+        for n in range(num_polar_graph_bins - 1):
+            a, b = bin_bounds[n]
+            if a <= direction < b:
                 binned = True
                 binned_direction_data[n].append(lifetime)
                 break
 
-        if not binned:
-            binned_direction_data[0].append(lifetime)
+        if binned == False:
+            binned_direction_data[-1].append(lifetime)
 
     fig = plt.figure(figsize=(10, 10))
 

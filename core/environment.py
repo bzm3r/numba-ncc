@@ -602,7 +602,8 @@ class Environment():
             all_cell_protrusion_lifetime_and_direction_data = []
 
             for cell_data in protrusion_lifetime_and_direction_data_per_cell:
-                all_cell_protrusion_lifetime_and_direction_data += cell_data
+                for pd in cell_data:
+                    all_cell_protrusion_lifetime_and_direction_data.append(pd)
 
             all_cell_protrusion_lifetime_and_direction_data = np.array(all_cell_protrusion_lifetime_and_direction_data)
             datavis.graph_protrusion_lifetimes_radially(all_cell_protrusion_lifetime_and_direction_data, num_polar_graph_bins, t*self.T/60.0, save_dir=save_dir, save_name="protrusion_dirn_and_lifetime")

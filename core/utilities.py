@@ -1160,110 +1160,214 @@ def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_p
 @nb.jit(nopython=True)
 def normalize_rgtpase_data_per_tstep(rgtpase_data):
     num_tpoints = rgtpase_data.shape[0]
-    
+
     normalized_rgtpase_data = np.zeros_like(rgtpase_data, dtype=np.float64)
     for ti in range(num_tpoints):
         this_tstep_rgtpase_data = rgtpase_data[ti]
-        normalized_rgtpase_data[ti] = this_tstep_rgtpase_data/np.max(this_tstep_rgtpase_data)
-        
+        normalized_rgtpase_data[ti] = this_tstep_rgtpase_data / np.max(this_tstep_rgtpase_data)
+
     return normalized_rgtpase_data
 
-# =====================================================
 
-def find_protrusions_per_timestep(normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep):
-    num_timesteps = normalized_rac_membrane_active_per_tstep.shape[0]
+@nb.jit(nopython=True)
+def determine_protrusion_existence_and_direction(normalized_rac_membrane_active_per_tstep,
+                                                 rac_membrane_active_per_tstep, rho_membrane_active_per_tstep,
+                                                 uivs_per_node_per_timestep):
+    num_tpoints = normalized_rac_membrane_active_per_tstep.shape[0]
     num_nodes = normalized_rac_membrane_active_per_tstep.shape[1]
+    protrusion_existence_per_tstep = np.zeros((num_tpoints, num_nodes), dtype=np.int64)
+    protrusion_direction_per_tstep = np.zeros((num_tpoints, num_nodes, 2), dtype=np.float64)
 
-    protrusions_per_timestep = [[] for x in range(num_timesteps)]
-
-    left_nodes = np.zeros(num_nodes, dtype=np.int64)
-    right_nodes = np.zeros(num_nodes, dtype=np.int64)
-
-    for ni in range(num_nodes):
-        left_nodes[ni] = (ni - 1) % num_nodes
-        right_nodes[ni] = (ni + 1) % num_nodes
-
-    for ti in range(num_timesteps):
-        normalized_rac_membrane_activity_at_nodes = normalized_rac_membrane_active_per_tstep[ti]
-        rac_membrane_activity_at_nodes = rac_membrane_active_per_tstep[ti]
-        rho_membrane_activity_at_nodes = rho_membrane_active_per_tstep[ti]
-        rac_dominant_at_node = np.zeros(num_nodes, dtype=np.bool)
+    for ti in range(num_tpoints):
+        relevant_normalized_rac_actives = normalized_rac_membrane_active_per_tstep[ti]
+        relevant_rac_actives = rac_membrane_active_per_tstep[ti]
+        relevant_rho_actives = rho_membrane_active_per_tstep[ti]
 
         for ni in range(num_nodes):
-            if (rac_membrane_activity_at_nodes[ni] > rho_membrane_activity_at_nodes[ni]) and normalized_rac_membrane_activity_at_nodes[ni] > 0.25:
-                protrusions_per_timestep[ti].append(ni)
+            if (relevant_rac_actives[ni] > relevant_rho_actives[ni]) and relevant_normalized_rac_actives[ni] > 0.25:
+                protrusion_existence_per_tstep[ti][ni] = 1
+                protrusion_direction_per_tstep[ti][ni] = -1. * uivs_per_node_per_timestep[ti][ni]
 
-    assert(len(protrusions_per_timestep) == normalized_rac_membrane_active_per_tstep.shape[0])
-    return protrusions_per_timestep
+    return protrusion_existence_per_tstep, protrusion_direction_per_tstep
 
-# =====================================================
 
-def determine_protrusion_lifetimes_and_avg_directions(protrusions_per_timestep, uivs_per_node_per_timestep):
-    num_timesteps = len(protrusions_per_timestep)
-    processed_protrusions_per_timestep = [list() for x in range(num_timesteps)]
+@nb.jit(nopython=True)
+def determine_protrusion_node_index_and_tpoint_start_ends(protrusion_existence_per_tstep):
+    num_tpoints = protrusion_existence_per_tstep.shape[0]
+    num_nodes = protrusion_existence_per_tstep.shape[1]
 
-    protrusion_lifetime_in_timesteps_and_directions = []
-    while True:
-        starting_index = -1
-        focus_protrusion_index = None
-        for ti in range(num_timesteps):
-            for ni in protrusions_per_timestep[ti]:
-                if ni not in processed_protrusions_per_timestep[ti]:
-                    focus_protrusion_index = ni
-                    starting_index = ti
-                    break
+    protrusion_node_index_and_tpoint_start_ends = np.zeros((num_tpoints * num_nodes, 3), dtype=np.int64)
+    num_protrusions = -1
 
-            if type(focus_protrusion_index) != type(None):
-                break
+    for ni in range(num_nodes):
+        protrusion_start = False
+        for ti in range(num_tpoints):
+            if protrusion_existence_per_tstep[ti][ni] == 1:
+                if protrusion_start == False:
+                    protrusion_start = True
+                    num_protrusions += 1
+                    protrusion_node_index_and_tpoint_start_ends[num_protrusions][0] = ni
+                    protrusion_node_index_and_tpoint_start_ends[num_protrusions][1] = ti
+            else:
+                if protrusion_start == True:
+                    protrusion_start = False
+                    protrusion_node_index_and_tpoint_start_ends[num_protrusions][2] = ti
 
-        if type(focus_protrusion_index) == type(None):
-            break
+            if ti == (num_tpoints - 1):
+                if protrusion_start == True:
+                    protrusion_node_index_and_tpoint_start_ends[num_protrusions][2] = ti + 1
+
+    return protrusion_node_index_and_tpoint_start_ends[:(num_protrusions + 1)]
+
+
+@nb.jit(nopython=True)
+def determine_protrusion_lifetimes_and_average_directions(T, protrusion_node_index_and_tpoint_start_ends,
+                                                          protrusion_direction_per_tstep):
+    num_protrusions = protrusion_node_index_and_tpoint_start_ends.shape[0]
+    protrusion_lifetime_and_average_directions = np.zeros((num_protrusions, 2), dtype=np.float64)
+
+    for pi in range(num_protrusions):
+        ni, ti_start, ti_end = protrusion_node_index_and_tpoint_start_ends[pi][0], \
+                               protrusion_node_index_and_tpoint_start_ends[pi][1], \
+                               protrusion_node_index_and_tpoint_start_ends[pi][2]
+        lifetime = (ti_end - ti_start) * T/60.0
+        directions = protrusion_direction_per_tstep[ti_start:ti_end, ni]
+        direction_xs = directions[:, 0]
+        direction_ys = directions[:, 1]
+        average_direction = np.zeros(2, dtype=np.float64)
+        average_direction[0] = np.sum(direction_xs) / directions.shape[0]
+        average_direction[1] = np.sum(direction_ys) / directions.shape[0]
+
+        protrusion_lifetime_and_average_directions[pi][0] = lifetime
+        protrusion_lifetime_and_average_directions[pi][1] = geometry.calculate_2D_vector_direction(average_direction)
+
+    return protrusion_lifetime_and_average_directions
+
+
+# @nb.jit(nopython=True)
+def calculate_average_cil_signal(node_index, normalized_cil_signals_per_tstep, end_buffer_a, end_buffer_b):
+    neighbour_cil_signals = np.zeros((end_buffer_b - end_buffer_a, 3), dtype=np.float64)
+    num_nodes = normalized_cil_signals_per_tstep.shape[1]
+    ni_p1 = (node_index + 1) % num_nodes
+    ni_m1 = (node_index - 1) % num_nodes
+
+    neighbour_cil_signals[:, 0] = normalized_cil_signals_per_tstep[end_buffer_a:end_buffer_b, node_index]
+    neighbour_cil_signals[:, 1] = normalized_cil_signals_per_tstep[end_buffer_a:end_buffer_b, ni_p1]
+    neighbour_cil_signals[:, 2] = normalized_cil_signals_per_tstep[end_buffer_a:end_buffer_b, ni_m1]
+
+    return np.average(np.average(neighbour_cil_signals, axis=1))
+
+
+def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoint_start_ends,
+                                                 normalized_rac_membrane_active_per_tstep, coa_signal_per_tstep,
+                                                 cil_signal_per_tstep, randomization_factors_per_tstep):
+    num_protrusions = protrusion_node_index_and_tpoint_start_ends.shape[0]
+    protrusion_start_end_causes = []
+    num_nodes = normalized_rac_membrane_active_per_tstep.shape[1]
+
+    global_avg_coa = np.average(coa_signal_per_tstep)
+    if not (global_avg_coa > 1.1):
+        normalized_coa_signals_per_tstep = coa_signal_per_tstep / 1e16
+    else:
+        normalized_coa_signals_per_tstep = coa_signal_per_tstep / global_avg_coa
+
+    global_avg_cil = np.average(cil_signal_per_tstep)
+    if not (global_avg_cil > 1.1):
+        normalized_cil_signals_per_tstep = cil_signal_per_tstep / 1e16
+    else:
+        normalized_cil_signals_per_tstep = cil_signal_per_tstep / global_avg_cil
+
+    max_rand = np.max(randomization_factors_per_tstep)
+    if not (max_rand > 1.1):
+        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep / 1e16
+    else:
+        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep / max_rand
+
+    for pi in range(num_protrusions):
+        ni, ti_start, ti_end = protrusion_node_index_and_tpoint_start_ends[pi]
+
+        last_protrusion_at_this_node_end_tstep = -1
+        if pi != 0:
+            for x in range(pi):
+                lpi = pi - (x + 1)
+                if protrusion_node_index_and_tpoint_start_ends[lpi][0] == ni:
+                    last_protrusion_at_this_node_end_tstep = protrusion_node_index_and_tpoint_start_ends[lpi][2]
+
+        start_causes = []
+        if ti_start == 0:
+            start_causes.append("init")
         else:
-            ending_index = starting_index + 1
-            for ti in range(starting_index, num_timesteps):
-                if focus_protrusion_index not in processed_protrusions_per_timestep[ti] and focus_protrusion_index in protrusions_per_timestep[ti]:
-                    processed_protrusions_per_timestep[ti].append(focus_protrusion_index)
-                    ending_index += 1
-                else:
-                    break
+            if last_protrusion_at_this_node_end_tstep != -1:
+                start_buffer_a, start_buffer_b = last_protrusion_at_this_node_end_tstep + int(
+                    0.75 * (ti_start - last_protrusion_at_this_node_end_tstep)), ti_start
+            else:
+                start_buffer_a, start_buffer_b = max([0, ti_start - 50]), ti_start
 
-            dvs = -1*uivs_per_node_per_timestep[starting_index:ending_index, focus_protrusion_index, :]
-            ds = [geometry.calculate_2D_vector_direction(dv) for dv in dvs]
+            average_coa_signal = np.average(normalized_coa_signals_per_tstep[start_buffer_a:(start_buffer_b + 1), ni])
+            average_randomization_factor = np.average(
+                normalized_randomization_factors_per_tstep[start_buffer_a:(start_buffer_b + 1), ni])
 
-            protrusion_lifetime_in_timesteps_and_directions.append((ending_index - starting_index, np.average(ds)))
+            start_cause_found = False
+            if average_coa_signal > 0.25 and global_avg_coa * average_coa_signal > 1.1:
+                start_causes.append("coa")
+                start_cause_found = True
 
-    actual_num_protrusions_per_timestep = [len(x) for x in protrusions_per_timestep]
-    processed_protrusions_per_timestep = [len(x) for x in processed_protrusions_per_timestep]
-    assert(np.all(np.array(actual_num_protrusions_per_timestep) == np.array(processed_protrusions_per_timestep)))
+            if average_randomization_factor > 0.25 and average_randomization_factor * max_rand > 1.0:
+                start_causes.append("rand")
+                start_cause_found = True
 
-    return protrusion_lifetime_in_timesteps_and_directions
+            if not start_cause_found:
+                this_node_rac = normalized_rac_membrane_active_per_tstep[start_buffer_a:(start_buffer_b + 1), ni]
+                p1_neigher_node_rac = normalized_rac_membrane_active_per_tstep[start_buffer_a:(start_buffer_b + 1),
+                                      (ni + 1) % num_nodes]
+                m1_neigher_node_rac = normalized_rac_membrane_active_per_tstep[start_buffer_a:(start_buffer_b + 1),
+                                      (ni - 1) % num_nodes]
+                if np.average(np.append(p1_neigher_node_rac, m1_neigher_node_rac)) > np.average(this_node_rac):
+                    start_causes.append("neighbour")
 
-# =====================================================
+        end_buffer_a, end_buffer_b = int(0.5 * (ti_end - ti_start) + ti_start), ti_end
 
-def determine_protrusion_lifetimes_and_directions(normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep):
-    protrusions_per_timestep = find_protrusions_per_timestep(normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep)
+        average_cil_signal = calculate_average_cil_signal(ni, normalized_cil_signals_per_tstep, end_buffer_a,
+                                                          end_buffer_b)
 
-    return determine_protrusion_lifetimes_and_avg_directions(protrusions_per_timestep, uivs_per_node_per_timestep)
+        end_causes = []
+        if average_cil_signal > 0.25 and global_avg_cil * average_cil_signal > 1.1:
+            end_causes.append("cil")
+        else:
+            end_causes.append("other")
 
-# =====================================================
-    
+        protrusion_start_end_causes.append((copy.deepcopy(start_causes), copy.deepcopy(end_causes)))
+
+    return protrusion_start_end_causes
+
+
 def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=None):
-    rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep = hardio.get_multiple_data_until_timestep(cell_index, max_tstep, ["rac_membrane_active", "rho_membrane_active", "unit_in_vec"], ['n', 'n', 'v'], storefile_path)
-    
-    normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(rac_membrane_active_per_tstep)
-    protrusion_lifetime_in_timesteps_and_directions = determine_protrusion_lifetimes_and_directions(normalized_rac_membrane_active_per_tstep,
-                                                  rac_membrane_active_per_tstep, rho_membrane_active_per_tstep,
-                                                  uivs_per_node_per_timestep)
-    
-    return [(l*T/60.0, d) for l,d in protrusion_lifetime_in_timesteps_and_directions]
+    rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep = hardio.get_multiple_data_until_timestep(
+        cell_index, max_tstep, ["rac_membrane_active", "rho_membrane_active", "unit_in_vec"], ['n', 'n', 'v'],
+        storefile_path)
 
-# =====================================================
+    normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(rac_membrane_active_per_tstep)
+    protrusion_existence_per_tstep, protrusion_direction_per_tstep = determine_protrusion_existence_and_direction(
+        normalized_rac_membrane_active_per_tstep, rac_membrane_active_per_tstep, rho_membrane_active_per_tstep,
+        uivs_per_node_per_timestep)
+
+    protrusion_node_index_and_tpoint_start_ends = determine_protrusion_node_index_and_tpoint_start_ends(
+        protrusion_existence_per_tstep)
+    protrusion_lifetime_and_average_directions = determine_protrusion_lifetimes_and_average_directions(T,
+                                                                                                       protrusion_node_index_and_tpoint_start_ends,
+                                                                                                       protrusion_direction_per_tstep)
+
+
+    return protrusion_lifetime_and_average_directions
+
 
 def collate_protrusion_data(num_cells, T, storefile_path, max_tstep=None):
     protrusion_data_per_cell = []
+
     for cell_index in range(num_cells):
-        protrusion_data_per_cell.append(collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=max_tstep))
-        
+        protrusion_data_per_cell.append(
+            collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=max_tstep))
+
     return protrusion_data_per_cell
 
 # ==============================================================================
