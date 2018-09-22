@@ -1749,7 +1749,7 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
                 dt = delaunay_triangulations_per_tstep[ti]
                 simplices = all_cell_centroids[dt.simplices]
                 simplex_areas = np.array(
-                    [geometry.calculate_polygon_area(simplex.shape[0], simplex) for simplex in simplices])
+                    [geometry.calculate_polygon_area(simplex) for simplex in simplices])
                 convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
                 edges = determine_edges(dt)
                 edge_lengths = calculate_edge_lengths(dt.points, edges)

@@ -1056,6 +1056,11 @@ def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, 
     for bi in range(num_polar_graph_bins):
         ax.text(bin_midpoints[bi], summed_x_direction_data[bi], "{}".format(len(binned_direction_data[bi])),
                 fontdict={'size': 0.5 * fontsize})
+
+    ax.set_ylim([0.0, 2.5])
+    ticks = np.linspace(0.0, 2.5, endpoint=True, num=10)
+    ax.set_ticks(ticks)
+    ax.set_ticklabels([x if i%2 == 0 and x > 0.0 else "" for i, x in enumerate(ticks)])
     # label_position=ax.get_rlabel_position()
     # ax.text(np.pi, ax.get_rmax()/2., 't (min.)', rotation=0.0,ha='center',va='center')
 
