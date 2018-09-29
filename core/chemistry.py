@@ -144,8 +144,9 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_f
         
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
-            
-        kgtp_rac_autoact = kgtp_rac_autoact_baseline*hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
+
+        rac_autoact_hill_function = hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
+        kgtp_rac_autoact = kgtp_rac_autoact_baseline*rac_autoact_hill_function
         
         result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact*(chemoattractant_signal + 1.0)
         
