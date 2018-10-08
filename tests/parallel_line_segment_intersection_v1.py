@@ -347,7 +347,7 @@ def multithread_func(inner_func, num_threads, num_cells, num_nodes, polygon_boun
     for i in range(num_threads):
         chunk = []
         for arg in line_segment_intersection_args:
-            chunk.append(arg[i * chunklen:(i + 1) * chunklen])
+            chunk.append(arg[i*chunklen:(i + 1)*chunklen])
         chunk.append(polygon_bounding_boxes)
         chunk.append(polygons)
         line_segment_intersection_chunks.append(chunk)
@@ -365,7 +365,7 @@ def multithread_func(inner_func, num_threads, num_cells, num_nodes, polygon_boun
     for i in range(num_threads):
         chunk = []
         for arg in dist_squared_args:
-            chunk.append(arg[i * chunklen:(i + 1) * chunklen])
+            chunk.append(arg[i*chunklen:(i + 1)*chunklen])
         chunk.append(polygons)
         line_segment_intersection_chunks.append(chunk)
             

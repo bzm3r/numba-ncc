@@ -39,7 +39,7 @@ def calc_dist_squared_bw_points(p1, p2):
     x_disp = p1[0] - p2[0]
     y_disp = p1[1] - p2[1]
 
-    return x_disp * x_disp + y_disp * y_disp
+    return x_disp*x_disp + y_disp*y_disp
 
 
 # -----------------------------------------------------------------
@@ -52,8 +52,8 @@ def calc_bounding_box(node_coords):
 
 
 def calc_bounding_box_centre(bb):
-    x = bb[0] + (bb[1] - bb[0]) * 0.5
-    y = bb[2] + (bb[3] - bb[2]) * 0.5
+    x = bb[0] + (bb[1] - bb[0])*0.5
+    y = bb[2] + (bb[3] - bb[2])*0.5
 
     return np.array([x, y])
 
@@ -73,9 +73,9 @@ def place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corri
     if init_random_cell_placement_x_factor < 0.0:
         raise Exception(
             "negative init_random_cell_placement_x_factor given: {}".format(init_random_cell_placement_x_factor))
-    center_x = corridor_origin[0] + 0.5 * cell_diameter + np.random.rand() * init_random_cell_placement_x_factor * (
+    center_x = corridor_origin[0] + 0.5*cell_diameter + np.random.rand()*init_random_cell_placement_x_factor*(
                 box_width - cell_diameter)
-    center_y = corridor_origin[1] + 0.5 * cell_diameter + np.random.rand() * (box_height - cell_diameter)
+    center_y = corridor_origin[1] + 0.5*cell_diameter + np.random.rand()*(box_height - cell_diameter)
 
     cell_centers[0] = np.array([center_x, center_y])
 
@@ -86,7 +86,7 @@ def place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corri
 
 def generate_theta_bin_boundaries(num_bins):
     theta_bins = np.zeros((num_bins, 2), dtype=np.float64)
-    delta_theta = 2 * np.pi / num_bins
+    delta_theta = 2*np.pi/num_bins
 
     for n in range(num_bins):
         if n == 0:
@@ -105,7 +105,7 @@ def generate_theta_bin_boundaries(num_bins):
 def generate_trial_theta(theta_bin_boundaries, theta_bin_probabilities):
     tbin_index = np.random.choice(np.arange(theta_bin_boundaries.shape[0]), p=theta_bin_probabilities)
 
-    return theta_bin_boundaries[tbin_index][0] + np.random.rand() * (
+    return theta_bin_boundaries[tbin_index][0] + np.random.rand()*(
                 theta_bin_boundaries[tbin_index][1] - theta_bin_boundaries[tbin_index][0])
 
 
@@ -115,7 +115,7 @@ def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
     num_bins = theta_bin_probabilities.shape[0]
     avg_p = np.average(theta_bin_probabilities)
     orig_p = theta_bin_probabilities[target_bin_index]
-    new_p = 0.5 * orig_p
+    new_p = 0.5*orig_p
     theta_bin_probabilities[target_bin_index] = new_p
 
     interesting_bins = []
@@ -133,7 +133,7 @@ def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
     if num_interesting_bins == 0:
         interesting_bins = [n for n in range(num_bins) if n != target_bin_index]
         num_interesting_bins = len(interesting_bins)
-    delta_p = new_p / num_interesting_bins
+    delta_p = new_p/num_interesting_bins
 
     for n in interesting_bins:
         theta_bin_probabilities[n] += delta_p
@@ -162,10 +162,10 @@ def find_relevant_bin_index(theta, theta_bins):
 
 def is_collision(last_placed_cell_index, cell_centers, cell_diameter, corridor_origin, corridor_height, center_x,
                  center_y):
-    if center_y > corridor_origin[1] + (corridor_height - 0.5 * cell_diameter) or center_y < corridor_origin[
-        1] + 0.5 * cell_diameter:
+    if center_y > corridor_origin[1] + (corridor_height - 0.5*cell_diameter) or center_y < corridor_origin[
+        1] + 0.5*cell_diameter:
         return True
-    if center_x < corridor_origin[0] + 0.5 * cell_diameter:
+    if center_x < corridor_origin[0] + 0.5*cell_diameter:
         return True
 
     for n in range(last_placed_cell_index + 1):
@@ -182,16 +182,16 @@ def is_collision(last_placed_cell_index, cell_centers, cell_diameter, corridor_o
 def try_placing_cell_randomly(last_successful_anchor_index, last_placed_cell_index, cell_centers, theta_bins,
                               cell_diameter, corridor_origin, corridor_height, box_height, box_width,
                               max_placement_dist):
-    num_trials = 2 * theta_bins.shape[0]
+    num_trials = 2*theta_bins.shape[0]
 
-    theta_bin_probabilities = np.ones(theta_bins.shape[0], dtype=np.float64) / theta_bins.shape[0]
+    theta_bin_probabilities = np.ones(theta_bins.shape[0], dtype=np.float64)/theta_bins.shape[0]
 
     center_x, center_y = cell_centers[last_successful_anchor_index]
 
     for ti in range(num_trials):
         theta = generate_trial_theta(theta_bins, theta_bin_probabilities)
-        placement_distance = cell_diameter * ((max_placement_dist - 1.0) * np.random.rand() + 1.0)
-        dx, dy = placement_distance * np.cos(theta), placement_distance * np.sin(theta)
+        placement_distance = cell_diameter*((max_placement_dist - 1.0)*np.random.rand() + 1.0)
+        dx, dy = placement_distance*np.cos(theta), placement_distance*np.sin(theta)
         test_x, test_y = center_x + dx, center_y + dy
         if is_collision(last_placed_cell_index, cell_centers, cell_diameter, corridor_origin, corridor_height, test_x,
                         test_y):
@@ -212,7 +212,7 @@ def place_cells_randomly(num_cells, cell_diameter, corridor_origin, corridor_hei
                          init_random_cell_placement_x_factor, max_placement_distance_factor, num_theta_bins=20):
     if max_placement_distance_factor < 1.0:
         raise Exception("max placement distance cannot be < 1.0! Given: {}".format(max_placement_distance_factor))
-    cell_centers = np.nan * np.ones((num_cells, 2), dtype=np.float64)
+    cell_centers = np.nan*np.ones((num_cells, 2), dtype=np.float64)
     cell_centers = place_init_cell_randomly(cell_centers, cell_diameter, corridor_origin, corridor_height, box_height,
                                             box_width, init_random_cell_placement_x_factor)
 
@@ -256,7 +256,7 @@ class Environment():
 
     def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64),
                  space_migratory_bdry_polygon=np.array([], dtype=np.float64), chemoattractant_signal_fn=lambda x: 0.0,
-                 cell_group_defns=None, environment_dir=None, verbose=True, T=(1 / 0.5), integration_params={},
+                 cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={},
                  full_print=False, persist=True, parameter_explorer_run=False,
                  parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None,
                  allowed_drift_before_geometry_recalc=1.0, max_geometry_recalc_skips=1000, cell_placement_method="",
@@ -498,24 +498,24 @@ class Environment():
         x_length = xmax - xmin
         y_length = ymax - ymin
 
-        cell_diameter = 2 * init_cell_radius
+        cell_diameter = 2*init_cell_radius
 
         # check if cells can fit in given bounding box
-        total_cell_group_area = num_cells * (np.pi * init_cell_radius ** 2)
-        cell_group_bounding_box_area = abs(x_length * y_length)
+        total_cell_group_area = num_cells*(np.pi*init_cell_radius ** 2)
+        cell_group_bounding_box_area = abs(x_length*y_length)
 
         if total_cell_group_area > cell_group_bounding_box_area:
             raise Exception(
                 "Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint.")
 
         if cell_placement_method == "":
-            num_cells_along_x = custom_floor(x_length / cell_diameter, 1e-6)
-            num_cells_along_y = custom_floor(y_length / cell_diameter, 1e-6)
+            num_cells_along_x = custom_floor(x_length/cell_diameter, 1e-6)
+            num_cells_along_y = custom_floor(y_length/cell_diameter, 1e-6)
 
-            cell_x_coords = xmin + np.sign(x_length) * np.arange(num_cells_along_x) * cell_diameter
-            cell_y_coords = ymin + np.sign(y_length) * np.arange(num_cells_along_y) * cell_diameter
-            x_step = np.sign(x_length) * cell_diameter
-            y_step = np.sign(y_length) * cell_diameter
+            cell_x_coords = xmin + np.sign(x_length)*np.arange(num_cells_along_x)*cell_diameter
+            cell_y_coords = ymin + np.sign(y_length)*np.arange(num_cells_along_y)*cell_diameter
+            x_step = np.sign(x_length)*cell_diameter
+            y_step = np.sign(y_length)*cell_diameter
 
             xi = 0
             yi = 0
@@ -537,7 +537,7 @@ class Environment():
             box_width = cell_group_bounding_box[1] - cell_group_bounding_box[0]
             box_height = cell_group_bounding_box[3] - cell_group_bounding_box[2]
 
-            cell_bounding_boxes = generate_bounding_boxes_from_centers(0.5 * cell_diameter,
+            cell_bounding_boxes = generate_bounding_boxes_from_centers(0.5*cell_diameter,
                                                                        place_cells_randomly(self.num_cells,
                                                                                             cell_diameter,
                                                                                             self.space_migratory_bdry_polygon[
@@ -553,9 +553,9 @@ class Environment():
     def create_default_init_cell_node_coords(self, bounding_box, init_cell_radius, num_nodes):
         cell_centre = calc_bounding_box_centre(bounding_box)
 
-        cell_node_thetas = np.pi * np.linspace(0, 2, endpoint=False, num=num_nodes)
+        cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
         cell_node_coords = np.transpose(
-            np.array([init_cell_radius * np.cos(cell_node_thetas), init_cell_radius * np.sin(cell_node_thetas)]))
+            np.array([init_cell_radius*np.cos(cell_node_thetas), init_cell_radius*np.sin(cell_node_thetas)]))
 
         # rotation_theta = np.random.rand()*2*np.pi
         # cell_node_coords = np.array([geometry.rotate_2D_vector_CCW_by_theta(rotation_theta, x) for x in cell_node_coords], dtype=np.float64)
@@ -591,9 +591,9 @@ class Environment():
             if self.verbose == True:
                 if self.full_print:
                     if cell_index != first_cell_index:
-                        print("-" * 40)
+                        print("-"*40)
                     else:
-                        print("=" * 40)
+                        print("="*40)
 
                     print("centroid_drift: ", centroid_drifts[cell_index])
                     if recalc_geometry[cell_index]:
@@ -608,8 +608,8 @@ class Environment():
                                       self.chemoattractant_signal_fn, be_talkative=self.full_print)
 
             if current_cell.skip_dynamics == False:
-                this_cell_coords = current_cell.curr_node_coords * current_cell.L
-                this_cell_forces = current_cell.curr_node_forces * current_cell.ML_T2
+                this_cell_coords = current_cell.curr_node_coords*current_cell.L
+                this_cell_forces = current_cell.curr_node_forces*current_cell.ML_T2
 
                 environment_cells_node_coords[cell_index] = this_cell_coords
                 environment_cells_node_forces[cell_index] = this_cell_forces
@@ -633,7 +633,7 @@ class Environment():
             if self.verbose == True:
                 if self.full_print:
                     if cell_index == last_cell_index:
-                        print("=" * 40)
+                        print("="*40)
 
         return cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces
 
@@ -665,9 +665,9 @@ class Environment():
                                                                                        significant_difference=0.2,
                                                                                        max_tstep=t)
                 #
-                cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment]) / 1e-6
+                cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment])/1e-6
 
-                data_dict = datavis.graph_important_cell_variables_over_time(self.T / 60.0, cell_Ls[cell_index],
+                data_dict = datavis.graph_important_cell_variables_over_time(self.T/60.0, cell_Ls[cell_index],
                                                                              cell_index, self.storefile_path,
                                                                              polarity_scores=scores_per_tstep,
                                                                              save_name='C={}'.format(
@@ -676,18 +676,18 @@ class Environment():
                                                                              max_tstep=t,
                                                                              general_data_structure=data_dict,
                                                                              convergence_test=self.convergence_test)
-                datavis.graph_rates(self.T / 60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline,
+                datavis.graph_rates(self.T/60.0, this_cell.kgtp_rac_baseline, this_cell.kgtp_rho_baseline,
                                     this_cell.kdgtp_rac_baseline, this_cell.kdgtp_rho_baseline, cell_index,
                                     self.storefile_path,
                                     save_name='C={}'.format(cell_index) + '_rates_graph_T={}'.format(t - 1),
                                     save_dir=save_dir_for_cell, max_tstep=t)
-                data_dict = datavis.graph_edge_and_areal_strains(self.T / 60.0, cell_index, self.storefile_path,
+                data_dict = datavis.graph_edge_and_areal_strains(self.T/60.0, cell_index, self.storefile_path,
                                                                  save_name='C={}'.format(
                                                                      cell_index) + '_strain_graph_T={}'.format(t - 1),
                                                                  save_dir=save_dir_for_cell, max_tstep=t,
                                                                  general_data_structure=data_dict)
 
-            data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T / 60.0, cell_Ls, self.storefile_path,
+            data_dict = datavis.graph_cell_speed_over_time(self.num_cells, self.T/60.0, cell_Ls, self.storefile_path,
                                                            save_name='cell_velocities_T={}'.format(t - 1),
                                                            save_dir=save_dir, max_tstep=t,
                                                            general_data_structure=data_dict,
@@ -695,14 +695,14 @@ class Environment():
 
             data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(self.num_cells,
                                                                                                        self.num_nodes,
-                                                                                                       t, self.T / 60.0,
+                                                                                                       t, self.T/60.0,
                                                                                                        self.storefile_path,
                                                                                                        save_dir=save_dir,
                                                                                                        general_data_structure=data_dict,
                                                                                                        graph_group_centroid_splits=self.graph_group_centroid_splits)
 
             data_dict = datavis.graph_centroid_related_data([c.skip_dynamics for c in self.cells_in_environment],
-                                                            self.num_cells, self.num_timepoints, self.T / 60.0, "min.",
+                                                            self.num_cells, self.num_timepoints, self.T/60.0, "min.",
                                                             cell_Ls, self.storefile_path,
                                                             save_name='centroid_data_T={}'.format(t - 1),
                                                             save_dir=save_dir, max_tstep=t,
@@ -722,7 +722,7 @@ class Environment():
 
             all_cell_protrusion_lifetime_and_direction_data = np.array(all_cell_protrusion_lifetime_and_direction_data)
             datavis.graph_protrusion_lifetimes_radially(all_cell_protrusion_lifetime_and_direction_data,
-                                                        num_polar_graph_bins, t * self.T / 60.0, save_dir=save_dir,
+                                                        num_polar_graph_bins, t*self.T/60.0, save_dir=save_dir,
                                                         save_name="protrusion_dirn_and_lifetime")
 
             #            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
@@ -890,8 +890,8 @@ class Environment():
             num_nodes = self.num_nodes
 
             environment_cells = self.cells_in_environment
-            environment_cells_node_coords = np.array([x.curr_node_coords * x.L for x in environment_cells])
-            environment_cells_node_forces = np.array([x.curr_node_forces * x.ML_T2 for x in environment_cells])
+            environment_cells_node_coords = np.array([x.curr_node_coords*x.L for x in environment_cells])
+            environment_cells_node_forces = np.array([x.curr_node_forces*x.ML_T2 for x in environment_cells])
 
             curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
 
@@ -917,7 +917,7 @@ class Environment():
 
                 for a_cell in self.cells_in_environment:
                     cell_group_indices.append(a_cell.cell_group_index)
-                    cell_Ls.append(a_cell.L / 1e-6)
+                    cell_Ls.append(a_cell.L/1e-6)
                     cell_etas.append(a_cell.eta)
                     cell_skip_dynamics.append(a_cell.skip_dynamics)
 
@@ -962,7 +962,7 @@ class Environment():
 
                     prev_centroids = copy.deepcopy(curr_centroids)
                     curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
-                    delta_drifts = geometry.calculate_centroid_dift(prev_centroids, curr_centroids) / 1e-6
+                    delta_drifts = geometry.calculate_centroid_dift(prev_centroids, curr_centroids)/1e-6
                     if np.all(recalc_geometry):
                         centroid_drifts = np.zeros_like(centroid_drifts)
                         recalc_geometry = np.zeros_like(recalc_geometry)

@@ -19,6 +19,7 @@ import matplotlib.patches as mpatch
 import numba as nb
 from matplotlib import gridspec as mgs
 from matplotlib import ticker as ticker
+import datetime
 
 plt.ioff()
 
@@ -79,7 +80,7 @@ def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(num_c
     group_aspect_ratios = cu.calculate_group_aspect_ratio_over_time(num_cells, num_nodes, num_timepoints,
                                                                     storefile_path)
     # normalized_areas_new = cu.calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefile_path)
-    timepoints = np.arange(normalized_areas.shape[0]) * T
+    timepoints = np.arange(normalized_areas.shape[0])*T
 
     fig_A, ax_A = plt.subplots()
 
@@ -153,9 +154,9 @@ def find_approximate_transient_end(group_x_velocities, average_group_x_velocity,
     for i in range(num_timepoints - 1):
         ti = i + 1
         velocities_until = group_x_velocities[:ti]
-        average_velocities_until = np.sum(velocities_until) / velocities_until.shape[0]
+        average_velocities_until = np.sum(velocities_until)/velocities_until.shape[0]
 
-        if group_x_velocities[ti] < 0.1 * max_velocity and average_velocities_until < 0.1 * max_velocity:
+        if group_x_velocities[ti] < 0.1*max_velocity and average_velocities_until < 0.1*max_velocity:
             possible_endpoint = ti
 
     return possible_endpoint
@@ -166,7 +167,7 @@ def find_approximate_transient_end(group_x_velocities, average_group_x_velocity,
 def graph_group_centroid_drift(T, time_unit, group_centroid_per_tstep, relative_all_cell_centroids_per_tstep, save_dir,
                                save_name, fontsize=22, general_data_structure=None):
     set_fontsize(fontsize)
-    timepoints = np.arange(group_centroid_per_tstep.shape[0]) * T
+    timepoints = np.arange(group_centroid_per_tstep.shape[0])*T
     relative_group_centroid_per_tstep = group_centroid_per_tstep - group_centroid_per_tstep[0]
     relative_group_centroid_x_coords = relative_group_centroid_per_tstep[:, 0]
     relative_group_centroid_y_coords = relative_group_centroid_per_tstep[:, 1]
@@ -176,7 +177,7 @@ def graph_group_centroid_drift(T, time_unit, group_centroid_per_tstep, relative_
 
     # A = np.vstack([timepoints, np.zeros(len(timepoints))]).T
     # delta_t = timepoints[1] - timepoints[0]
-    group_x_velocities = (relative_group_centroid_x_coords[1:] - relative_group_centroid_x_coords[:-1]) / (
+    group_x_velocities = (relative_group_centroid_x_coords[1:] - relative_group_centroid_x_coords[:-1])/(
                 timepoints[1:] - timepoints[:-1])
     average_group_x_velocity = np.average(group_x_velocities)
 
@@ -186,7 +187,7 @@ def graph_group_centroid_drift(T, time_unit, group_centroid_per_tstep, relative_
     ax.plot(timepoints, relative_group_centroid_x_coords, label="x-coord", color='b')
     ax_clean.plot(timepoints, group_centroid_per_tstep[:, 0], label="x-coord")
     ax.plot(timepoints, relative_group_centroid_y_coords, label="y-coord", color='g')
-    ax.plot(timepoints, average_group_x_velocity * timepoints,
+    ax.plot(timepoints, average_group_x_velocity*timepoints,
             label="velocity ({} $\mu m$)".format(average_group_x_velocity), color='r')
     write_lines_to_file(os.path.join(save_dir, "group_" + save_name),
                         ["velocity ({} $\mu m$)\n".format(average_group_x_velocity)])
@@ -314,7 +315,7 @@ def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, 
     # ------------------------
 
     for ci in range(num_cells):
-        cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path) * cell_Ls[ci]
+        cell_centroids_per_tstep = cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)*cell_Ls[ci]
 
         all_cell_centroids_per_tstep[ci, :, :] = cell_centroids_per_tstep
 
@@ -367,7 +368,7 @@ def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, 
             graph_title = "persistence time: {} {}".format(np.round(this_cell_persistence_time, decimals=0), time_unit)
             ax.set_title(graph_title)
             ax.plot(this_cell_positive_ts, this_cell_positive_das, color='g', marker='.')
-            ax.plot(this_cell_positive_ts, np.exp(-1 * this_cell_positive_ts / this_cell_persistence_time), color='r',
+            ax.plot(this_cell_positive_ts, np.exp(-1*this_cell_positive_ts/this_cell_persistence_time), color='r',
                     marker='.')
 
             this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
@@ -379,7 +380,7 @@ def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, 
         fig, ax = plt.subplots()
         ax.set_title("persistence time: {}".format(np.round(group_persistence_time, decimals=0)))
         ax.plot(group_positive_ts, group_positive_das, color='g', marker='.')
-        ax.plot(group_positive_ts, np.exp(-1 * group_positive_ts / group_persistence_time), color='r', marker='.')
+        ax.plot(group_positive_ts, np.exp(-1*group_positive_ts/group_persistence_time), color='r', marker='.')
 
         show_or_save_fig(fig, (12, 8), save_dir, "group_persistence_time_estimation", "")
 
@@ -392,18 +393,18 @@ def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, 
     min_x_data_lim = np.min(relative_all_cell_centroids_per_tstep[:, :, 0])
     max_x_data_lim = np.max(relative_all_cell_centroids_per_tstep[:, :, 0])
     delta_x = np.abs(min_x_data_lim - max_x_data_lim)
-    max_y_data_lim = 1.2 * np.max(np.abs(relative_all_cell_centroids_per_tstep[:, :, 1]))
-    ax.set_xlim(min_x_data_lim - 0.1 * delta_x, max_x_data_lim + 0.1 * delta_x)
-    if 2 * max_y_data_lim < 0.25 * (1.2 * delta_x):
-        max_y_data_lim = 0.5 * 1.2 * delta_x
-    ax.set_ylim(-1 * max_y_data_lim, max_y_data_lim)
+    max_y_data_lim = 1.2*np.max(np.abs(relative_all_cell_centroids_per_tstep[:, :, 1]))
+    ax.set_xlim(min_x_data_lim - 0.1*delta_x, max_x_data_lim + 0.1*delta_x)
+    if 2*max_y_data_lim < 0.25*(1.2*delta_x):
+        max_y_data_lim = 0.5*1.2*delta_x
+    ax.set_ylim(-1*max_y_data_lim, max_y_data_lim)
     ax.set_aspect('equal')
 
     group_net_displacement = relative_group_centroid_per_tstep[-1] - relative_group_centroid_per_tstep[0]
     group_net_displacement_mag = np.linalg.norm(group_net_displacement)
     group_net_distance = np.sum(
         np.linalg.norm(relative_group_centroid_per_tstep[1:] - relative_group_centroid_per_tstep[:-1], axis=1))
-    group_persistence_ratio = np.round(group_net_displacement_mag / group_net_distance, 4)
+    group_persistence_ratio = np.round(group_net_displacement_mag/group_net_distance, 4)
 
     add_to_general_data_structure(general_data_structure, [("group_persistence_ratio", group_persistence_ratio)])
 
@@ -413,7 +414,7 @@ def graph_centroid_related_data(skip_dynamics_flags, num_cells, num_timepoints, 
         net_displacement = ccs[-1] - ccs[0]
         net_displacement_mag = np.linalg.norm(net_displacement)
         net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:-1], axis=-1))
-        persistence_ratio = net_displacement_mag / net_distance
+        persistence_ratio = net_displacement_mag/net_distance
         cell_persistence_ratios.append(persistence_ratio)
 
         ax.plot(ccs[:, 0], ccs[:, 1], marker=None, color=colors.color_list20[ci % 20])
@@ -490,7 +491,7 @@ def graph_cell_speed_over_time(num_cells, T, cell_Ls, storefile_path, save_dir=N
 
     # Shrink current axis by 20%
     # box = ax_time.get_position()
-    # ax_time.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    # ax_time.set_position([box.x0, box.y0, box.width*0.8, box.height])
 
     ax_time.grid(which='both')
 
@@ -540,24 +541,24 @@ def graph_important_cell_variables_over_time(T, L, cell_index, storefile_path, p
         edgeplus = np.array([geometry.calculate_edgeplus_lengths(nc) for nc in node_coords])
         edgeminus = np.array([geometry.calculate_edgeplus_lengths(nc) for nc in node_coords])
         average_edge_lengths = np.array(
-            [[(ep + em) / 2. for ep, em in zip(eps, ems)] for eps, ems in zip(edgeplus, edgeminus)]) * L
+            [[(ep + em)/2. for ep, em in zip(eps, ems)] for eps, ems in zip(edgeplus, edgeminus)])*L
 
-        conc_rac_mem_active = rac_mem_active / average_edge_lengths
+        conc_rac_mem_active = rac_mem_active/average_edge_lengths
         # add_to_general_data_structure(general_data_structure, [("rac_membrane_active_{}".format(cell_index), sum_rac_act_over_nodes)])
         add_to_general_data_structure(general_data_structure, [
             ("avg_max_conc_rac_membrane_active_{}".format(cell_index), np.max(conc_rac_mem_active, axis=1))])
 
-        conc_rac_mem_inactive = rac_mem_inactive / average_edge_lengths
+        conc_rac_mem_inactive = rac_mem_inactive/average_edge_lengths
         # add_to_general_data_structure(general_data_structure, [("rac_membrane_inactive_{}".format(cell_index), sum_rac_inact_over_nodes)])
         add_to_general_data_structure(general_data_structure, [
             ("avg_max_conc_rac_membrane_inactive_{}".format(cell_index), np.max(conc_rac_mem_inactive, axis=1))])
 
-        conc_rho_membrane_active = rho_mem_active / average_edge_lengths
+        conc_rho_membrane_active = rho_mem_active/average_edge_lengths
         add_to_general_data_structure(general_data_structure, [
             ("avg_max_conc_rho_membrane_active_{}".format(cell_index), np.max(conc_rho_membrane_active, axis=1))])
         # add_to_general_data_structure(general_data_structure, [("rho_membrane_active_{}".format(cell_index), sum_rho_act_over_nodes)])
 
-        conc_rho_membrane_inactive = rho_mem_inactive / average_edge_lengths
+        conc_rho_membrane_inactive = rho_mem_inactive/average_edge_lengths
         add_to_general_data_structure(general_data_structure, [
             ("avg_max_conc_rho_membrane_inactive_{}".format(cell_index), np.max(conc_rho_membrane_inactive, axis=1))])
         # add_to_general_data_structure(general_data_structure, [("rho_membrane_inactive_{}".format(cell_index), sum_rho_inact_over_nodes)])
@@ -565,7 +566,7 @@ def graph_important_cell_variables_over_time(T, L, cell_index, storefile_path, p
     rac_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rac_cytosolic_gdi_bound', storefile_path)[:, 0]
     rho_cyt_gdi = hardio.get_data_until_timestep(cell_index, max_tstep, 'rho_cytosolic_gdi_bound', storefile_path)[:, 0]
 
-    time_points = T * np.arange(rac_mem_active.shape[0])
+    time_points = T*np.arange(rac_mem_active.shape[0])
 
     # for data_set, line_style, data_label in zip([randomization_kicks, sum_rac_act_over_nodes, sum_rho_act_over_nodes, sum_rac_inact_over_nodes, sum_rho_inact_over_nodes, rac_cyt_gdi, rho_cyt_gdi], ['k', 'b', 'r', 'b--', 'r--', 'c', 'm'], ['random kick', 'rac_active', 'rho_active', 'rac_inactive', 'rho_inactive', 'rac_gdi', 'rho_gdi'])
 
@@ -580,7 +581,7 @@ def graph_important_cell_variables_over_time(T, L, cell_index, storefile_path, p
 
     # Shrink current axis by 20%
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
 
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
@@ -606,20 +607,20 @@ def graph_edge_and_areal_strains(T, cell_index, storefile_path, save_dir=None, s
         hardio.get_data_until_timestep(cell_index, max_tstep, 'local_strains', storefile_path), axis=1)
     node_coordinates_per_tstep = hardio.get_node_coords_for_all_tsteps(cell_index, storefile_path)
     areas = np.array([geometry.calculate_polygon_area(ncs) for ncs in node_coordinates_per_tstep])
-    areal_strains = (areas - areas[0]) / areas[0]
+    areal_strains = (areas - areas[0])/areas[0]
 
     if "all_cell_areal_strains" not in list(general_data_structure.keys()):
         add_to_general_data_structure(general_data_structure, [("all_cell_areal_strains", [areal_strains])])
     else:
         general_data_structure["all_cell_areal_strains"].append(areal_strains)
 
-    time_points = T * np.arange(avg_edge_strains.shape[0])
+    time_points = T*np.arange(avg_edge_strains.shape[0])
 
     ax_e.plot(time_points, avg_edge_strains, 'k', label='avg_strains')
 
     # Shrink current axis by 20%
     box = ax_e.get_position()
-    ax_e.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax_e.set_position([box.x0, box.y0, box.width*0.8, box.height])
 
     # Put a legend to the right of the current axis
     ax_e.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
@@ -630,7 +631,7 @@ def graph_edge_and_areal_strains(T, cell_index, storefile_path, save_dir=None, s
 
     # Shrink current axis by 20%
     box = ax_a.get_position()
-    ax_a.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax_a.set_position([box.x0, box.y0, box.width*0.8, box.height])
 
     # Put a legend to the right of the current axis
     ax_a.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
@@ -655,21 +656,21 @@ def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdg
     fig, ax = plt.subplots()
 
     average_kgtp_rac = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kgtp_rac', storefile_path),
-                                  axis=1) / kgtp_rac_baseline
+                                  axis=1)/kgtp_rac_baseline
     avg_average_kgtp_rac = np.average(average_kgtp_rac)
     average_kgtp_rho = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kgtp_rho', storefile_path),
-                                  axis=1) / kgtp_rho_baseline
+                                  axis=1)/kgtp_rho_baseline
     avg_average_kgtp_rho = np.average(average_kgtp_rho)
     average_kdgtp_rac = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kdgtp_rac', storefile_path),
-                                   axis=1) / kdgtp_rac_baseline
+                                   axis=1)/kdgtp_rac_baseline
     avg_average_kdgtp_rac = np.average(average_kdgtp_rac)
     average_kdgtp_rho = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'kdgtp_rho', storefile_path),
-                                   axis=1) / kdgtp_rho_baseline
+                                   axis=1)/kdgtp_rho_baseline
     avg_average_kdgtp_rho = np.average(average_kdgtp_rho)
     average_coa_signal = np.average(hardio.get_data_until_timestep(cell_index, max_tstep, 'coa_signal', storefile_path),
                                     axis=1) + 1.0
 
-    time_points = T * np.arange(average_kgtp_rac.shape[0]) / 60.0
+    time_points = T*np.arange(average_kgtp_rac.shape[0])/60.0
 
     for data_set, line_style, data_label in zip(
             [average_kgtp_rac, average_kgtp_rho, average_kdgtp_rac, average_kdgtp_rho, average_coa_signal],
@@ -681,7 +682,7 @@ def graph_rates(T, kgtp_rac_baseline, kgtp_rho_baseline, kdgtp_rac_baseline, kdg
 
     # Shrink current axis by 20%
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
 
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
@@ -740,8 +741,8 @@ def present_collated_single_cell_motion_data(centroids_persistences_speeds_per_r
     ax.set_ylabel("$\mu m$")
     ax.set_xlabel("$\mu m$")
 
-    ax.set_xlim(-1.1 * max_data_lim, 1.1 * max_data_lim)
-    ax.set_ylim(-1.1 * max_data_lim, 1.1 * max_data_lim)
+    ax.set_xlim(-1.1*max_data_lim, 1.1*max_data_lim)
+    ax.set_ylim(-1.1*max_data_lim, 1.1*max_data_lim)
     ax.set_aspect('equal')
     ax.grid(which='both')
 
@@ -829,26 +830,26 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_time.set_xlabel("$\mu m$")
 
     if type(chemoattraction_source_coords) == type(None):
-        y_lim = 1.1 * np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
     else:
-        y_lim = 1.1 * np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim), np.abs(chemoattraction_source_coords[1])])
+        y_lim = 1.1*np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim), np.abs(chemoattraction_source_coords[1])])
 
     if max_x_data_lim > 0.0:
-        max_x_data_lim = 1.1 * max_x_data_lim
+        max_x_data_lim = 1.1*max_x_data_lim
     else:
-        max_x_data_lim = -1 * 1.1 * np.abs(max_x_data_lim)
+        max_x_data_lim = -1*1.1*np.abs(max_x_data_lim)
 
     if min_x_data_lim > 0.0:
-        min_x_data_lim = 1.1 * min_x_data_lim
+        min_x_data_lim = 1.1*min_x_data_lim
     else:
-        min_x_data_lim = -1 * 1.1 * np.abs(min_x_data_lim)
+        min_x_data_lim = -1*1.1*np.abs(min_x_data_lim)
 
     ax_time.set_xlim(min_x_data_lim, max_x_data_lim)
 
-    if y_lim < 0.2 * (max_x_data_lim - min_x_data_lim):
-        y_lim = 0.2 * (max_x_data_lim - min_x_data_lim)
+    if y_lim < 0.2*(max_x_data_lim - min_x_data_lim):
+        y_lim = 0.2*(max_x_data_lim - min_x_data_lim)
 
-    ax_time.set_ylim(-1 * y_lim, y_lim)
+    ax_time.set_ylim(-1*y_lim, y_lim)
     ax_time.set_aspect('equal')
 
     ax_time.grid(which='both')
@@ -865,7 +866,7 @@ def present_collated_cell_motion_data(time_unit, all_cell_centroids_per_repeat, 
     ax_box.xaxis.set_ticks_position('none')
 
     print("plotting protrusion lifetimes radially...")
-    graph_protrusion_lifetimes_radially(all_protrusion_lifetimes_and_average_directions, 12, total_time_in_hours * 60.0,
+    graph_protrusion_lifetimes_radially(all_protrusion_lifetimes_and_average_directions, 12, total_time_in_hours*60.0,
                                         save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
 
     print("showing/saving figures...")
@@ -883,8 +884,8 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
                                                ax_full=None, plot_speedbox=True, plot_if_no_axis_given=True,
                                                min_ylim=0.0, max_ylim=1500.0):
     set_fontsize(fontsize)
-    timepoints = np.arange(group_x_centroid_per_tstep_per_repeat[0].shape[0]) * T / 60.0
-    max_timepoint = int(((total_time_in_hours * 3600.0) / T) + 1)
+    timepoints = np.arange(group_x_centroid_per_tstep_per_repeat[0].shape[0])*T/60.0
+    max_timepoint = int(((total_time_in_hours*3600.0)/T) + 1)
 
     fig_simple_normalized, fig_simple, fig_full_normalized, fig_full, fig_box = None, None, None, None, None
     if plot_if_no_axis_given:
@@ -902,8 +903,8 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
 
     num_repeats = len(group_x_centroid_per_tstep_per_repeat)
 
-    bar_step = int(0.01 * num_repeats * timepoints.shape[0])
-    bar_offset = int(0.01 * timepoints.shape[0])
+    bar_step = int(0.01*num_repeats*timepoints.shape[0])
+    bar_offset = int(0.01*timepoints.shape[0])
 
     for repeat_number in range(num_repeats):
         max_x_centroid_per_tstep = max_x_centroid_per_tstep_per_repeat[repeat_number]
@@ -914,11 +915,11 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
         relative_max_x_centroid_per_tstep = max_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
         relative_min_x_centroid_per_tstep = min_x_centroid_per_tstep - min_x_centroid_per_tstep[0]
 
-        normalized_relative_group_centroid_x_coords = relative_group_x_centroid_per_tstep / cell_diameter
-        normalized_relative_max_centroid_x_coords = relative_max_x_centroid_per_tstep / cell_diameter
-        normalized_relative_min_centroid_x_coords = relative_min_x_centroid_per_tstep / cell_diameter
+        normalized_relative_group_centroid_x_coords = relative_group_x_centroid_per_tstep/cell_diameter
+        normalized_relative_max_centroid_x_coords = relative_max_x_centroid_per_tstep/cell_diameter
+        normalized_relative_min_centroid_x_coords = relative_min_x_centroid_per_tstep/cell_diameter
 
-        bar_indices = np.arange(bar_offset * repeat_number, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64)
+        bar_indices = np.arange(bar_offset*repeat_number, timepoints.shape[0] - bar_offset, bar_step, dtype=np.int64)
 
         if repeat_number == 0:
             bar_indices = np.append(bar_indices, timepoints.shape[0] - 1)
@@ -1000,15 +1001,15 @@ def present_collated_group_centroid_drift_data(T, cell_diameter, min_x_centroid_
 # =============================================================================
 
 def generate_theta_bins(num_bins):
-    delta = 2 * np.pi / num_bins
-    start = 0.5 * delta
+    delta = 2*np.pi/num_bins
+    start = 0.5*delta
 
     bin_bounds = []
     current = start
     for n in range(num_bins - 1):
         bin_bounds.append([current, current + delta])
         current += delta
-    bin_bounds.append([2 * np.pi - 0.5 * delta, start])
+    bin_bounds.append([2*np.pi - 0.5*delta, start])
     bin_bounds = np.array(bin_bounds)
     bin_mids = np.average(bin_bounds, axis=1)
     bin_mids[-1] = 0.0
@@ -1045,7 +1046,7 @@ def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, 
 
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
 
-    summed_x_direction_data = [np.sum(x) / total_simulation_time_in_minutes for x in binned_direction_data]
+    summed_x_direction_data = [np.sum(x)/total_simulation_time_in_minutes for x in binned_direction_data]
 
     bars = ax.bar(bin_midpoints, summed_x_direction_data, width=bin_size, bottom=0.0)
 
@@ -1055,7 +1056,7 @@ def graph_protrusion_lifetimes_radially(protrusion_lifetime_and_direction_data, 
 
     for bi in range(num_polar_graph_bins):
         ax.text(bin_midpoints[bi], summed_x_direction_data[bi], "{}".format(len(binned_direction_data[bi])),
-                fontdict={'size': 0.5 * fontsize})
+                fontdict={'size': 0.5*fontsize})
 
     max_y = np.max(summed_x_direction_data)
 
@@ -1123,11 +1124,11 @@ def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction
         for bi in range(num_polar_graph_bins):
             a, b = bins[bi][0], bins[bi][1]
             if a > b:
-                b = b + 2 * np.pi
+                b = b + 2*np.pi
                 if a > b:
                     raise Exception("a is still greater than b!")
             thetas = np.append(thetas, np.linspace(a, b))
-            rs = np.append(rs, 50 * [binned_start_cause_data[bi][n]])
+            rs = np.append(rs, 50*[binned_start_cause_data[bi][n]])
 
         thetas = np.append(thetas, [thetas[-1] + 1e-6])
         rs = np.append(rs, [rs[0]])
@@ -1147,11 +1148,11 @@ def graph_protrusion_start_end_causes_radially(protrusion_lifetime_and_direction
         for bi in range(num_polar_graph_bins):
             a, b = bins[bi][0], bins[bi][1]
             if a > b:
-                b = b + 2 * np.pi
+                b = b + 2*np.pi
                 if a > b:
                     raise Exception("a is still greater than b!")
             thetas = np.append(thetas, np.linspace(a, b))
-            rs = np.append(rs, 50 * [binned_end_cause_data[bi][n]])
+            rs = np.append(rs, 50*[binned_end_cause_data[bi][n]])
 
         thetas = np.append(thetas, [thetas[-1] + 1e-6])
         rs = np.append(rs, [rs[0]])
@@ -1170,7 +1171,7 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
                                                     backward_cones, num_nodes, save_dir=None, fontsize=22,
                                                     general_data_structure=None):
     set_fontsize(fontsize)
-    times = np.arange(max_tstep) * T / 60.0
+    times = np.arange(max_tstep)*T/60.0
     num_forward_protrusions = np.zeros(max_tstep, dtype=np.float)
     num_backward_protrusions = np.zeros(max_tstep, dtype=np.float)
     num_neither_protrusions = np.zeros(max_tstep, dtype=np.float64)
@@ -1223,9 +1224,9 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
 
     fig_normalized, ax_normalized = plt.subplots()
 
-    ax_normalized.plot(times, num_forward_protrusions / num_nodes, label='forward')
-    ax_normalized.plot(times, num_backward_protrusions / num_nodes, label='backward')
-    ax_normalized.plot(times, num_neither_protrusions / num_nodes, label='other')
+    ax_normalized.plot(times, num_forward_protrusions/num_nodes, label='forward')
+    ax_normalized.plot(times, num_backward_protrusions/num_nodes, label='backward')
+    ax_normalized.plot(times, num_neither_protrusions/num_nodes, label='other')
     # ax.plot(times, other_cone, label='other')
 
     ax_normalized.legend(loc='best', fontsize=fontsize)
@@ -1234,16 +1235,16 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
 
     fig_normalized_with_other, ax_normalized_with_other = plt.subplots()
 
-    ax_normalized_with_other.plot(times, num_forward_protrusions / num_nodes, label='forward')
-    ax_normalized_with_other.plot(times, num_backward_protrusions / num_nodes, label='backward')
-    ax_normalized_with_other.plot(times, num_neither_protrusions / num_nodes, label='other')
+    ax_normalized_with_other.plot(times, num_forward_protrusions/num_nodes, label='forward')
+    ax_normalized_with_other.plot(times, num_backward_protrusions/num_nodes, label='backward')
+    ax_normalized_with_other.plot(times, num_neither_protrusions/num_nodes, label='other')
     # ax.plot(times, other_cone, label='other')
 
     ax_normalized_with_other.legend(loc='best', fontsize=fontsize)
     ax_normalized_with_other.set_ylabel("number of protrusions/N per cell")
     ax_normalized_with_other.set_xlabel("t (min.)")
 
-    for f, fsize, base_name in zip([fig, fig_with_other, fig_normalized, fig_normalized_with_other], [(12, 8)] * 4,
+    for f, fsize, base_name in zip([fig, fig_with_other, fig_normalized, fig_normalized_with_other], [(12, 8)]*4,
                                    ["num_forward_backward_protrusions_over_time", "num_fbo_protrusions_over_time",
                                     "normalized_forward_backward_protrusions_over_time",
                                     "normalized_fbo_protrusions_over_time"]):
@@ -1255,7 +1256,7 @@ def graph_forward_backward_protrusions_per_timestep(max_tstep, protrusion_node_i
 def graph_forward_backward_cells_per_timestep(max_tstep, all_cell_speeds_and_directions, T, forward_cones,
                                               backward_cones, save_dir=None, fontsize=22, general_data_structure=None):
     set_fontsize(fontsize)
-    times = np.arange(max_tstep) * T / 60.0
+    times = np.arange(max_tstep)*T/60.0
     num_forward_cells = np.zeros(max_tstep, dtype=np.float64)
     num_backward_cells = np.zeros(max_tstep, dtype=np.float64)
     num_other_cells = np.zeros(max_tstep, dtype=np.float64)
@@ -1314,7 +1315,7 @@ def graph_coa_variation_test_data_simple(sub_experiment_number, num_timepoints, 
                                          average_cell_group_area_data, save_dir=None, general_data_structure=None):
     set_fontsize(fontsize)
     fig, ax = plt.subplots()
-    timepoints = np.arange(num_timepoints) * T / 60.0
+    timepoints = np.arange(num_timepoints)*T/60.0
 
     for i, n in enumerate(num_cells_to_test):
         for j, tcoa in enumerate(test_coas):
@@ -1442,7 +1443,7 @@ def calculate_statistics_and_write_into_general_file(text_file_name, labels, gro
 def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_heights, graph_x_dimension,
                                   group_persistence_ratios, group_persistence_times, fit_group_x_velocities,
                                   cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
     calculate_statistics_and_write_into_text_file(sub_experiment_number, test_num_cells, test_heights,
                                                   group_persistence_ratios, fit_group_x_velocities, areal_strains,
                                                   save_dir)
@@ -1482,7 +1483,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -1494,7 +1495,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -1503,7 +1504,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -1557,7 +1558,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
             show_or_save_fig(fig, (6, 6), save_dir, 'cell_number_change_data',
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'cell_number_change_data',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'cell_number_change_data',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -1566,7 +1567,7 @@ def graph_cell_number_change_data(sub_experiment_number, test_num_cells, test_he
 def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratios, group_persistence_times,
                                                  fit_group_x_velocities, cell_separations, areal_strains,
                                                  experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
     # calculate_statistics_and_write_into_text_file(sub_experiment_number, test_num_cells, test_heights, group_persistence_ratios, fit_group_x_velocities, areal_strains, save_dir)
 
     x_axis_positions = [i + 1 for i in range(len(labels))]
@@ -1597,7 +1598,7 @@ def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratio
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -1609,7 +1610,7 @@ def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratio
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -1618,7 +1619,7 @@ def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratio
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -1672,7 +1673,7 @@ def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratio
             show_or_save_fig(fig, (6, 6), save_dir, 'parameter_test_data',
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'parameter_test_data',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'parameter_test_data',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -1681,7 +1682,7 @@ def graph_corridor_migration_parameter_test_data(labels, group_persistence_ratio
 def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil, corridor_height, num_cells,
                                   group_persistence_ratios, group_persistence_times, fit_group_x_velocities,
                                   cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
 
     x_axis_positions = [i + 1 for i in range(len(test_coas))]
     x_axis_stuff = test_coas
@@ -1713,7 +1714,7 @@ def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil,
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -1725,7 +1726,7 @@ def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil,
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -1734,7 +1735,7 @@ def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil,
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -1788,7 +1789,7 @@ def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil,
             show_or_save_fig(fig, (6, 6), save_dir, 'coa_variation_test',
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'coa_variation_test',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'coa_variation_test',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -1797,7 +1798,7 @@ def graph_coa_variation_test_data(sub_experiment_number, test_coas, default_cil,
 def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa, corridor_height, num_cells,
                                   group_persistence_ratios, group_persistence_times, fit_group_x_velocities,
                                   cell_separations, areal_strains, experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
 
     x_axis_positions = [i + 1 for i in range(len(test_cils))]
     x_axis_stuff = test_cils
@@ -1829,7 +1830,7 @@ def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa,
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -1841,7 +1842,7 @@ def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa,
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -1850,7 +1851,7 @@ def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa,
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -1904,7 +1905,7 @@ def graph_cil_variation_test_data(sub_experiment_number, test_cils, default_coa,
             show_or_save_fig(fig, (6, 6), save_dir, 'cil_variation_test',
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'cil_variation_test',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'cil_variation_test',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -1914,7 +1915,7 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
                                             default_coa, corridor_height, num_cells, group_persistence_ratios,
                                             group_persistence_times, fit_group_x_velocities, cell_separations,
                                             areal_strains, experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
 
     x_axis_positions = [i + 1 for i in range(len(test_vertex_choice_ratios_and_randomization_magnitudes))]
     x_axis_stuff = ["{}".format(tvr) + "\n$x_r$={}".format(trm) for tvr, trm in
@@ -1948,7 +1949,7 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -1960,7 +1961,7 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -1969,7 +1970,7 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -2023,7 +2024,7 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
             show_or_save_fig(fig, (6, 6), save_dir, 'vertex_choice_variation',
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'vertex_choice_variation',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'vertex_choice_variation',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -2031,12 +2032,12 @@ def graph_vertex_choice_variation_test_data(test_vertex_choice_ratios_and_random
 
 def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells, box_height, box_width,
                           corridor_height, box_y_placement_factor):
-    bh = draw_space_factor * (box_height / scale_factor)
-    ch = draw_space_factor * (corridor_height / scale_factor)
-    bw = draw_space_factor * (box_width / scale_factor)
-    cw = draw_space_factor * (1.2 * box_width / scale_factor)
+    bh = draw_space_factor*(box_height/scale_factor)
+    ch = draw_space_factor*(corridor_height/scale_factor)
+    bw = draw_space_factor*(box_width/scale_factor)
+    cw = draw_space_factor*(1.2*box_width/scale_factor)
 
-    origin[0] = origin[0] - cw * 0.5
+    origin[0] = origin[0] - cw*0.5
 
     corridor_boundary_coords = np.array([[cw, 0.], [0., 0.], [0., ch], [cw, ch]], dtype=np.float64) + origin
 
@@ -2044,10 +2045,10 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells
                                              clip_on=False)
     ax.add_artist(corridor_boundary_patch)
 
-    box_origin = origin + np.array([0.0, (ch - bh) * box_y_placement_factor])
+    box_origin = origin + np.array([0.0, (ch - bh)*box_y_placement_factor])
 
-    cell_radius = 0.5 * draw_space_factor * (1. / scale_factor)
-    cell_placement_delta = cell_radius * 2
+    cell_radius = 0.5*draw_space_factor*(1./scale_factor)
+    cell_placement_delta = cell_radius*2
     y_delta = np.array([0., cell_placement_delta])
     x_delta = np.array([cell_placement_delta, 0.])
 
@@ -2056,7 +2057,7 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells
     x_delta_index = 0
 
     for ci in range(num_cells):
-        cell_patch = mpatch.Circle(cell_origin + y_delta_index * y_delta + x_delta_index * x_delta, radius=cell_radius,
+        cell_patch = mpatch.Circle(cell_origin + y_delta_index*y_delta + x_delta_index*x_delta, radius=cell_radius,
                                    color='k', fill=False, ls='solid', clip_on=False)
         ax.add_artist(cell_patch)
 
@@ -2072,7 +2073,7 @@ def draw_cell_arrangement(ax, origin, draw_space_factor, scale_factor, num_cells
 def graph_init_condition_change_data(sub_experiment_number, tests, group_persistence_ratios, group_persistence_times,
                                      fit_group_x_velocities, cell_separations, transient_end_times,
                                      experiment_set_label, save_dir=None, fontsize=22):
-    set_fontsize(2 * fontsize)
+    set_fontsize(2*fontsize)
 
     x_axis_positions = [i + 1 for i in range(len(tests))]
     x_axis_stuff = []
@@ -2110,7 +2111,7 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
                 for v, a in zip(group_velocities_per_experiment_per_repeat,
                                 average_cell_separation_per_experiment_per_repeat):
-                    data.append(v / a)
+                    data.append(v/a)
             elif ds_label == "migration characteristic distance":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 group_persistence_times_per_experiment_per_repeat = ds_dicts["group persistence times"]
@@ -2122,7 +2123,7 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
                         hide = np.nan
                     else:
                         hide = 1.0
-                    data.append(hide * v * t)
+                    data.append(hide*v*t)
             elif ds_label == "migration number":
                 group_velocities_per_experiment_per_repeat = ds_dicts["group X velocity"]
                 average_cell_separation_per_experiment_per_repeat = ds_dicts["average cell separation"]
@@ -2131,7 +2132,7 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
                 for v, a, t in zip(group_velocities_per_experiment_per_repeat,
                                    average_cell_separation_per_experiment_per_repeat,
                                    group_persistence_times_per_experiment_per_repeat):
-                    data.append(v * t / a)
+                    data.append(v*t/a)
             else:
                 ds = ds_dicts[ds_label]
                 data = [d for d in ds]
@@ -2185,7 +2186,7 @@ def graph_init_condition_change_data(sub_experiment_number, tests, group_persist
             show_or_save_fig(fig, (6, 6), save_dir, "init_conditions",
                              experiment_set_label + "_{}_{}".format(ds_label, graph_type))
 
-        show_or_save_fig(fig_rows, (12, 3 * len(data_plot_order)), save_dir, 'init_conditions_',
+        show_or_save_fig(fig_rows, (12, 3*len(data_plot_order)), save_dir, 'init_conditions_',
                          experiment_set_label + "_{}".format(graph_type))
 
 
@@ -2259,16 +2260,16 @@ def get_text_positions(text, x_data, y_data, txt_width, txt_height):
     text_positions = list(y_data)
     for index, (y, x) in enumerate(a):
         local_text_positions = [i for i in a if i[0] > (y - txt_height)
-                                and (abs(i[1] - x) < txt_width * 2) and i != (y, x)]
+                                and (abs(i[1] - x) < txt_width*2) and i != (y, x)]
         if local_text_positions:
             sorted_ltp = sorted(local_text_positions)
             if abs(sorted_ltp[0][0] - y) < txt_height:  # True == collision
                 differ = np.diff(sorted_ltp, axis=0)
                 a[index] = (sorted_ltp[-1][0] + txt_height, a[index][1])
-                text_positions[index] = sorted_ltp[-1][0] + txt_height * 1.01
+                text_positions[index] = sorted_ltp[-1][0] + txt_height*1.01
                 for k, (j, m) in enumerate(differ):
                     # j is the vertical distance between words
-                    if j > txt_height * 2:  # if True then room to fit a word in
+                    if j > txt_height*2:  # if True then room to fit a word in
                         a[index] = (sorted_ltp[k][0] + txt_height, a[index][1])
                         text_positions[index] = sorted_ltp[k][0] + txt_height
                         break
@@ -2278,10 +2279,10 @@ def get_text_positions(text, x_data, y_data, txt_width, txt_height):
 
 def text_plotter(ax, text, x_data, y_data, text_positions, txt_width, txt_height):
     for z, x, y, t in zip(text, x_data, y_data, text_positions):
-        ax.annotate(str(z), xy=(x - txt_width / 2, t), size=12)
+        ax.annotate(str(z), xy=(x - txt_width/2, t), size=12)
         if y != t:
-            ax.arrow(x, t, 0, y - t, color='red', alpha=0.3, width=txt_width * 0.1,
-                     head_width=txt_width, head_length=txt_height * 0.5,
+            ax.arrow(x, t, 0, y - t, color='red', alpha=0.3, width=txt_width*0.1,
+                     head_width=txt_width, head_length=txt_height*0.5,
                      zorder=0, length_includes_head=True)
 
 
@@ -2289,7 +2290,7 @@ def graph_specific_convergence_test_data(num_timepoints, T, test_num_nodes, data
                                          fontsize, save_dir, data_name_and_unit):
     fig, ax = plt.subplots()
     set_fontsize(fontsize)
-    timepoints = np.arange(num_timepoints) * T / 60.0
+    timepoints = np.arange(num_timepoints)*T/60.0
     text = []
     for i, nn in enumerate(test_num_nodes):
         data_per_cell_per_timepoint = data_per_test_per_repeat_per_timepoint[i][0]
@@ -2414,8 +2415,8 @@ def graph_Tr_vs_Tp_test_data(sub_experiment_number, test_Trs, average_cell_persi
 def graph_combined_group_drifts(experiment_drift_args, base_name, experiment_set_label, save_dir=None):
     num_experiments = len(experiment_drift_args)
     # s = np.sqrt(num_experiments)
-    num_rows = num_experiments / 2
-    num_cols = num_experiments / num_rows
+    num_rows = num_experiments/2
+    num_cols = num_experiments/num_rows
 
     if num_experiments % 2 != 0:
         raise Exception("Logic for dealing with uneven number of plots not yet complete!")
@@ -2500,16 +2501,16 @@ def graph_combined_group_drifts(experiment_drift_args, base_name, experiment_set
 
     ylabel = "$X_c$ ($\mu$m)"
     axarr[-1, -1].set_ylabel(ylabel)
-    axarr[-1, -1].yaxis.set_label_coords(tick_label_left - 0.01, (bottom + top) / 2, transform=fig.transFigure)
+    axarr[-1, -1].yaxis.set_label_coords(tick_label_left - 0.01, (bottom + top)/2, transform=fig.transFigure)
 
     xlabel = "t (min.)"
     axarr[-1, -1].set_xlabel(xlabel)
-    axarr[-1, -1].yaxis.set_label_coords(tick_label_down - 0.01, (left + right) / 2, transform=fig.transFigure)
+    axarr[-1, -1].yaxis.set_label_coords(tick_label_down - 0.01, (left + right)/2, transform=fig.transFigure)
 
     # ax.set_xlabel("t (min.)")
     # ax.set_ylabel("")
 
-    show_or_save_fig(fig, (0.9 * 8.5, 8), save_dir, base_name, experiment_set_label + "_drifts")
+    show_or_save_fig(fig, (0.9*8.5, 8), save_dir, base_name, experiment_set_label + "_drifts")
 
 
 # =============================================================================
@@ -2528,8 +2529,8 @@ def graph_nonlin_to_lin_parameter_comparison(kgtp_rac_multipliers, kgtp_rho_mult
             kgtp_rac_multipliers, kgtp_rho_multipliers, kgtp_rac_autoact_multipliers, kgtp_rho_autoact_multipliers,
             kdgtp_rac_multipliers, kdgtp_rho_multipliers, kdgtp_rho_mediated_rac_inhib_multipliers,
             kdgtp_rac_mediated_rho_inhib_multipliers):
-        rac_rate_comparison = (kgtp_rac_auto) / (kgtp_rac)
-        rho_rate_comparison = (kgtp_rho_auto) / (kgtp_rho)
+        rac_rate_comparison = (kgtp_rac_auto)/(kgtp_rac)
+        rho_rate_comparison = (kgtp_rho_auto)/(kgtp_rho)
 
         rac_rate_comparisons.append(rac_rate_comparison)
         rho_rate_comparisons.append(rho_rate_comparison)
@@ -2548,7 +2549,7 @@ def determine_intercellular_separations_after_first_collision(all_cell_centroids
     for all_cell_centroids in all_cell_centroids_per_repeat:
         timestep_at_first_collision = -1
 
-        ics_per_tstep = np.abs(all_cell_centroids[0, :, 0] - all_cell_centroids[1, :, 0]) / cell_diameter
+        ics_per_tstep = np.abs(all_cell_centroids[0, :, 0] - all_cell_centroids[1, :, 0])/cell_diameter
 
         for t, ics in enumerate(ics_per_tstep):
             if timestep_at_first_collision < 0:
@@ -2558,7 +2559,7 @@ def determine_intercellular_separations_after_first_collision(all_cell_centroids
 
         cell_intercellular_separations_after_first_collision.append((timestep_at_first_collision, ics_per_tstep[
                                                                                                   timestep_at_first_collision:(
-                                                                                                              timestep_at_first_collision + cutoff)] * cell_diameter))
+                                                                                                              timestep_at_first_collision + cutoff)]*cell_diameter))
 
     return cell_intercellular_separations_after_first_collision
 
@@ -2570,11 +2571,11 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
                 all_cell_centroids_per_repeat.shape))
 
     cell_intercellular_separations_after_first_collision = determine_intercellular_separations_after_first_collision(
-        all_cell_centroids_per_repeat, cell_diameter, int(40.0 / T))
+        all_cell_centroids_per_repeat, cell_diameter, int(40.0/T))
 
     fig, ax = plt.subplots()
     for i, ics_after_first_collision in enumerate(cell_intercellular_separations_after_first_collision):
-        ts = np.arange(len(ics_after_first_collision[1])) * T
+        ts = np.arange(len(ics_after_first_collision[1]))*T
         ics = ics_after_first_collision[1]
 
         ax.plot(ts, ics, color=colors.color_list20[i % 20])
@@ -2585,7 +2586,7 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     show_or_save_fig(fig, (6, 6), save_dir, "post-collision-ics", "")
 
     fig, ax = plt.subplots()
-    tpoint_of_interest = int(30.0 / T)
+    tpoint_of_interest = int(30.0/T)
     cell_ics_at_tpoint_of_interest = [icinfo[1][tpoint_of_interest] for icinfo in
                                       cell_intercellular_separations_after_first_collision]
 
@@ -2596,7 +2597,7 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     rects1 = ax.bar(np.arange(1), mean, width, color='r', yerr=std)
 
     ax.set_ylabel('centroid-to-centroid separation\n30 min. after collision')
-    ax.set_xticks(np.arange(1) + width / 2)
+    ax.set_xticks(np.arange(1) + width/2)
     ax.set_xticklabels((""))
     ax.set_title("mean separation after 30 min.={} $\mu$m\nstd={} $\mu$m".format(np.round(mean, decimals=2),
                                                                                  np.round(std, decimals=2)))
@@ -2604,29 +2605,36 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
 
 
-def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios,
-                                     box_width, box_height, num_cells, save_dir=None, fontsize=22):
+def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios_per_num_cells, num_experiment_repeats, num_cells, box_widths, box_heights, save_dir=None, fontsize=22):
     set_fontsize(fontsize)
     assert (len(test_magnitudes) == len(test_slopes))
     fig, ax = plt.subplots()
 
-    indices = np.arange(chemotaxis_success_ratios.shape[0])
-    width = 0.35
-    ax.bar(indices, chemotaxis_success_ratios, width, color='b')
+    for i, nr, chemotaxis_success_ratios, nc, bw, bh in zip(np.arange(len(num_cells)), num_experiment_repeats, chemotaxis_success_ratios_per_num_cells, num_cells, box_widths, box_heights):
+        indices = np.arange(len(test_slopes))
 
-    ax.set_ylabel("success ratio")
-    ax.set_xticks(indices)
+        xpoints = np.array([[index, index + 1, np.nan] for index in indices]).flatten()
+        ypoints = np.array([[c, c, np.nan] for c in chemotaxis_success_ratios]).flatten()
 
-    xlabels = ["{},\n{}".format(s, m) for s, m in
-               zip([40.0 * x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
-    ax.set_xticklabels(xlabels)
-    ax.set_xlabel("(gradient, magnitude at source)")
-    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
+        ax.plot(xpoints, ypoints, color=colors.color_list20[i], label="{}, {}x{}, N={}".format(nc, bw, bh, nr))
 
-    ax.set_ylim([0, 1.0])
+        ax.set_ylabel("success ratio")
+        ax.set_xticks([index + 0.5 for index in indices])
 
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target",
-                     "({}, {}, {})".format(box_width, box_height, num_cells))
+        xlabels = ["{},\n{}".format(s, m) for s, m in
+                   zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+        ax.set_xticklabels(xlabels)
+        ax.set_xlabel("(gradient, magnitude at source)")
+        ax.set_title("success ratios")
+
+        ax.set_ylim([-0.1, 1.5])
+        ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+        ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
+
+    ax.legend(loc='best', fontsize=fontsize)
+
+    x = datetime.datetime.now()
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "({})".format([(nr, nc, bw, bh) for nr, nc, bw, bh in zip(num_experiment_repeats, num_cells, box_widths, box_heights)]))
 
 
 def convert_rgba_to_rgb(rgba, background_color):
@@ -2634,7 +2642,7 @@ def convert_rgba_to_rgb(rgba, background_color):
     a = rgba[3]
 
     for i in range(3):
-        rgb[i] = ((1.0 - a) * background_color[i]) + (a * rgba[i])
+        rgb[i] = ((1.0 - a)*background_color[i]) + (a*rgba[i])
 
     return rgb
 
@@ -2664,7 +2672,7 @@ def graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_m
     ax.set_xticks(indices)
 
     xlabels = ["{},\n{}".format(s, m) for s, m in
-               zip([40.0 * x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+               zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
     ax.set_xticklabels(xlabels)
     ax.set_xlabel("(gradient, magnitude at source)")
     ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))

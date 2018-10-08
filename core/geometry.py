@@ -660,7 +660,7 @@ def calculate_polygon_area(vertex_coords):
     for i in range(num_vertices):
         j = (i + 1)%num_vertices
         k = (i - 1)%num_vertices
-        area += vertex_coords[i, 0] * (vertex_coords[j, 1] - vertex_coords[k, 1])
+        area += vertex_coords[i, 0]*(vertex_coords[j, 1] - vertex_coords[k, 1])
         
     return area*0.5
     

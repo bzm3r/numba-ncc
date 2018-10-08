@@ -314,7 +314,7 @@ def remake_graphics(remake_graphs, remake_animation, environment_dir, an_environ
     
     animation_object = animator.EnvironmentAnimation(an_environment.environment_dir, an_environment.environment_name, an_environment.num_cells, an_environment.num_nodes, an_environment.num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, an_environment.storefile_path, **ani_sets)
     
-    print("making graphics...")
+    print("remaking graphics...")
     an_environment.do_data_analysis_and_make_visuals(draw_tpoint, visuals_save_dir, ani_sets, animation_object, remake_graphs, remake_animation)
         
 

@@ -66,7 +66,7 @@ def calculate_velocities(position_per_tstep, T):
     velocities = np.zeros((num_tpoints - 1, 2), dtype=np.float64)
 
     for ti in range(num_tpoints - 1):
-        velocities[ti] = (position_per_tstep[ti + 1] - position_per_tstep[ti]) / T
+        velocities[ti] = (position_per_tstep[ti + 1] - position_per_tstep[ti])/T
 
     return velocities
 
@@ -74,11 +74,11 @@ def calculate_velocities(position_per_tstep, T):
 # ==============================================================================
 def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, L):
     node_coords_per_tstep = hardio.get_node_coords_until_tstep(cell_index, max_tstep, storefile_path)
-    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep) * L
+    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)*L
 
     num_tsteps = node_coords_per_tstep.shape[0]
 
-    timepoints = np.arange(num_tsteps - 1) * T
+    timepoints = np.arange(num_tsteps - 1)*T
 
     velocities = calculate_velocities(centroid_per_tstep, T)
 
@@ -104,7 +104,7 @@ def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, 
         sum_rho = sum_rho + rho_membrane_active[i]
 
     significant_rac = np.zeros(num_nodes, dtype=np.int64)
-    normalized_rac = rac_membrane_active / max_rac
+    normalized_rac = rac_membrane_active/max_rac
     for i in range(num_nodes):
         if normalized_rac[i] > 0.2:
             significant_rac[i] = 1
@@ -132,30 +132,30 @@ def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, 
             front_width += 1.0
             i = (i + 1) % num_nodes
 
-        front_strengths[fi] = front_strength / front_width
+        front_strengths[fi] = front_strength/front_width
         front_widths[fi] = front_width
 
     max_front_strength = np.max(front_strengths)
-    normalized_front_strengths = front_strengths / max_front_strength
+    normalized_front_strengths = front_strengths/max_front_strength
 
     rac_amount_score = 1.0
     if sum_rac > 0.3:
-        rac_amount_score = np.exp((sum_rac - 0.3) * np.log(0.1) / 0.1)
+        rac_amount_score = np.exp((sum_rac - 0.3)*np.log(0.1)/0.1)
 
     rho_amount_score = 1.0
     if sum_rho > 0.1:
-        rho_amount_score = np.exp((sum_rho - 0.1) * np.log(0.1) / 0.1)
+        rho_amount_score = np.exp((sum_rho - 0.1)*np.log(0.1)/0.1)
 
     if num_rac_fronts == 1:
-        front_width_rating = front_widths[0] / (num_nodes / 3.)
+        front_width_rating = front_widths[0]/(num_nodes/3.)
 
         if front_width_rating > 1.0:
             front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
 
-        return front_width_rating * rac_amount_score * rho_amount_score  # (front_width_rating)*rac_amount_score*rho_amount_score
+        return front_width_rating*rac_amount_score*rho_amount_score  # (front_width_rating)*rac_amount_score*rho_amount_score
 
     elif num_rac_fronts > 1:
-        worst_distance_between_fronts = (num_nodes - np.sum(front_widths)) / float(num_rac_fronts)
+        worst_distance_between_fronts = (num_nodes - np.sum(front_widths))/float(num_rac_fronts)
         distance_between_fronts_score = np.zeros(num_rac_fronts, dtype=np.float64)
 
         for fi in range(num_rac_fronts):
@@ -175,7 +175,7 @@ def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, 
             else:
                 relevant_fs = next_fs
 
-            score = dist_bw_fronts * relevant_fs / worst_distance_between_fronts
+            score = dist_bw_fronts*relevant_fs/worst_distance_between_fronts
             if score > 1.0:
                 distance_between_fronts_score[fi] = 1.0
             else:
@@ -185,15 +185,15 @@ def calculate_polarization_rating_old(rac_membrane_active, rho_membrane_active, 
         if num_rac_fronts == 2:
             combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
         else:
-            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score) / num_rac_fronts
+            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_rac_fronts
 
         total_front_width = (np.sum(front_widths) + 0.0)
-        front_width_rating = total_front_width / (num_nodes / 3.)
+        front_width_rating = total_front_width/(num_nodes/3.)
 
         if front_width_rating > 1.0:
             front_width_rating = 1.0 - score_function(1.0, 2.0, front_width_rating)
 
-        return combined_dist_bw_fronts_score * front_width_rating * rac_amount_score * rho_amount_score  # combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score  # combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
 
     return 0.0
 
@@ -219,13 +219,13 @@ def polarization_score_pwl_fn(x):
                 y1 = defining_ys[j - 1]
                 y2 = defining_ys[j]
 
-                return ((y2 - y1) / (x2 - x1)) * (x - x1) + y1
+                return ((y2 - y1)/(x2 - x1))*(x - x1) + y1
 
 
 @nb.jit(nopython=True)
 def scaled_and_translated_bump_function(offset, width, x):
     if offset - np.sqrt(width) < x < offset + np.sqrt(width):
-        return np.exp(-1.0 * (1 / (1.0 - ((x - offset) ** 2.0) / width)))
+        return np.exp(-1.0*(1/(1.0 - ((x - offset) ** 2.0)/width)))
     else:
         return 0.0
 
@@ -246,7 +246,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         sum_rho = sum_rho + rho_membrane_active[i]
 
     significant_rac = np.zeros(num_nodes, dtype=np.int64)
-    normalized_rac = rac_membrane_active / max_rac
+    normalized_rac = rac_membrane_active/max_rac
     for i in range(num_nodes):
         if normalized_rac[i] > 0.2:
             significant_rac[i] = 1
@@ -274,29 +274,29 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
             front_width += 1.0
             i = (i + 1) % num_nodes
 
-        front_strengths[fi] = front_strength / front_width
+        front_strengths[fi] = front_strength/front_width
         front_widths[fi] = front_width
 
     max_front_strength = np.max(front_strengths)
-    normalized_front_strengths = front_strengths / max_front_strength
+    normalized_front_strengths = front_strengths/max_front_strength
 
     rac_amount_score = 1.0
     if sum_rac > 0.4:
-        rac_amount_score = np.exp((sum_rac - 0.4) * np.log(0.1) / 0.1)
+        rac_amount_score = np.exp((sum_rac - 0.4)*np.log(0.1)/0.1)
 
     rho_amount_score = 1.0
     if sum_rho > 0.4:
-        rho_amount_score = np.exp((sum_rho - 0.4) * np.log(0.1) / 0.1)
+        rho_amount_score = np.exp((sum_rho - 0.4)*np.log(0.1)/0.1)
 
     if num_rac_fronts == 1:
-        single_front_width = (1.0 * front_widths[0]) / num_nodes
+        single_front_width = (1.0*front_widths[0])/num_nodes
 
         front_width_rating = polarization_score_pwl_fn(single_front_width)
 
-        return front_width_rating * rac_amount_score * rho_amount_score  # (front_width_rating)*rac_amount_score*rho_amount_score
+        return front_width_rating*rac_amount_score*rho_amount_score  # (front_width_rating)*rac_amount_score*rho_amount_score
 
     elif num_rac_fronts > 1:
-        worst_distance_between_fronts = (num_nodes - np.sum(front_widths)) / float(num_rac_fronts)
+        worst_distance_between_fronts = (num_nodes - np.sum(front_widths))/float(num_rac_fronts)
         distance_between_fronts_score = np.zeros(num_rac_fronts, dtype=np.float64)
 
         for fi in range(num_rac_fronts):
@@ -316,7 +316,7 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
             else:
                 relevant_fs = next_fs
 
-            score = dist_bw_fronts * relevant_fs / worst_distance_between_fronts
+            score = dist_bw_fronts*relevant_fs/worst_distance_between_fronts
             if score > 1.0:
                 distance_between_fronts_score[fi] = 1.0
             else:
@@ -326,12 +326,12 @@ def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_
         if num_rac_fronts == 2:
             combined_dist_bw_fronts_score = 1.0 - np.min(distance_between_fronts_score)
         else:
-            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score) / num_rac_fronts
+            combined_dist_bw_fronts_score = 1.0 - np.sum(distance_between_fronts_score)/num_rac_fronts
 
-        total_front_width = (np.sum(front_widths) + 0.0) / num_nodes
+        total_front_width = (np.sum(front_widths) + 0.0)/num_nodes
         front_width_rating = polarization_score_pwl_fn(total_front_width)
 
-        return combined_dist_bw_fronts_score * front_width_rating * rac_amount_score * rho_amount_score  # combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
+        return combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score  # combined_dist_bw_fronts_score*front_width_rating*rac_amount_score*rho_amount_score
 
     return 0.0
 
@@ -363,7 +363,7 @@ def score_function(min_cutoff, max_cutoff, x):
         # 1.0 = m*max - m*min
         # 1.0/(max - min) = m
         # b = -m*min
-        return (x - min_cutoff) / (max_cutoff - min_cutoff)
+        return (x - min_cutoff)/(max_cutoff - min_cutoff)
 
 
 def calculate_parameter_exploration_score_from_cell(a_cell, significant_difference=0.1, num_data_points_from_end=None,
@@ -388,7 +388,7 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
     node_coords_per_tstep = a_cell.system_history[:, :, [parameterorg.x_index, parameterorg.y_index]]
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
 
-    cell_centroids = centroids_per_tstep * a_cell.L / 1e-6
+    cell_centroids = centroids_per_tstep*a_cell.L/1e-6
     num_tsteps = cell_centroids.shape[0]
 
     net_displacement = cell_centroids[num_tsteps - 1] - cell_centroids[0]
@@ -397,9 +397,9 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
     distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps - 1], axis=1)
     net_distance = np.sum(distance_per_tstep)
 
-    persistence = net_displacement_mag / net_distance
+    persistence = net_displacement_mag/net_distance
 
-    velocities = distance_per_tstep * (60.0 / a_cell.T)
+    velocities = distance_per_tstep*(60.0/a_cell.T)
     average_velocity = np.average(velocities)
 
     persistence_score = 1.0 - score_function(0.5, 1.0, persistence)
@@ -421,7 +421,7 @@ def calculate_parameter_exploration_score_from_cell(a_cell, significant_differen
 def calculate_parameter_exploration_score_from_cell_no_randomization_variant_old(a_cell,
                                                                                  should_be_polarized_by_in_hours=0.5):
     T = a_cell.T
-    should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours * 3600.) / T)
+    should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours*3600.)/T)
 
     rac_membrane_active_per_tstep = a_cell.system_history[(should_be_polarized_by_tstep + 1):, :,
                                     parameterorg.rac_membrane_active_index]
@@ -447,10 +447,10 @@ def calculate_parameter_exploration_score_from_cell_no_randomization_variant_old
     node_coords_per_tstep = a_cell.system_history[:, :, [parameterorg.x_index, parameterorg.y_index]]
     centroids_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
 
-    cell_centroids = centroids_per_tstep * a_cell.L / 1e-6
+    cell_centroids = centroids_per_tstep*a_cell.L/1e-6
     num_tsteps = cell_centroids.shape[0]
 
-    velocities = (cell_centroids[1:] - cell_centroids[:num_tsteps - 1]) * (60.0 / a_cell.T)
+    velocities = (cell_centroids[1:] - cell_centroids[:num_tsteps - 1])*(60.0/a_cell.T)
     speeds = np.linalg.norm(velocities, axis=1)
     avg_speed = np.average(speeds)
 
@@ -473,7 +473,7 @@ def calculate_parameter_exploration_score_from_cell_no_randomization_variant_old
 def calculate_parameter_exploration_score_from_cell_no_randomization_variant(a_cell,
                                                                              should_be_polarized_by_in_hours=0.5):
     T = a_cell.T
-    should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours * 3600.) / T)
+    should_be_polarized_by_tstep = int((should_be_polarized_by_in_hours*3600.)/T)
 
     rac_membrane_active_per_tstep = a_cell.system_history[(should_be_polarized_by_tstep + 1):, :,
                                     parameterorg.rac_membrane_active_index]
@@ -546,7 +546,7 @@ def calculate_migry_boundary_violation_score(num_nodes, num_timesteps, cell_inde
     y = x > 1e-10
     y = np.array(y, dtype=np.int64)
 
-    return np.sum(y) / (num_timesteps * num_nodes)
+    return np.sum(y)/(num_timesteps*num_nodes)
 
 
 # ==============================================================================
@@ -556,7 +556,7 @@ def calculate_average_total_strain(num_nodes, cell_index, storefile_path):
 
     init_perimeter = geometry.calculate_perimeter(num_nodes, node_coords_per_timestep[0])
     total_strains = np.array(
-        [geometry.calculate_perimeter(num_nodes, x) for x in node_coords_per_timestep]) / init_perimeter
+        [geometry.calculate_perimeter(num_nodes, x) for x in node_coords_per_timestep])/init_perimeter
     avg_total_strain = np.average(total_strains)
 
     return avg_total_strain - 1.0
@@ -566,7 +566,7 @@ def calculate_average_total_strain(num_nodes, cell_index, storefile_path):
 
 def calculate_acceleration(num_timepoints, num_nodes, L, T, cell_index, storefile_path):
     init_point = 0
-    mid_point = np.int(num_timepoints * 0.5)
+    mid_point = np.int(num_timepoints*0.5)
     final_point = -1
 
     init_node_coords = np.transpose(hardio.get_node_coords(cell_index, init_point, storefile_path))
@@ -577,8 +577,8 @@ def calculate_acceleration(num_timepoints, num_nodes, L, T, cell_index, storefil
     mid_centroid = geometry.calculate_centroid(num_nodes, mid_node_coords)
     final_centroid = geometry.calculate_centroid(num_nodes, final_node_coords)
 
-    acceleration = (np.linalg.norm((final_centroid - mid_centroid)) * L * 1e6 - np.linalg.norm(
-        (mid_centroid - init_centroid)) * L * 1e6) / (0.5 * num_timepoints * T / 60.0) ** 2
+    acceleration = (np.linalg.norm((final_centroid - mid_centroid))*L*1e6 - np.linalg.norm(
+        (mid_centroid - init_centroid))*L*1e6)/(0.5*num_timepoints*T/60.0) ** 2
 
     return np.abs(acceleration)
 
@@ -592,14 +592,14 @@ def score_distance_travelled(cell_index, storefile_path):
     x_disps = xs[1:] - xs[:-1]
     y_disps = ys[1:] - ys[:-1]
 
-    dists = np.sqrt(x_disps * x_disps + y_disps * y_disps)
+    dists = np.sqrt(x_disps*x_disps + y_disps*y_disps)
 
     total_dist_magnitude = np.sum(dists)
 
     sum_x_disps = np.sum(x_disps)
     sum_y_disps = np.sum(y_disps)
 
-    total_disp_magnitude = np.sqrt(sum_x_disps * sum_x_disps + sum_y_disps * sum_y_disps)
+    total_disp_magnitude = np.sqrt(sum_x_disps*sum_x_disps + sum_y_disps*sum_y_disps)
 
     return total_dist_magnitude, total_disp_magnitude
 
@@ -651,7 +651,7 @@ def determine_contact_start_end(T, contact_tsteps, min_tstep, max_tstep):
         last_contact_tstep = contact_tstep
 
     contact_start_end_tuples = [x for x in contact_start_end_tuples if
-                                (T * (x[1] - x[0]) > 30.0) and (x[1] != max_tstep)]
+                                (T*(x[1] - x[0]) > 30.0) and (x[1] != max_tstep)]
 
     return contact_start_end_tuples
 
@@ -660,8 +660,8 @@ def determine_contact_start_end(T, contact_tsteps, min_tstep, max_tstep):
 
 def calculate_kinematics(delta_t, centroid_pos_plus1s, centroid_pos_minus1s):
     delta_pos = centroid_pos_plus1s - centroid_pos_minus1s
-    velocities = delta_pos / (2 * delta_t)
-    accelerations = delta_pos / (delta_t ** 2)
+    velocities = delta_pos/(2*delta_t)
+    accelerations = delta_pos/(delta_t ** 2)
 
     return velocities, accelerations
 
@@ -778,20 +778,20 @@ def determine_probability_given_N_Rstar(N, Rstar):
 
     if x_lb_lb != x_lb_ub:
         prob_lb = clabels[x_lb_lb] + (
-                    (clabels[x_lb_ub] - clabels[x_lb_lb]) / (rstars_lb[x_lb_ub] - rstars_lb[x_lb_lb])) * (
+                    (clabels[x_lb_ub] - clabels[x_lb_lb])/(rstars_lb[x_lb_ub] - rstars_lb[x_lb_lb]))*(
                               Rstar - rstars_lb[x_lb_lb])
     else:
         prob_lb = clabels[x_lb_lb]
 
     if x_ub_lb != x_ub_ub:
         prob_ub = clabels[x_ub_lb] + (
-                    (clabels[x_ub_ub] - clabels[x_ub_lb]) / (rstars_ub[x_ub_ub] - rstars_ub[x_ub_lb])) * (
+                    (clabels[x_ub_ub] - clabels[x_ub_lb])/(rstars_ub[x_ub_ub] - rstars_ub[x_ub_lb]))*(
                               Rstar - rstars_ub[x_ub_lb])
     else:
         prob_ub = clabels[x_ub_lb]
 
     if yub != ylb:
-        prob = prob_lb + ((prob_ub - prob_lb) / (rlabels[yub] - rlabels[ylb])) * (N - rlabels[ylb])
+        prob = prob_lb + ((prob_ub - prob_lb)/(rlabels[yub] - rlabels[ylb]))*(N - rlabels[ylb])
     else:
         prob = prob_lb
 
@@ -831,7 +831,7 @@ def calculate_null_hypothesis_probability(velocities):
     Y = np.dot(transformed_rs, np.sin(thetas))
 
     R = np.sqrt(X ** 2 + Y ** 2)
-    Rstar = R / (N ** (3. / 2.))
+    Rstar = R/(N ** (3./2.))
 
     return determine_probability_given_N_Rstar(N, Rstar)
 
@@ -952,10 +952,10 @@ def get_assessable_contact_start_end_tuples(smoothened_contact_start_end_arrays,
 def calculate_3_point_kinematics(last_centroid, next_centroid, delta_tsteps, tstep_length):
     delta_centroid = (next_centroid - last_centroid)
 
-    delta_t = delta_tsteps * tstep_length / 60.0
+    delta_t = delta_tsteps*tstep_length/60.0
 
-    acceleration = delta_centroid / (delta_t * delta_t)
-    velocity = delta_centroid / (2 * delta_t)
+    acceleration = delta_centroid/(delta_t*delta_t)
+    velocity = delta_centroid/(2*delta_t)
 
     return acceleration, velocity
 
@@ -1052,14 +1052,14 @@ def get_min_max_x_centroid_per_timestep(all_cell_centroid_xs):
 
 def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomization, time_unit="min."):
     if time_unit == "min.":
-        T = relevant_environment.T / 60.0
+        T = relevant_environment.T/60.0
     elif time_unit == "sec":
         T = relevant_environment.T
     else:
         raise Exception("Unknown time unit given: ", time_unit)
 
-    cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path) * \
-                     relevant_environment.cells_in_environment[0].L / 1e-6
+    cell_centroids = calculate_cell_centroids_for_all_time(0, storefile_path)*\
+                     relevant_environment.cells_in_environment[0].L/1e-6
     num_tsteps = cell_centroids.shape[0]
 
     net_displacement = cell_centroids[num_tsteps - 1] - cell_centroids[0]
@@ -1069,7 +1069,7 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
     distance_per_tstep = np.linalg.norm(cell_centroid_displacements, axis=1)
     net_distance = np.sum(distance_per_tstep)
 
-    cell_speeds = distance_per_tstep / T
+    cell_speeds = distance_per_tstep/T
 
     if net_distance > 0.0:
         if not no_randomization:
@@ -1079,7 +1079,7 @@ def analyze_single_cell_motion(relevant_environment, storefile_path, no_randomiz
         else:
             persistence_time = np.nan
 
-        persistence_ratio = net_displacement_mag / net_distance
+        persistence_ratio = net_displacement_mag/net_distance
     else:
         persistence_ratio = np.nan
         persistence_time = np.nan
@@ -1091,7 +1091,7 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
     num_cells = relevant_environment.num_cells
 
     if time_unit == "min.":
-        T = relevant_environment.T / 60.0
+        T = relevant_environment.T/60.0
     elif time_unit == "sec":
         T = relevant_environment.T
     else:
@@ -1103,19 +1103,19 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         if n == 48:
             pass
 
-        cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path) * \
-                         relevant_environment.cells_in_environment[n].L / 1e-6
+        cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*\
+                         relevant_environment.cells_in_environment[n].L/1e-6
         num_tsteps = cell_centroids.shape[0]
 
         net_displacement = cell_centroids[num_tsteps - 1] - cell_centroids[0]
         net_displacement_mag = np.linalg.norm(net_displacement)
 
         distance_per_tstep = np.linalg.norm(cell_centroids[1:] - cell_centroids[:num_tsteps - 1], axis=1)
-        speeds = distance_per_tstep / T
+        speeds = distance_per_tstep/T
         net_distance = np.sum(distance_per_tstep)
 
         if net_distance > 0.0:
-            persistence_ratio = net_displacement_mag / net_distance
+            persistence_ratio = net_displacement_mag/net_distance
             this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
             this_cell_positive_ns, this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
                 this_cell_centroid_displacements)
@@ -1151,7 +1151,7 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         group_net_distance = np.sum(
             np.linalg.norm(relative_group_centroid_per_timestep[1:] - relative_group_centroid_per_timestep[:-1],
                            axis=1))
-        group_persistence_ratio = group_net_displacement_mag / group_net_distance
+        group_persistence_ratio = group_net_displacement_mag/group_net_distance
 
         group_positive_ns, group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
             group_centroid_displacements_per_timestep)
@@ -1161,8 +1161,8 @@ def analyze_cell_motion(relevant_environment, storefile_path, subexperiment_inde
         group_speed_per_timestep = np.linalg.norm(group_velocities, axis=1)
     else:
         group_centroid_x_per_timestep = all_cell_centroid_xs[0]
-        min_x_centroid_per_timestep, max_x_centroid_per_timestep = np.nan * np.empty_like(
-            group_centroid_x_per_timestep), np.nan * np.empty_like(group_centroid_x_per_timestep)
+        min_x_centroid_per_timestep, max_x_centroid_per_timestep = np.nan*np.empty_like(
+            group_centroid_x_per_timestep), np.nan*np.empty_like(group_centroid_x_per_timestep)
 
         group_centroid_per_timestep = all_cell_centroids[0]
         group_velocities = calculate_velocities(group_centroid_per_timestep, T)
@@ -1182,7 +1182,7 @@ def determine_run_and_tumble_periods(avg_strain_per_tstep, polarization_score_pe
     tumble_period_found = False
     associated_run_period_found = False
 
-    tumble_info = -1 * np.ones((int(num_tsteps / 2), 3), dtype=np.int64)
+    tumble_info = -1*np.ones((int(num_tsteps/2), 3), dtype=np.int64)
     run_and_tumble_pair_index = 0
 
     for ti in range(num_tsteps):
@@ -1209,7 +1209,7 @@ def determine_run_and_tumble_periods(avg_strain_per_tstep, polarization_score_pe
             num_run_and_tumble_pairs -= 1
             break
 
-    return_tumble_info = -1 * np.ones((num_run_and_tumble_pairs, 3), dtype=np.int64)
+    return_tumble_info = -1*np.ones((num_run_and_tumble_pairs, 3), dtype=np.int64)
     for pi in range(num_run_and_tumble_pairs):
         tumble_info_tuple = tumble_info[pi]
         for i in range(3):
@@ -1239,20 +1239,20 @@ def calculate_run_and_tumble_statistics(num_nodes, T, L, cell_index, storefile_p
                                                            tumble_period_strain_threshold,
                                                            tumble_period_polarization_threshold)
 
-    tumble_periods = [(tpi[1] - tpi[0]) * T for tpi in tumble_periods_info]
-    run_periods = [(tpi[2] - tpi[1]) * T for tpi in tumble_periods_info]
+    tumble_periods = [(tpi[1] - tpi[0])*T for tpi in tumble_periods_info]
+    run_periods = [(tpi[2] - tpi[1])*T for tpi in tumble_periods_info]
 
     if cell_centroids == None:
-        cell_centroids = calculate_cell_centroids_for_all_time(cell_index, storefile_path) * L
+        cell_centroids = calculate_cell_centroids_for_all_time(cell_index, storefile_path)*L
 
     tumble_centroids = [cell_centroids[tpi[0]:tpi[1]] for tpi in tumble_periods_info]
     net_tumble_displacement_mags = [np.linalg.norm(tccs[-1] - tccs[0]) for tccs in tumble_centroids]
-    mean_tumble_period_speeds = [np.average(np.linalg.norm((tccs[1:] - tccs[:-1]) / T, axis=1)) for tccs in
+    mean_tumble_period_speeds = [np.average(np.linalg.norm((tccs[1:] - tccs[:-1])/T, axis=1)) for tccs in
                                  tumble_centroids]
 
     run_centroids = [cell_centroids[tpi[1]:tpi[2]] for tpi in tumble_periods_info]
     net_run_displacement_mags = [np.linalg.norm(rccs[-1] - rccs[0]) for rccs in run_centroids]
-    mean_run_period_speeds = [np.average(np.linalg.norm((rccs[1:] - rccs[:-1]) / T, axis=1)) for rccs in run_centroids]
+    mean_run_period_speeds = [np.average(np.linalg.norm((rccs[1:] - rccs[:-1])/T, axis=1)) for rccs in run_centroids]
 
     return (
     tumble_periods, run_periods, net_tumble_displacement_mags, mean_tumble_period_speeds, net_run_displacement_mags,
@@ -1268,7 +1268,7 @@ def normalize_rgtpase_data_per_tstep(rgtpase_data):
     normalized_rgtpase_data = np.zeros_like(rgtpase_data, dtype=np.float64)
     for ti in range(num_tpoints):
         this_tstep_rgtpase_data = rgtpase_data[ti]
-        normalized_rgtpase_data[ti] = this_tstep_rgtpase_data / np.max(this_tstep_rgtpase_data)
+        normalized_rgtpase_data[ti] = this_tstep_rgtpase_data/np.max(this_tstep_rgtpase_data)
 
     return normalized_rgtpase_data
 
@@ -1290,7 +1290,7 @@ def determine_protrusion_existence_and_direction(normalized_rac_membrane_active_
         for ni in range(num_nodes):
             if (relevant_rac_actives[ni] > relevant_rho_actives[ni]) and relevant_normalized_rac_actives[ni] > 0.25:
                 protrusion_existence_per_tstep[ti][ni] = 1
-                protrusion_direction_per_tstep[ti][ni] = -1. * uivs_per_node_per_timestep[ti][ni]
+                protrusion_direction_per_tstep[ti][ni] = -1.*uivs_per_node_per_timestep[ti][ni]
 
     return protrusion_existence_per_tstep, protrusion_direction_per_tstep
 
@@ -1300,7 +1300,7 @@ def determine_protrusion_node_index_and_tpoint_start_ends(protrusion_existence_p
     num_tpoints = protrusion_existence_per_tstep.shape[0]
     num_nodes = protrusion_existence_per_tstep.shape[1]
 
-    protrusion_node_index_and_tpoint_start_ends = np.zeros((num_tpoints * num_nodes, 3), dtype=np.int64)
+    protrusion_node_index_and_tpoint_start_ends = np.zeros((num_tpoints*num_nodes, 3), dtype=np.int64)
     num_protrusions = -1
 
     for ni in range(num_nodes):
@@ -1334,13 +1334,13 @@ def determine_protrusion_lifetimes_and_average_directions(T, protrusion_node_ind
         ni, ti_start, ti_end = protrusion_node_index_and_tpoint_start_ends[pi][0], \
                                protrusion_node_index_and_tpoint_start_ends[pi][1], \
                                protrusion_node_index_and_tpoint_start_ends[pi][2]
-        lifetime = (ti_end - ti_start) * T / 60.0
+        lifetime = (ti_end - ti_start)*T/60.0
         directions = protrusion_direction_per_tstep[ti_start:ti_end, ni]
         direction_xs = directions[:, 0]
         direction_ys = directions[:, 1]
         average_direction = np.zeros(2, dtype=np.float64)
-        average_direction[0] = np.sum(direction_xs) / directions.shape[0]
-        average_direction[1] = np.sum(direction_ys) / directions.shape[0]
+        average_direction[0] = np.sum(direction_xs)/directions.shape[0]
+        average_direction[1] = np.sum(direction_ys)/directions.shape[0]
 
         protrusion_lifetime_and_average_directions[pi][0] = lifetime
         protrusion_lifetime_and_average_directions[pi][1] = geometry.calculate_2D_vector_direction(average_direction)
@@ -1371,21 +1371,21 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
 
     global_avg_coa = np.average(coa_signal_per_tstep)
     if not (global_avg_coa > 1.1):
-        normalized_coa_signals_per_tstep = coa_signal_per_tstep / 1e16
+        normalized_coa_signals_per_tstep = coa_signal_per_tstep/1e16
     else:
-        normalized_coa_signals_per_tstep = coa_signal_per_tstep / global_avg_coa
+        normalized_coa_signals_per_tstep = coa_signal_per_tstep/global_avg_coa
 
     global_avg_cil = np.average(cil_signal_per_tstep)
     if not (global_avg_cil > 1.1):
-        normalized_cil_signals_per_tstep = cil_signal_per_tstep / 1e16
+        normalized_cil_signals_per_tstep = cil_signal_per_tstep/1e16
     else:
-        normalized_cil_signals_per_tstep = cil_signal_per_tstep / global_avg_cil
+        normalized_cil_signals_per_tstep = cil_signal_per_tstep/global_avg_cil
 
     max_rand = np.max(randomization_factors_per_tstep)
     if not (max_rand > 1.1):
-        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep / 1e16
+        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep/1e16
     else:
-        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep / max_rand
+        normalized_randomization_factors_per_tstep = randomization_factors_per_tstep/max_rand
 
     for pi in range(num_protrusions):
         ni, ti_start, ti_end = protrusion_node_index_and_tpoint_start_ends[pi]
@@ -1403,7 +1403,7 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
         else:
             if last_protrusion_at_this_node_end_tstep != -1:
                 start_buffer_a, start_buffer_b = last_protrusion_at_this_node_end_tstep + int(
-                    0.75 * (ti_start - last_protrusion_at_this_node_end_tstep)), ti_start
+                    0.75*(ti_start - last_protrusion_at_this_node_end_tstep)), ti_start
             else:
                 start_buffer_a, start_buffer_b = max([0, ti_start - 50]), ti_start
 
@@ -1412,11 +1412,11 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
                 normalized_randomization_factors_per_tstep[start_buffer_a:(start_buffer_b + 1), ni])
 
             start_cause_found = False
-            if average_coa_signal > 0.25 and global_avg_coa * average_coa_signal > 1.1:
+            if average_coa_signal > 0.25 and global_avg_coa*average_coa_signal > 1.1:
                 start_causes.append("coa")
                 start_cause_found = True
 
-            if average_randomization_factor > 0.25 and average_randomization_factor * max_rand > 1.0:
+            if average_randomization_factor > 0.25 and average_randomization_factor*max_rand > 1.0:
                 start_causes.append("rand")
                 start_cause_found = True
 
@@ -1429,13 +1429,13 @@ def determine_likely_protrusion_start_end_causes(protrusion_node_index_and_tpoin
                 if np.average(np.append(p1_neigher_node_rac, m1_neigher_node_rac)) > np.average(this_node_rac):
                     start_causes.append("neighbour")
 
-        end_buffer_a, end_buffer_b = int(0.5 * (ti_end - ti_start) + ti_start), ti_end
+        end_buffer_a, end_buffer_b = int(0.5*(ti_end - ti_start) + ti_start), ti_end
 
         average_cil_signal = calculate_average_cil_signal(ni, normalized_cil_signals_per_tstep, end_buffer_a,
                                                           end_buffer_b)
 
         end_causes = []
-        if average_cil_signal > 0.25 and global_avg_cil * average_cil_signal > 1.1:
+        if average_cil_signal > 0.25 and global_avg_cil*average_cil_signal > 1.1:
             end_causes.append("cil")
         else:
             end_causes.append("other")
@@ -1478,7 +1478,7 @@ def collate_protrusion_data(num_cells, T, storefile_path, max_tstep=None):
 
 def calculate_cell_speeds_and_directions_until_tstep(cell_index, max_tstep, storefile_path, T, L):
     node_coords_per_tstep = hardio.get_node_coords_until_tstep(cell_index, max_tstep, storefile_path)
-    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep) * L
+    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)*L
 
     velocities = calculate_velocities(centroid_per_tstep, T)
     speeds = np.linalg.norm(velocities, axis=1)
@@ -1522,7 +1522,7 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
         distance_between_cells_at_all_timesteps = np.linalg.norm(
             all_cell_centroids_per_tstep[:, 0, :] - all_cell_centroids_per_tstep[:, 1, :], axis=1)
 
-        return distance_between_cells_at_all_timesteps / distance_between_cells_at_all_timesteps[0]
+        return distance_between_cells_at_all_timesteps/distance_between_cells_at_all_timesteps[0]
     else:
         delaunay_triangulations_per_tstep = []
         for cell_centroids in all_cell_centroids_per_tstep:
@@ -1540,7 +1540,7 @@ def calculate_normalized_group_area_over_time(num_cells, num_timepoints, storefi
                 convex_hull_areas_per_tstep.append(np.round(np.sum(simplex_areas), decimals=3))
             else:
                 convex_hull_areas_per_tstep.append(np.nan)
-        return np.array(convex_hull_areas_per_tstep) / convex_hull_areas_per_tstep[0]
+        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0]
 
 
 # =============================================================================
@@ -1561,7 +1561,7 @@ def is_prospective_edge_already_counted(prospective_edge, edges):
 # =====================================================
 
 def determine_edges(dt):
-    edges = -1 * np.ones((dt.points.shape[0] + dt.simplices.shape[0] - 1, 2), dtype=np.int64)
+    edges = -1*np.ones((dt.points.shape[0] + dt.simplices.shape[0] - 1, 2), dtype=np.int64)
     sorted_simplices = np.sort(dt.simplices, axis=1)
     pairs = np.array([[0, 1], [0, 2], [1, 2]])
 
@@ -1592,7 +1592,7 @@ def calculate_edge_lengths(points, edges):
     for ei in range(edges.shape[0]):
         edge = edges[ei]
         x, y = points[edge[0]] - points[edge[1]]
-        edge_lengths[ei] = np.sqrt(x * x + y * y)
+        edge_lengths[ei] = np.sqrt(x*x + y*y)
 
     return edge_lengths
 
@@ -1611,9 +1611,9 @@ def calculate_simple_intercellular_separations_and_subgroups(init_cell_group_sep
         cia = sorted_cell_indices[n]
         cib = sorted_cell_indices[n + 1]
         v = all_cell_centroids[cia] - all_cell_centroids[cib]
-        d = math.sqrt(v[0] * v[0] + v[1] * v[1])
+        d = math.sqrt(v[0]*v[0] + v[1]*v[1])
 
-        if d > 3.0 * init_cell_group_separation:
+        if d > 3.0*init_cell_group_separation:
             if len(current_subgroup) > 0:
                 subgroups.append(copy.deepcopy(current_subgroup))
                 current_subgroup = [n + 1]
@@ -1661,7 +1661,7 @@ def determine_group_aspect_ratio_per_tstep(all_cell_coords_per_tstep):
         w = np.max(xs) - np.min(xs)
         h = np.max(ys) - np.min(ys)
 
-        group_aspect_ratio_per_tstep[ti] = w / h
+        group_aspect_ratio_per_tstep[ti] = w/h
 
     return group_aspect_ratio_per_tstep
 
@@ -1706,12 +1706,12 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
         distance_between_cells_at_all_timesteps = np.linalg.norm(
             all_cell_centroids_per_tstep[:, 0, :] - all_cell_centroids_per_tstep[:, 1, :], axis=1)
 
-        return np.nan * np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps / \
+        return np.nan*np.zeros(num_timepoints, dtype=np.float64), distance_between_cells_at_all_timesteps/\
                distance_between_cells_at_all_timesteps[0], cell_subgroups_per_timestep
     else:
         delaunay_triangulations_per_tstep = []
         simple_intercellular_separations_per_tstep = []
-        initial_intercellular_separation = 2 * cell_radius
+        initial_intercellular_separation = 2*cell_radius
         # simple_separation_calculation = False
         init_delaunay_success = False
         for ti, cell_centroids in enumerate(all_cell_centroids_per_tstep):
@@ -1759,8 +1759,8 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(cell_r
 
                 average_cell_separation_per_tstep.append(np.average(edge_lengths))
 
-        return np.array(convex_hull_areas_per_tstep) / convex_hull_areas_per_tstep[0], np.array(
-            average_cell_separation_per_tstep) / min_cell_separation_tstep0, cell_subgroups_per_timestep
+        return np.array(convex_hull_areas_per_tstep)/convex_hull_areas_per_tstep[0], np.array(
+            average_cell_separation_per_tstep)/min_cell_separation_tstep0, cell_subgroups_per_timestep
 
 
 # =============================================================================
@@ -1770,23 +1770,23 @@ def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
     ax, ay = a
     bx, by = b
 
-    norm_a = np.sqrt(ax * ax + ay * ay)
-    norm_b = np.sqrt(bx * bx + by * by)
+    norm_a = np.sqrt(ax*ax + ay*ay)
+    norm_b = np.sqrt(bx*bx + by*by)
 
     if norm_a < 1e-6:
         a = np.random.rand(2)
         ax, ay = a
-        norm_a = np.sqrt(ax * ax + ay * ay)
+        norm_a = np.sqrt(ax*ax + ay*ay)
 
     if norm_b < 1e-6:
         b = np.random.rand(2)
         bx, by = b
-        norm_b = np.sqrt(bx * bx + by * by)
+        norm_b = np.sqrt(bx*bx + by*by)
 
-    ax_, ay_ = a / norm_a
-    bx_, by_ = b / norm_b
+    ax_, ay_ = a/norm_a
+    bx_, by_ = b/norm_b
 
-    return ax_ * bx_ + ay_ * by_
+    return ax_*bx_ + ay_*by_
 
 
 # =====================================================
@@ -1809,7 +1809,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
             m += 1
             i += 1
 
-        da = (1. / m) * sum_cos_thetas
+        da = (1./m)*sum_cos_thetas
         if da < 0.0 and first_negative_n == -1:
             first_negative_n = n
             break
@@ -1837,7 +1837,7 @@ def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacement
             m += 1
             i += 1
 
-        dacs[n] = (1. / m) * sum_cos_thetas
+        dacs[n] = (1./m)*sum_cos_thetas
 
 
 # =====================================================
@@ -1860,7 +1860,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(displaceme
 
     chunks = []
     for i in range(num_threads):
-        chunk = [N, task_indices[i * chunklen:(i + 1) * chunklen], dacs, displacements]
+        chunk = [N, task_indices[i*chunklen:(i + 1)*chunklen], dacs, displacements]
         chunks.append(chunk)
 
     threads = [threading.Thread(target=calculate_direction_autocorr_coeff_parallel_worker, args=c) for c in chunks]
@@ -1880,12 +1880,12 @@ def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(displaceme
 # =====================================================
 
 def estimate_persistence_time(timestep, positive_ns, positive_das):
-    ts = positive_ns * timestep
+    ts = positive_ns*timestep
     #    A = np.zeros((ts.shape[0], 2), dtype=np.float64)
     #    A[:, 0] = ts
     #    pt = -1./(np.linalg.lstsq(A, np.log(positive_das))[0][0])
     try:
-        popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1. * t / pt), ts, positive_das)
+        popt, pcov = scipio.curve_fit(lambda t, pt: np.exp(-1.*t/pt), ts, positive_das)
         pt = popt[0]
     except:
         pt = np.nan

@@ -47,14 +47,14 @@ def setup_animation_settings(timestep_length, global_scale, plate_height, plate_
                              chemotaxis_target_radius=-1.0):
     return dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height),
                  ('plate_width_in_micrometers', plate_width), ('velocity_scale', velocity_scale),
-                 ('rgtpase_scale', global_scale * rgtpase_scale_factor), ('coa_scale', global_scale * coa_scale_factor),
+                 ('rgtpase_scale', global_scale*rgtpase_scale_factor), ('coa_scale', global_scale*coa_scale_factor),
                  ('show_velocities', show_velocities), ('show_rgtpase', show_rgtpase),
                  ('show_centroid_trail', show_centroid_trail), ('show_rac_random_spikes', show_rac_random_spikes),
                  ('show_coa', show_coa), ('color_each_group_differently', color_each_group_differently),
                  ('only_show_cells', only_show_cells), ('polygon_line_width', polygon_line_width),
                  ('space_physical_bdry_polygon', space_physical_bdry_polygon),
                  ('space_migratory_bdry_polygon', space_migratory_bdry_polygon),
-                 ('short_video_length_definition', 1000.0 * timestep_length),
+                 ('short_video_length_definition', 1000.0*timestep_length),
                  ('short_video_duration', short_video_duration), ('timestep_length', timestep_length), ('fps', fps),
                  ('string_together_pictures_into_animation', string_together_pictures_into_animation),
                  ('show_coa_overlay', show_coa_overlay), ('max_coa_signal', max_coa_signal),
@@ -86,7 +86,7 @@ def make_default_migr_polygon(make_migr_space_poly, width_corridor, height_corri
         bottom_right = [width_corridor + corridor_x_offset, 0 + corridor_y_offset]
         top_right = [width_corridor + corridor_x_offset, height_corridor + corridor_y_offset]
         top_left = [0 + corridor_x_offset, height_corridor + corridor_y_offset]
-        migr_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64) * 1e-6
+        migr_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
 
     return migr_space_poly
 
@@ -99,7 +99,7 @@ def make_bottleneck_migr_polygon(make_migr_space_poly, width_corridor, height_co
     migr_space_poly = np.zeros((0, 0), dtype=np.float64)
 
     if make_migr_space_poly == True:
-        bottleneck_y_dip = 0.5 * height_corridor * (1. - bottleneck_factor)
+        bottleneck_y_dip = 0.5*height_corridor*(1. - bottleneck_factor)
         remaining_corridor = width_corridor - (
                     first_slope_start + first_slope_end + second_slope_start + second_slope_end)
 
@@ -134,7 +134,7 @@ def make_bottleneck_migr_polygon(make_migr_space_poly, width_corridor, height_co
         migr_space_poly = np.array(
             [bottom_left, first_slope_start_bottom, first_slope_end_bottom, second_slope_start_bottom,
              second_slope_end_bottom, bottom_right, top_right, second_slope_end_top, second_slope_start_top,
-             first_slope_end_top, first_slope_start_top, top_left]) * 1e-6
+             first_slope_end_top, first_slope_start_top, top_left])*1e-6
 
     return migr_space_poly
 
@@ -151,9 +151,9 @@ def make_obstacle_migr_polygon_and_phys_polygon(make_migr_space_poly, width_corr
         bottom_right = [width_corridor + corridor_x_offset, 0 + corridor_y_offset]
         top_right = [width_corridor + corridor_x_offset, height_corridor + corridor_y_offset]
         top_left = [0 + corridor_x_offset, height_corridor + corridor_y_offset]
-        migr_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64) * 1e-6
+        migr_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
 
-    obstacle_height = height_corridor - 2 * passage_space
+    obstacle_height = height_corridor - 2*passage_space
     if obstacle_height < 1e-16:
         raise Exception(
             "Passage space is too wide to fit within corridor: corridor height = {}, passage space = {}".format(
@@ -163,7 +163,7 @@ def make_obstacle_migr_polygon_and_phys_polygon(make_migr_space_poly, width_corr
     top_right = [corridor_x_offset + obstacle_x_start + obstacle_width,
                  corridor_y_offset + passage_space + obstacle_height]
     top_left = [corridor_x_offset + obstacle_x_start, corridor_y_offset + passage_space + obstacle_height]
-    phys_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64) * 1e-6
+    phys_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
 
     return migr_space_poly, phys_space_poly
 
@@ -172,22 +172,22 @@ def make_obstacle_migr_polygon_and_phys_polygon(make_migr_space_poly, width_corr
 
 def generate_bottom_and_top_curves(x_offset, y_offset, curve_start_x, curve_radius, height_corridor, resolution,
                                    curve_direction):
-    outer_radius = curve_radius + 0.5 * height_corridor
+    outer_radius = curve_radius + 0.5*height_corridor
     inner_radius = outer_radius - height_corridor
 
     if curve_direction == 1:
-        bottom_thetas = np.linspace(0.75 * 2 * np.pi, 2 * np.pi, num=resolution)
+        bottom_thetas = np.linspace(0.75*2*np.pi, 2*np.pi, num=resolution)
         top_thetas = np.flip(bottom_thetas, 0)
         bottom_curve_radius = outer_radius
         top_curve_radius = inner_radius
     else:
-        top_thetas = np.linspace(0, 0.25 * 2 * np.pi, num=resolution)
+        top_thetas = np.linspace(0, 0.25*2*np.pi, num=resolution)
         bottom_thetas = np.flip(top_thetas, 0)
         bottom_curve_radius = inner_radius
         top_curve_radius = outer_radius
 
-    bottom_curve_untranslated = bottom_curve_radius * np.array([[np.cos(t), np.sin(t)] for t in bottom_thetas])
-    top_curve_untranslated = top_curve_radius * np.array([[np.cos(t), np.sin(t)] for t in top_thetas])
+    bottom_curve_untranslated = bottom_curve_radius*np.array([[np.cos(t), np.sin(t)] for t in bottom_thetas])
+    top_curve_untranslated = top_curve_radius*np.array([[np.cos(t), np.sin(t)] for t in top_thetas])
 
     origin = bottom_curve_untranslated[0]
     bottom_curve_untranslated = bottom_curve_untranslated - origin
@@ -196,8 +196,8 @@ def generate_bottom_and_top_curves(x_offset, y_offset, curve_start_x, curve_radi
     bottom_curve = np.array(bottom_curve_untranslated, dtype=np.float64) + [x_offset, y_offset]
     top_curve = np.array(top_curve_untranslated, dtype=np.float64) + [x_offset, y_offset]
 
-    arc_base_line_length = 2 * curve_radius * np.sin(np.abs(bottom_thetas[1] - bottom_thetas[0]))
-    length_within_curve = resolution * arc_base_line_length
+    arc_base_line_length = 2*curve_radius*np.sin(np.abs(bottom_thetas[1] - bottom_thetas[0]))
+    length_within_curve = resolution*arc_base_line_length
 
     return bottom_curve, top_curve, length_within_curve
 
@@ -226,8 +226,8 @@ def make_curving_migr_polygon(make_migr_space_poly, width_corridor, height_corri
             raise Exception("Corridor is not long enough to fit curve!")
 
         bottom_left = [[0 + corridor_x_offset, 0 + corridor_y_offset]]
-        bottom_right = [[bottom_curve[-1][0], bottom_curve[-1][1] + curve_direction * remaining_corridor]]
-        top_right = [[bottom_right[0][0] - curve_direction * height_corridor, bottom_right[0][1]]]
+        bottom_right = [[bottom_curve[-1][0], bottom_curve[-1][1] + curve_direction*remaining_corridor]]
+        top_right = [[bottom_right[0][0] - curve_direction*height_corridor, bottom_right[0][1]]]
         top_left = [[0 + corridor_x_offset, 0 + corridor_y_offset + height_corridor]]
 
         full_polygon = np.zeros((0, 2), dtype=np.float64)
@@ -242,7 +242,7 @@ def make_curving_migr_polygon(make_migr_space_poly, width_corridor, height_corri
     #        fig.set_size_inches(10, 10)
     #        fig.savefig("B:\\numba-ncc\\output\\2018_FEB_10\\SET=0\\full_poly.png")
 
-    return full_polygon * 1e-6
+    return full_polygon*1e-6
 
 
 # =====================================================================
@@ -292,15 +292,15 @@ def make_centered_physical_obstacle(width_factor, height_factor, x_offset, heigh
                                     corridor_y_offset, cell_diameter):
     phys_space_poly = np.zeros((0, 0), dtype=np.float64)
 
-    bottom_y = corridor_y_offset + 0.5 * height_corridor * (1 - cell_diameter * height_factor)
-    top_y = bottom_y + cell_diameter * height_corridor
+    bottom_y = corridor_y_offset + 0.5*height_corridor*(1 - cell_diameter*height_factor)
+    top_y = bottom_y + cell_diameter*height_corridor
 
     bottom_left = [x_offset + corridor_x_offset, bottom_y]
-    bottom_right = [x_offset + cell_diameter * width_factor + corridor_x_offset, bottom_y]
-    top_right = [x_offset + cell_diameter * width_factor + corridor_x_offset, top_y]
+    bottom_right = [x_offset + cell_diameter*width_factor + corridor_x_offset, bottom_y]
+    top_right = [x_offset + cell_diameter*width_factor + corridor_x_offset, top_y]
     top_left = [x_offset + corridor_x_offset, top_y]
 
-    phys_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64) * 1e-6
+    phys_space_poly = np.array([bottom_left, bottom_right, top_right, top_left], dtype=np.float64)*1e-6
 
     return phys_space_poly
 
@@ -349,7 +349,7 @@ def define_group_boxes_and_corridors(corridor_definition, plate_width, plate_hei
         if x_placement_option == "ORIGIN":
             first_box_offset = origin_x_offset
         else:
-            first_box_offset = 0.5 * plate_width - 0.5 * (np.sum(box_widths) + np.sum(x_space_between_boxes))
+            first_box_offset = 0.5*plate_width - 0.5*(np.sum(box_widths) + np.sum(x_space_between_boxes))
 
         for box_index in range(num_boxes):
             if box_index > 0:
@@ -363,7 +363,7 @@ def define_group_boxes_and_corridors(corridor_definition, plate_width, plate_hei
             if y_placement_option == "ORIGIN":
                 box_y_offsets[box_index] = origin_y_offset
             else:
-                box_y_offsets[box_index] = 0.5 * plate_height - 0.5 * np.max(box_heights)
+                box_y_offsets[box_index] = 0.5*plate_height - 0.5*np.max(box_heights)
 
     make_migr_poly = True
     if migratory_corridor_size == [None, None]:
@@ -450,13 +450,13 @@ def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timeste
                                   verbose=True, integration_params={'rtol': 1e-2}, max_timepoints_on_ram=None,
                                   seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0,
                                   num_experiment_repeats=1, init_rho_gtpase_conditions=None):
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 1
     num_cells_in_boxes = [1]
-    box_heights = [1 * cell_diameter]
-    box_widths = [1 * cell_diameter]
+    box_heights = [1*cell_diameter]
+    box_widths = [1*cell_diameter]
 
     x_space_between_boxes = []
     plate_width, plate_height = 1000, 1000
@@ -465,8 +465,8 @@ def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timeste
         plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes,
         "CENTER", "CENTER")
 
-    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon * 1e-6
-    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon * 1e-6
+    parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon*1e-6
+    parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon*1e-6
 
     environment_wide_variable_defns = {'parameter_explorer_run': True, 'num_timesteps': num_timesteps,
                                        'space_physical_bdry_polygon': space_physical_bdry_polygon,
@@ -480,12 +480,12 @@ def setup_polarization_experiment(parameter_dict, total_time_in_hours=1, timeste
     cell_dependent_coa_signal_strengths_defn_dict = dict([(x, default_coa) for x in boxes])
     intercellular_contact_factor_magnitudes_defn_dict = dict([(x, default_cil) for x in boxes])
 
-    biased_rgtpase_distrib_defn_dict = {'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}
+    biased_rgtpase_distrib_defn_dict = {'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}
 
-    user_cell_group_defn = {'cell_group_name': 0, 'num_cells': 1, 'init_cell_radius': cell_diameter * 0.5 * 1e-6,
+    user_cell_group_defn = {'cell_group_name': 0, 'num_cells': 1, 'init_cell_radius': cell_diameter*0.5*1e-6,
                             'cell_group_bounding_box': np.array(
                                 [box_x_offsets[0], box_x_offsets[0] + box_widths[0], box_y_offsets[0],
-                                 box_heights[0] + box_y_offsets[0]]) * 1e-6,
+                                 box_heights[0] + box_y_offsets[0]])*1e-6,
                             'interaction_factors_intercellular_contact_per_celltype': intercellular_contact_factor_magnitudes_defn_dict,
                             'interaction_factors_coa_per_celltype': cell_dependent_coa_signal_strengths_defn_dict,
                             'biased_rgtpase_distrib_defns': biased_rgtpase_distrib_defn_dict,
@@ -507,8 +507,8 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
                                   run_experiments=True, remake_graphs=False, remake_animation=False,
                                   show_centroid_trail=False, show_randomized_nodes=False, convergence_test=False,
                                   Tr_vs_Tp_test=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={
-            'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}, zoomed_in=False, show_coa_overlay=False):
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+            'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, zoomed_in=False, show_coa_overlay=False):
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if zoomed_in == True:
         plate_width = 250
@@ -540,13 +540,13 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 1
     num_cells_in_boxes = [1]
-    box_heights = [1 * cell_diameter]
-    box_widths = [1 * cell_diameter]
+    box_heights = [1*cell_diameter]
+    box_widths = [1*cell_diameter]
 
     x_space_between_boxes = []
 
@@ -568,7 +568,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
                                        'cell_placement_method': "", 'convergence_test': convergence_test}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil}}]
 
     biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]]
@@ -590,7 +590,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -614,8 +614,8 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
                                                   cell_dependent_coa_signal_strengths=cell_dependent_coa_signal_strengths,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
@@ -699,7 +699,7 @@ def convergence_test_simple(date_str, experiment_number, sub_experiment_number, 
                             produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True,
                             run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=False,
                             num_experiment_repeats=5, biased_rgtpase_distrib_defn_dict={
-            'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}):
+            'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}):
     num_tests = len(test_num_nodes)
 
     cell_speeds = np.zeros((num_tests, num_experiment_repeats), dtype=np.float64)
@@ -742,14 +742,14 @@ def convergence_test_simple(date_str, experiment_number, sub_experiment_number, 
             num_experiment_repeats, experiment_dir)
 
         num_speed_points = cell_full_speeds_per_repeat[0].shape[0]
-        cell_speeds[xi] = [np.average(cfs[num_speed_points / 2:]) for cfs in cell_full_speeds_per_repeat]
+        cell_speeds[xi] = [np.average(cfs[num_speed_points/2:]) for cfs in cell_full_speeds_per_repeat]
 
         num_rgtpase_points = cell_rac_active_max_conc_per_repeat[0].shape[0]
-        active_racs[xi] = [np.average(dats[num_rgtpase_points / 2:]) for dats in cell_rac_active_max_conc_per_repeat]
-        active_rhos[xi] = [np.average(dats[num_rgtpase_points / 2:]) for dats in cell_rho_active_max_conc_per_repeat]
-        inactive_racs[xi] = [np.average(dats[num_rgtpase_points / 2:]) for dats in
+        active_racs[xi] = [np.average(dats[num_rgtpase_points/2:]) for dats in cell_rac_active_max_conc_per_repeat]
+        active_rhos[xi] = [np.average(dats[num_rgtpase_points/2:]) for dats in cell_rho_active_max_conc_per_repeat]
+        inactive_racs[xi] = [np.average(dats[num_rgtpase_points/2:]) for dats in
                              cell_rac_inactive_max_conc_per_repeat]
-        inactive_rhos[xi] = [np.average(dats[num_rgtpase_points / 2:]) for dats in
+        inactive_rhos[xi] = [np.average(dats[num_rgtpase_points/2:]) for dats in
                              cell_rho_inactive_max_conc_per_repeat]
 
     print("=========")
@@ -830,7 +830,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
                        show_coa_overlay=False, justify_parameters=True):
     global_scale = 4
 
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     experiment_name_format_string = "cil_symm_{}_CIL={}_COA={}".format(sub_experiment_number, default_cil,
                                                                        default_coa) + "_{}"
 
@@ -844,22 +844,22 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 2
     num_cells_in_boxes = [1, 1]
-    box_heights = [1 * cell_diameter] * num_boxes
-    box_widths = [1 * cell_diameter] * num_boxes
+    box_heights = [1*cell_diameter]*num_boxes
+    box_widths = [1*cell_diameter]*num_boxes
 
-    x_space_between_boxes = [1 * cell_diameter]
-    plate_width, plate_height = 20 * cell_diameter * 1.2, 3 * cell_diameter
+    x_space_between_boxes = [1*cell_diameter]
+    plate_width, plate_height = 20*cell_diameter*1.2, 3*cell_diameter
 
     # define_group_boxes_and_corridors(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None)
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths,
-        x_space_between_boxes, "CENTRE", "ORIGIN", migratory_corridor_size=[100 * cell_diameter, cell_diameter],
-        migratory_bdry_x_offset=-1 * 50 * cell_diameter, origin_y_offset=25)
+        x_space_between_boxes, "CENTRE", "ORIGIN", migratory_corridor_size=[100*cell_diameter, cell_diameter],
+        migratory_bdry_x_offset=-1*50*cell_diameter, origin_y_offset=25)
 
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -874,14 +874,14 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
                                        "cell_placement_method": ""}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         {0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
 
-    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25 * np.pi, 0.25 * np.pi]), 0.2]},
+    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 0.2]},
                                           {'default': ['biased uniform',
-                                                       np.array([-0.25 * np.pi, 0.25 * np.pi]) + np.pi, 0.2]}]]
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+                                                       np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 0.2]}]]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
 
@@ -899,7 +899,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -920,9 +920,9 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
-                                                  rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
+                                                  rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
@@ -944,7 +944,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
         all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(
             num_experiment_repeats, experiment_dir)
         datavis.graph_intercellular_distance_after_first_collision(all_cell_centroids_per_repeat,
-                                                                   timestep_length * (1. / 60.0), cell_diameter,
+                                                                   timestep_length*(1./60.0), cell_diameter,
                                                                    save_dir=experiment_dir)
         # ================================================================
 
@@ -961,7 +961,7 @@ def two_cells_cil_test(date_str, experiment_number, sub_experiment_number, param
                                                   total_time_in_hours)
 
         drift_args = (
-        timestep_length, parameter_dict["init_cell_radius"] * 2 / 1e-6, min_x_centroid_per_timestep_per_repeat,
+        timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat,
         max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat,
         fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
 
@@ -989,7 +989,7 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
                    show_coa_overlay=False):
     global_scale = 4
 
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     experiment_name_format_string = "collision_test_{}".format(sub_experiment_number, default_cil, default_coa) + "_{}"
 
     if no_randomization:
@@ -1002,23 +1002,23 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 2
     num_cells_in_boxes = [1, 1]
-    box_heights = [1 * cell_diameter] * num_boxes
-    box_widths = [1 * cell_diameter] * num_boxes
+    box_heights = [1*cell_diameter]*num_boxes
+    box_widths = [1*cell_diameter]*num_boxes
 
-    x_space_between_boxes = [0 * cell_diameter]
-    plate_width, plate_height = 10 * cell_diameter * 1.2, 3 * cell_diameter
+    x_space_between_boxes = [0*cell_diameter]
+    plate_width, plate_height = 10*cell_diameter*1.2, 3*cell_diameter
 
     # plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes,
         "OVERRIDE", "ORIGIN", physical_bdry_polygon_extra=20,
-        box_x_offsets=[10 + 3 * cell_diameter, 10 + (3 + 1 + 1) * cell_diameter],
-        migratory_corridor_size=[10 * cell_diameter, migr_bdry_height_factor * cell_diameter],
+        box_x_offsets=[10 + 3*cell_diameter, 10 + (3 + 1 + 1)*cell_diameter],
+        migratory_corridor_size=[10*cell_diameter, migr_bdry_height_factor*cell_diameter],
         make_only_migratory_corridor=True, origin_y_offset=25)
 
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
@@ -1034,13 +1034,13 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
                                        "cell_placement_method": ""}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         {0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
 
-    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25 * np.pi, 0.25 * np.pi]), 1.0]},
+    biased_rgtpase_distrib_defn_dicts = [[{'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]},
                                           {'default': ['unbiased random',
-                                                       np.array([-0.25 * np.pi, 0.25 * np.pi]) + np.pi, 1.0]}]]
+                                                       np.array([-0.25*np.pi, 0.25*np.pi]) + np.pi, 1.0]}]]
     parameter_dict_per_sub_experiment = [[parameter_dict, make_no_rgtpase_parameter_dict(parameter_dict)]]
     experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
@@ -1059,7 +1059,7 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -1080,9 +1080,9 @@ def collision_test(date_str, experiment_number, sub_experiment_number, parameter
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
-                                                  rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
+                                                  rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
@@ -1119,9 +1119,9 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
         raise Exception("init_polarization not in acceptable list of options: {}. Given: {}.".format(
             acceptable_init_polarization_opts, init_polarization))
 
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
     experiment_name_format_string = "block_coa_test_{}_{}_NC={}_D={}_COA={}_CIL={}".format(sub_experiment_number, "{}",
-                                                                                           block_cells_width * block_cells_height,
+                                                                                           block_cells_width*block_cells_height,
                                                                                            dist_from_block, default_coa,
                                                                                            default_cil)
 
@@ -1135,23 +1135,23 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 2
-    num_cells_in_boxes = [block_cells_width * block_cells_height, 1]
-    box_heights = [block_cells_height * cell_diameter, cell_diameter]
-    box_widths = [block_cells_width * cell_diameter, cell_diameter]
+    num_cells_in_boxes = [block_cells_width*block_cells_height, 1]
+    box_heights = [block_cells_height*cell_diameter, cell_diameter]
+    box_widths = [block_cells_width*cell_diameter, cell_diameter]
 
-    x_space_between_boxes = [dist_from_block * cell_diameter]
+    x_space_between_boxes = [dist_from_block*cell_diameter]
 
     min_x_space_required = box_widths[0] + x_space_between_boxes[0] + box_widths[1]
-    plate_width = 2 * (box_widths[0] + x_space_between_boxes[0] + box_widths[1])
+    plate_width = 2*(box_widths[0] + x_space_between_boxes[0] + box_widths[1])
     plate_height = plate_width
 
-    box_x_offsets = [0.5 * (plate_width - min_x_space_required),
-                     0.5 * (plate_width - min_x_space_required) + min_x_space_required + box_widths[1]]
-    box_y_offsets = [plate_height / 2. - box_heights[0] / 2., plate_height / 2. - box_heights[1] / 2.]
+    box_x_offsets = [0.5*(plate_width - min_x_space_required),
+                     0.5*(plate_width - min_x_space_required) + min_x_space_required + box_widths[1]]
+    box_y_offsets = [plate_height/2. - box_heights[0]/2., plate_height/2. - box_heights[1]/2.]
     # (corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None)
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         ["default"], plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths,
@@ -1171,7 +1171,7 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
                                        "cell_placement_method": ""}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
     cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
@@ -1179,12 +1179,12 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
 
     if init_polarization in ["r", "random"]:
         biased_rgtpase_distrib_defn_dicts = [
-            [{'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}] * num_boxes]
+            [{'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}]*num_boxes]
     elif init_polarization in ["o", "opposite"]:
-        biased_rgtpase_distrib_defn_dicts = [[{'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}, {
-            'default': ['biased uniform', np.array([-0.25 * np.pi, 0.25 * np.pi]), 1.0]}]]
+        biased_rgtpase_distrib_defn_dicts = [[{'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, {
+            'default': ['biased uniform', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}]]
 
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
 
@@ -1206,7 +1206,7 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -1227,9 +1227,9 @@ def block_coa_test(date_str, experiment_number, sub_experiment_number, parameter
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
-                                                  rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
+                                                  rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
@@ -1262,10 +1262,10 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
                         auto_calculate_num_cells=True, num_cells=None, remake_graphs=False, run_experiments=True,
                         remake_animation=False, show_centroid_trail=True, show_rac_random_spikes=False,
                         cell_placement_method="", show_coa_overlay=False, justify_parameters=True):
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if auto_calculate_num_cells:
-        num_cells = box_height * box_width
+        num_cells = box_height*box_width
     else:
         if num_cells == None:
             raise Exception("Auto-calculation of cell number turned off, but num_cells not given!")
@@ -1283,12 +1283,12 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
     num_boxes = 1
     num_cells_in_boxes = [num_cells]
-    box_heights = [box_height * cell_diameter]
-    box_widths = [box_width * cell_diameter]
+    box_heights = [box_height*cell_diameter]
+    box_widths = [box_width*cell_diameter]
 
     x_space_between_boxes = []
     plate_width, plate_height = 1000, 1000
@@ -1310,14 +1310,14 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
                                        "cell_placement_method": cell_placement_method}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
     cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         dict([(n, cil_dict) for n in range(num_boxes)])]
 
-    biased_rgtpase_distrib_defn_dicts = [[{'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}] * num_boxes]
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    biased_rgtpase_distrib_defn_dicts = [[{'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}]*num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
 
@@ -1335,7 +1335,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -1362,9 +1362,9 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
-                                                  rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
+                                                  rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                   cell_dependent_coa_signal_strengths=cell_dependent_coa_signal_strengths,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'],
                                                   coa_overlay_resolution=1.0)
@@ -1448,7 +1448,7 @@ def make_linear_gradient_function(source_x, source_y, max_value, slope):
     @nb.jit(nopython=True)
     def f(x):
         d = np.sqrt((x[0] - source_x) ** 2 + (x[1] - source_y) ** 2)
-        calc_value = max_value * (1 - slope * d)
+        calc_value = max_value*(1 - slope*d)
 
         if calc_value > max_value:
             return max_value
@@ -1461,12 +1461,12 @@ def make_linear_gradient_function(source_x, source_y, max_value, slope):
 
 
 def make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height):
-    widthsq = gaussian_width * gaussian_width
+    widthsq = gaussian_width*gaussian_width
 
     @nb.jit(nopython=True)
     def f(x):
         dsq = (x[0] - source_x) ** 2 + (x[1] - source_y) ** 2
-        return gaussian_height * np.exp(-1 * dsq / (2 * widthsq))
+        return gaussian_height*np.exp(-1*dsq/(2*widthsq))
 
     return f
 
@@ -1649,12 +1649,12 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                             num_cells=0, corridor_definition=["default"], run_experiments=True, remake_graphs=False,
                             remake_animation=False, do_final_analysis=True, convergence_test=False,
                             biased_rgtpase_distrib_defn_dict={
-                                'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]},
+                                'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]},
                             graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1,
                             show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True,
                             colorscheme="normal", specific_timesteps_to_draw_as_svg=[],
                             chemoattractant_source_definition=[]):
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if num_cells == 0:
         raise Exception("No cells!")
@@ -1701,24 +1701,24 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 1
     num_cells_in_boxes = [num_cells]
-    box_heights = [box_height * cell_diameter]
-    box_widths = [box_width * cell_diameter]
+    box_heights = [box_height*cell_diameter]
+    box_widths = [box_width*cell_diameter]
 
     x_space_between_boxes = []
 
     if not convergence_test:
         if max_animation_corridor_length == None:
-            plate_width, plate_height = min(2000, max(1000, box_widths[0] * 8)), (
-                        corridor_height * cell_diameter + 40 + 100)
+            plate_width, plate_height = min(2000, max(1000, box_widths[0]*8)), (
+                        corridor_height*cell_diameter + 40 + 100)
         else:
-            plate_width, plate_height = max_animation_corridor_length, (corridor_height * cell_diameter + 40 + 100)
+            plate_width, plate_height = max_animation_corridor_length, (corridor_height*cell_diameter + 40 + 100)
     else:
-        plate_width, plate_height = 600, (corridor_height * cell_diameter + 40 + 100)
+        plate_width, plate_height = 600, (corridor_height*cell_diameter + 40 + 100)
 
     origin_y_offset = 55
     physical_bdry_polygon_extra = 20
@@ -1726,37 +1726,37 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
     initial_x_placement_options = "ORIGIN"
     initial_y_placement_options = "OVERRIDE"
 
-    box_y_offsets = [box_y_placement_factor * (corridor_height - box_height) * cell_diameter + origin_y_offset]
+    box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
 
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths,
         x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, box_y_offsets=box_y_offsets,
         physical_bdry_polygon_extra=physical_bdry_polygon_extra, origin_y_offset=origin_y_offset,
-        migratory_corridor_size=[box_widths[0] * 100, corridor_height * cell_diameter],
+        migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter],
         make_only_migratory_corridor=convergence_test)
 
     if corridor_definition[0] == "regular curve":
         migr_poly_xs = space_migratory_bdry_polygon[:, 0]
         # migr_poly_ys = space_migratory_bdry_polygon[:,1]
         curve_radius = corridor_definition[2]
-        plate_width = (np.max(migr_poly_xs / 1e-6) - np.min(migr_poly_xs / 1e-6)) * 1.1
+        plate_width = (np.max(migr_poly_xs/1e-6) - np.min(migr_poly_xs/1e-6))*1.1
         if max_animation_corridor_length == None:
-            min_height = corridor_height + 0.5 * corridor_height + curve_radius
-            plate_height = (min_height + (750 - min_height)) * 1.1
+            min_height = corridor_height + 0.5*corridor_height + curve_radius
+            plate_height = (min_height + (750 - min_height))*1.1
         else:
-            min_height = corridor_height + 0.5 * corridor_height + curve_radius
-            plate_height = (min_height + (max_animation_corridor_length - min_height)) * 1.1
+            min_height = corridor_height + 0.5*corridor_height + curve_radius
+            plate_height = (min_height + (max_animation_corridor_length - min_height))*1.1
 
         if corridor_definition[-1] == -1:
-            origin_y_offset = plate_height - origin_y_offset - corridor_height * cell_diameter
-            box_y_offsets = [box_y_placement_factor * (corridor_height - box_height) * cell_diameter + origin_y_offset]
+            origin_y_offset = plate_height - origin_y_offset - corridor_height*cell_diameter
+            box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
 
             boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
                 corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths,
                 x_space_between_boxes, initial_x_placement_options, initial_y_placement_options,
                 box_y_offsets=box_y_offsets, physical_bdry_polygon_extra=physical_bdry_polygon_extra,
                 origin_y_offset=origin_y_offset,
-                migratory_corridor_size=[box_widths[0] * 100, corridor_height * cell_diameter],
+                migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter],
                 make_only_migratory_corridor=convergence_test)
 
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
@@ -1776,14 +1776,14 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                                        "graph_group_centroid_splits": graph_group_centroid_splits}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
     cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         dict([(n, cil_dict) for n in range(num_boxes)])]
 
-    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict] * num_boxes]
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]*num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
 
     chemoattractant_source_location = np.array([])
@@ -1791,7 +1791,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         chemoattractant_source_definition['source_x'] = box_x_offsets[0] + chemoattractant_source_definition[
             'x_offset_in_corridor']
         del chemoattractant_source_definition['x_offset_in_corridor']
-        chemoattractant_source_definition['source_y'] = box_y_offsets[0] + corridor_height * cell_diameter * 0.5
+        chemoattractant_source_definition['source_y'] = box_y_offsets[0] + corridor_height*cell_diameter*0.5
         chemoattractant_source_location = np.array(
             [chemoattractant_source_definition['source_x'], chemoattractant_source_definition['source_y']])
 
@@ -1812,7 +1812,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -1843,10 +1843,10 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                                                       string_together_pictures_into_animation=True,
                                                       show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                       coa_distribution_exponent=np.log(
-                                                          parameter_dict['coa_sensing_value_at_dist']) / (
+                                                          parameter_dict['coa_sensing_value_at_dist'])/(
                                                                                             parameter_dict[
-                                                                                                'coa_sensing_dist_at_value'] / 1e-6),
-                                                      rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                                                                'coa_sensing_dist_at_value']/1e-6),
+                                                      rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                       coa_intersection_exponent=parameter_dict[
                                                           'coa_intersection_exponent'],
                                                       coa_overlay_resolution=coa_overlay_resolution,
@@ -1860,10 +1860,10 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                                                       string_together_pictures_into_animation=True,
                                                       show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                       coa_distribution_exponent=np.log(
-                                                          parameter_dict['coa_sensing_value_at_dist']) / (
+                                                          parameter_dict['coa_sensing_value_at_dist'])/(
                                                                                             parameter_dict[
-                                                                                                'coa_sensing_dist_at_value'] / 1e-6),
-                                                      rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                                                                'coa_sensing_dist_at_value']/1e-6),
+                                                      rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                       coa_intersection_exponent=parameter_dict[
                                                           'coa_intersection_exponent'],
                                                       background_color=colors.RGB_BLACK,
@@ -1925,7 +1925,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
                                                   total_time_in_hours)
 
         drift_args = (
-        timestep_length, parameter_dict["init_cell_radius"] * 2 / 1e-6, min_x_centroid_per_timestep_per_repeat,
+        timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat,
         max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat,
         fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
 
@@ -1951,12 +1951,12 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                      max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25,
                                      box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False,
                                      remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={
-            'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}, graph_group_centroid_splits=False,
+            'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False,
                                      max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False,
                                      coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal",
                                      specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0,
                                      show_centroid_trail=False):
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if num_cells == 0:
         raise Exception("No cells!")
@@ -1988,23 +1988,23 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 1
     num_cells_in_boxes = [num_cells]
-    box_heights = [box_height * cell_diameter]
-    box_widths = [box_width * cell_diameter]
+    box_heights = [box_height*cell_diameter]
+    box_widths = [box_width*cell_diameter]
 
     x_space_between_boxes = []
 
     if 'x_offset_in_corridor':
         source_x_location = chemoattractant_source_definition["x_offset_in_corridor"]
-        plate_width = max(2.2 * source_x_location, 5 * box_width)
+        plate_width = max(2.2*source_x_location, 5*box_width)
         initial_x_placement_options = "OVERRIDE"
-        box_x_offsets = [1.1 * source_x_location - 0.5 * box_width]
+        box_x_offsets = [1.1*source_x_location - 0.5*box_width]
     else:
-        plate_width = 5 * box_width
+        plate_width = 5*box_width
         initial_x_placement_options = "ORIGIN"
         box_x_offsets = []
 
@@ -2035,14 +2035,14 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                        "graph_group_centroid_splits": graph_group_centroid_splits}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
     cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         dict([(n, cil_dict) for n in range(num_boxes)])]
 
-    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict] * num_boxes]
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]*num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
 
     chemoattractant_source_location = np.array([])
@@ -2050,7 +2050,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         chemoattractant_source_definition['source_x'] = box_x_offsets[0] + chemoattractant_source_definition[
             'x_offset_in_corridor']
         del chemoattractant_source_definition['x_offset_in_corridor']
-        chemoattractant_source_definition['source_y'] = box_y_offsets[0] + box_height * cell_diameter * 0.5
+        chemoattractant_source_definition['source_y'] = box_y_offsets[0] + box_height*cell_diameter*0.5
         chemoattractant_source_location = np.array(
             [chemoattractant_source_definition['source_x'], chemoattractant_source_definition['source_y']])
 
@@ -2071,7 +2071,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -2097,10 +2097,10 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                                       string_together_pictures_into_animation=True,
                                                       show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                       coa_distribution_exponent=np.log(
-                                                          parameter_dict['coa_sensing_value_at_dist']) / (
+                                                          parameter_dict['coa_sensing_value_at_dist'])/(
                                                                                             parameter_dict[
-                                                                                                'coa_sensing_dist_at_value'] / 1e-6),
-                                                      rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                                                                'coa_sensing_dist_at_value']/1e-6),
+                                                      rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                       coa_intersection_exponent=parameter_dict[
                                                           'coa_intersection_exponent'],
                                                       coa_overlay_resolution=coa_overlay_resolution,
@@ -2116,10 +2116,10 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                                       string_together_pictures_into_animation=True,
                                                       show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                       coa_distribution_exponent=np.log(
-                                                          parameter_dict['coa_sensing_value_at_dist']) / (
+                                                          parameter_dict['coa_sensing_value_at_dist'])/(
                                                                                             parameter_dict[
-                                                                                                'coa_sensing_dist_at_value'] / 1e-6),
-                                                      rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                                                                'coa_sensing_dist_at_value']/1e-6),
+                                                      rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                       coa_intersection_exponent=parameter_dict[
                                                           'coa_intersection_exponent'],
                                                       background_color=colors.RGB_BLACK,
@@ -2180,7 +2180,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                                   chemoattraction_source_coords=chemoattractant_source_location)
 
         drift_args = (
-        timestep_length, parameter_dict["init_cell_radius"] * 2 / 1e-6, min_x_centroid_per_timestep_per_repeat,
+        timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat,
         max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat,
         fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
 
@@ -2207,10 +2207,10 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
                                       max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25,
                                       box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False,
                                       remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={
-            'default': ['unbiased random', np.array([0, 2 * np.pi]), 0.3]}, graph_group_centroid_splits=False,
+            'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False,
                                       max_animation_corridor_length=None, show_coa_overlay=False, global_scale=1,
                                       chemoattractant_source_definition=None):
-    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+    cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if num_cells == 0:
         raise Exception("No cells!")
@@ -2251,21 +2251,21 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = 1
     num_cells_in_boxes = [num_cells]
-    box_heights = [box_height * cell_diameter]
-    box_widths = [box_width * cell_diameter]
+    box_heights = [box_height*cell_diameter]
+    box_widths = [box_width*cell_diameter]
 
     x_space_between_boxes = []
 
     if max_animation_corridor_length == None:
-        plate_width, plate_height = min(2000, max(1000, box_widths[0] * 8)), (
-                    corridor_height * cell_diameter + 40 + 100)
+        plate_width, plate_height = min(2000, max(1000, box_widths[0]*8)), (
+                    corridor_height*cell_diameter + 40 + 100)
     else:
-        plate_width, plate_height = max_animation_corridor_length, (corridor_height * cell_diameter + 40 + 100)
+        plate_width, plate_height = max_animation_corridor_length, (corridor_height*cell_diameter + 40 + 100)
 
     origin_y_offset = 55
     physical_bdry_polygon_extra = 20
@@ -2273,14 +2273,14 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
     initial_x_placement_options = "CENTER"
     initial_y_placement_options = "OVERRIDE"
 
-    box_y_offsets = [box_y_placement_factor * (corridor_height - box_height) * cell_diameter + origin_y_offset]
+    box_y_offsets = [box_y_placement_factor*(corridor_height - box_height)*cell_diameter + origin_y_offset]
 
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         ["default"], plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths,
         x_space_between_boxes, initial_x_placement_options, initial_y_placement_options, box_y_offsets=box_y_offsets,
         physical_bdry_polygon_extra=physical_bdry_polygon_extra, origin_y_offset=origin_y_offset,
-        migratory_corridor_size=[box_widths[0] * 100, corridor_height * cell_diameter],
-        make_only_migratory_corridor=convergence_test, migratory_bdry_x_offset=-1 * 0.5 * box_widths[0] * 100)
+        migratory_corridor_size=[box_widths[0]*100, corridor_height*cell_diameter],
+        make_only_migratory_corridor=convergence_test, migratory_bdry_x_offset=-1*0.5*box_widths[0]*100)
 
     parameter_dict['space_physical_bdry_polygon'] = space_physical_bdry_polygon
     parameter_dict['space_migratory_bdry_polygon'] = space_migratory_bdry_polygon
@@ -2299,14 +2299,14 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
                                        "graph_group_centroid_splits": graph_group_centroid_splits}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
     # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
     cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
         dict([(n, cil_dict) for n in range(num_boxes)])]
 
-    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict] * num_boxes]
-    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]*num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
 
     chemoattractant_gradient_fn_per_subexperiment = [
@@ -2326,7 +2326,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'interaction_factors_intercellular_contact_per_celltype':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'interaction_factors_coa_per_celltype':
@@ -2347,9 +2347,9 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
-                                                  rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
+                                                  rgtpase_scale_factor=0.75*np.sqrt(global_scale)*312.5,
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
@@ -2386,7 +2386,7 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
                                                   total_time_in_hours)
 
         drift_args = (
-        timestep_length, parameter_dict["init_cell_radius"] * 2 / 1e-6, min_x_centroid_per_timestep_per_repeat,
+        timestep_length, parameter_dict["init_cell_radius"]*2/1e-6, min_x_centroid_per_timestep_per_repeat,
         max_x_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat,
         fit_group_x_velocity_per_repeat, experiment_dir, total_time_in_hours)
 
@@ -2408,131 +2408,152 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
                                          timesteps_between_generation_of_intermediate_visuals=None,
                                          produce_animation=True, produce_graphs=True, full_print=True,
                                          delete_and_rerun_experiments_without_stored_env=True, run_experiments=True,
-                                         remake_graphs=False, remake_animation=False, default_coa=0.0, default_cil=60.0,
-                                         chemotaxis_target_radius=160.0, box_width=1, box_height=1,
-                                         box_y_placement_factor=0.5, num_cells=1):
+                                         remake_graphs=False, remake_animation=False, default_coas=[], default_cil=60.0,
+                                         chemotaxis_target_radius=160.0, box_widths=[], box_heights=[],
+                                         box_y_placement_factor=0.5, num_cells=[]):
     test_chemo_magnitudes = sorted(test_chemo_magnitudes)
 
-    chemotaxis_success_ratios = np.zeros(len(test_chemo_magnitudes), dtype=np.float64)
+    assert(len(num_cells) == len(box_widths) == len(box_heights))
+
+    num_cases = len(num_cells)
+    if type(num_experiment_repeats) == int:
+        num_experiment_repeats = [num_experiment_repeats]*num_cases
+
+    chemotaxis_success_ratios_per_magslope_per_num_cells = []
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
 
-    closest_to_source_per_repeat_per_magslope = np.zeros((len(test_chemo_magnitudes), num_experiment_repeats),
-                                                         dtype=np.float64)
+    closest_to_source_per_repeat_per_magslope_per_num_cells = []
     protrusion_lifetimes_and_directions_per_magslope = []
 
-    for xi, chm in enumerate(test_chemo_magnitudes):
-        print("=========")
-        print("mag: {}".format(chm))
-        experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(
-            date_str, experiment_number, sub_experiment_number, parameter_dict,
-            chemoattractant_source_definition={'source_type': 'linear',
-                                               'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm,
-                                               'slope': test_chemo_slope}, no_randomization=no_randomization,
-            base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length,
-            verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram,
-            seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-            default_coa=default_coa, default_cil=default_cil, num_experiment_repeats=num_experiment_repeats,
-            timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,
-            produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print,
-            delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
-            box_width=box_width, box_height=box_height, box_y_placement_factor=box_y_placement_factor,
-            num_cells=num_cells, run_experiments=run_experiments, remake_graphs=remake_graphs,
-            remake_animation=remake_animation, do_final_analysis=True,
-            chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
-
-        experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
-                                                                   experiment_name)
-        experiment_name_format_string = "RPT={}"
-
-        if run_experiments == False:
-            if not os.path.exists(experiment_dir):
-                raise Exception("Experiment directory does not exist.")
-            else:
-                for rpt_number in range(num_experiment_repeats):
-                    environment_name = experiment_name_format_string.format(rpt_number)
-                    environment_dir = os.path.join(experiment_dir, environment_name)
-                    if not os.path.exists(environment_dir):
-                        raise Exception("Environment directory does not exist.")
-
-                    storefile_path = eu.get_storefile_path(environment_dir)
-                    if not os.path.isfile(storefile_path):
-                        raise Exception("Storefile does not exist.")
-
-                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False,
-                                                                   produce_graphs, produce_animation,
-                                                                   environment_wide_variable_defns)
-                    if not (relevant_environment.simulation_complete() and (
-                            relevant_environment.curr_tpoint * relevant_environment.T / 3600.) == total_time_in_hours):
-                        raise Exception("Simulation is not complete.")
-
-                print("Data exists.")
-
-        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(
-            num_experiment_repeats, experiment_dir)
-
-        protrusion_lifetimes_and_directions = []
-        for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
-            for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
-                for l, d in protrusion_lifetime_dirn:
-                    protrusion_lifetimes_and_directions.append((l, d))
-
-        datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12, total_time_in_hours * 60.0,
-                                                    save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
-
-        chemotaxis_success_per_repeat = []
+    for nci, nr, nc, bh, bw in zip(np.arange(num_cases), num_experiment_repeats, num_cells, box_heights, box_widths):
+        chemotaxis_success_ratios = []
         closest_to_source_per_repeat = []
-        for rpt_number in range(num_experiment_repeats):
-            environment_name = experiment_name_format_string.format(rpt_number)
-            environment_dir = os.path.join(experiment_dir, environment_name)
-            storefile_path = eu.get_storefile_path(environment_dir)
-            # empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
-            relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False,
-                                                           produce_graphs, produce_animation,
-                                                           environment_wide_variable_defns)
+        for xi, chm in enumerate(test_chemo_magnitudes):
+            print("=========")
+            print("mag: {}".format(chm))
+            experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(
+                date_str, experiment_number, sub_experiment_number, parameter_dict,
+                chemoattractant_source_definition={'source_type': 'linear',
+                                                   'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm,
+                                                   'slope': test_chemo_slope}, no_randomization=no_randomization,
+                base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length,
+                verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram,
+                seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
+                default_coa=default_coas[nci], default_cil=default_cil, num_experiment_repeats=nr,
+                timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,
+                produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print,
+                delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
+                box_width=bw, box_height=bh, box_y_placement_factor=box_y_placement_factor,
+                num_cells=nc, run_experiments=run_experiments, remake_graphs=remake_graphs,
+                remake_animation=remake_animation, do_final_analysis=True,
+                chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
 
-            chemotaxis_success, closest_to_source = cu.analyze_chemotaxis_success(relevant_environment, storefile_path,
-                                                                                  rpt_number, source_x, source_y,
-                                                                                  chemotaxis_target_radius)
+            experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
+                                                                       experiment_name)
+            experiment_name_format_string = "RPT={}"
 
-            chemotaxis_success_per_repeat.append(chemotaxis_success)
-            closest_to_source_per_repeat.append(closest_to_source)
+            if run_experiments == False:
+                if not os.path.exists(experiment_dir):
+                    raise Exception("Experiment directory does not exist.")
+                else:
+                    for rpt_number in range(nr):
+                        environment_name = experiment_name_format_string.format(rpt_number)
+                        environment_dir = os.path.join(experiment_dir, environment_name)
+                        if not os.path.exists(environment_dir):
+                            raise Exception("Environment directory does not exist.")
 
-        success_protrusion_lifetimes_and_directions = []
-        fail_protrusion_lifetimes_and_directions = []
-        for i, protrusion_lifetime_dirn_per_cell in enumerate(all_cell_protrusion_lifetimes_and_directions_per_repeat):
-            if chemotaxis_success_per_repeat[i] == 1:
+                        storefile_path = eu.get_storefile_path(environment_dir)
+                        if not os.path.isfile(storefile_path):
+                            raise Exception("Storefile does not exist.")
+
+                        relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False,
+                                                                       produce_graphs, produce_animation,
+                                                                       environment_wide_variable_defns)
+                        if not (relevant_environment.simulation_complete() and (
+                                relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
+                            raise Exception("Simulation is not complete.")
+
+                    print("Data exists.")
+
+            all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(
+                nr, experiment_dir)
+
+            protrusion_lifetimes_and_directions = []
+            for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
                 for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                     for l, d in protrusion_lifetime_dirn:
-                        success_protrusion_lifetimes_and_directions.append((l, d))
-            else:
-                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
-                    for l, d in protrusion_lifetime_dirn:
-                        fail_protrusion_lifetimes_and_directions.append((l, d))
+                        protrusion_lifetimes_and_directions.append((l, d))
 
-        datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12,
-                                                    total_time_in_hours * 60.0,
-                                                    save_dir=experiment_dir,
-                                                    save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(
-                                                        np.sum(chemotaxis_success_per_repeat)))
+            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0,
+                                                        save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
 
-        datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12,
-                                                    total_time_in_hours * 60.0,
-                                                    save_dir=experiment_dir,
-                                                    save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(
-                                                        num_experiment_repeats - np.sum(chemotaxis_success_per_repeat)))
+            chemotaxis_success_per_repeat = []
+            closest_to_source_per_repeat = []
+            for rpt_number in range(nr):
+                environment_name = experiment_name_format_string.format(rpt_number)
+                environment_dir = os.path.join(experiment_dir, environment_name)
+                storefile_path = eu.get_storefile_path(environment_dir)
+                # empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
+                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False,
+                                                               produce_graphs, produce_animation,
+                                                               environment_wide_variable_defns)
 
-        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat) / num_experiment_repeats
-        closest_to_source_per_repeat_per_magslope[xi] = closest_to_source_per_repeat
+                chemotaxis_success, closest_to_source = cu.analyze_chemotaxis_success(relevant_environment, storefile_path,
+                                                                                      rpt_number, source_x, source_y,
+                                                                                      chemotaxis_target_radius)
+
+                chemotaxis_success_per_repeat.append(chemotaxis_success)
+                closest_to_source_per_repeat.append(closest_to_source)
+
+            success_protrusion_lifetimes_and_directions = []
+            fail_protrusion_lifetimes_and_directions = []
+            for i, protrusion_lifetime_dirn_per_cell in enumerate(all_cell_protrusion_lifetimes_and_directions_per_repeat):
+                if chemotaxis_success_per_repeat[i] == 1:
+                    for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                        for l, d in protrusion_lifetime_dirn:
+                            success_protrusion_lifetimes_and_directions.append((l, d))
+                else:
+                    for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                        for l, d in protrusion_lifetime_dirn:
+                            fail_protrusion_lifetimes_and_directions.append((l, d))
+
+            datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12,
+                                                        total_time_in_hours*60.0,
+                                                        save_dir=experiment_dir,
+                                                        save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(np.sum(chemotaxis_success_per_repeat)))
+
+            datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12,
+                                                        total_time_in_hours*60.0,
+                                                        save_dir=experiment_dir,
+                                                        save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(nr - np.sum(chemotaxis_success_per_repeat)))
+
+            chemotaxis_success_ratios.append(np.sum(chemotaxis_success_per_repeat)/nr)
+            closest_to_source_per_repeat.append(closest_to_source_per_repeat)
+
+        chemotaxis_success_ratios_per_magslope_per_num_cells.append(copy.deepcopy(chemotaxis_success_ratios))
+        closest_to_source_per_repeat_per_magslope_per_num_cells.append(copy.deepcopy(closest_to_source_per_repeat_per_magslope_per_num_cells))
 
     print("=========")
     # sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22
-    datavis.graph_chemotaxis_efficiency_data(sub_experiment_number, test_chemo_magnitudes,
-                                             [test_chemo_slope] * len(test_chemo_magnitudes), chemotaxis_success_ratios,
-                                             box_width, box_height, num_cells, save_dir=experiment_set_directory)
-    datavis.graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_chemo_magnitudes,
-                                                           [test_chemo_slope] * len(test_chemo_magnitudes),
-                                                           closest_to_source_per_repeat_per_magslope, box_width,
-                                                           box_height, num_cells, save_dir=experiment_set_directory)
+    datavis.graph_chemotaxis_efficiency_data(
+        sub_experiment_number,
+        test_chemo_magnitudes,
+        [test_chemo_slope]*len(test_chemo_magnitudes),
+        chemotaxis_success_ratios_per_magslope_per_num_cells,
+        num_experiment_repeats,
+        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory)
+    # datavis.graph_chemotaxis_efficiency_data_using_violins(
+    #     sub_experiment_number,
+    #     test_chemo_magnitudes,
+    #     [test_chemo_slope]*len(test_chemo_magnitudes),
+    #     closest_to_source_per_repeat_per_magslope_per_num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     num_cells,
+    #     save_dir=experiment_set_directory)
     # datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), protrusion_lifetimes_and_directions_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
 
     print("Complete.")
@@ -2560,7 +2581,7 @@ def chemotaxis_threshold_test_slopes(date_str, experiment_number, sub_experiment
     closest_to_source_per_repeat_per_magslope = np.zeros((len(test_chemo_slopes), num_experiment_repeats),
                                                          dtype=np.float64)
     protrusion_lifetimes_per_magslope = []
-    required_magnitudes = [slope * halfmax_dist * 2 for slope in test_chemo_slopes]
+    required_magnitudes = [slope*halfmax_dist*2 for slope in test_chemo_slopes]
 
     for xi, chs in enumerate(test_chemo_slopes):
         print("=========")
@@ -2605,7 +2626,7 @@ def chemotaxis_threshold_test_slopes(date_str, experiment_number, sub_experiment
                                                                    produce_graphs, produce_animation,
                                                                    environment_wide_variable_defns)
                     if not (relevant_environment.simulation_complete() and (
-                            relevant_environment.curr_tpoint * relevant_environment.T / 3600.) == total_time_in_hours):
+                            relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                         raise Exception("Simulation is not complete.")
 
                 print("Data exists.")
@@ -2617,7 +2638,7 @@ def chemotaxis_threshold_test_slopes(date_str, experiment_number, sub_experiment
         for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
             for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                 for l, d in protrusion_lifetime_dirn:
-                    protrusion_lifetimes.append(l / 60.0)
+                    protrusion_lifetimes.append(l/60.0)
 
         protrusion_lifetimes_per_magslope.append(protrusion_lifetimes)
 
@@ -2639,7 +2660,7 @@ def chemotaxis_threshold_test_slopes(date_str, experiment_number, sub_experiment
             chemotaxis_success_per_repeat.append(chemotaxis_success)
             closest_to_source_per_repeat.append(closest_to_source)
 
-        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat) / num_experiment_repeats
+        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat)/num_experiment_repeats
         closest_to_source_per_repeat_per_magslope[xi] = closest_to_source_per_repeat
 
     print("=========")
@@ -2715,7 +2736,7 @@ def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experime
                                                                    produce_graphs, produce_animation,
                                                                    environment_wide_variable_defns)
                     if not (relevant_environment.simulation_complete() and (
-                            relevant_environment.curr_tpoint * relevant_environment.T / 3600.) == total_time_in_hours):
+                            relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                         raise Exception("Simulation is not complete.")
 
                 print("Data exists.")
@@ -2735,7 +2756,7 @@ def two_cell_chemotaxis_threshold_test(date_str, experiment_number, sub_experime
 
             chemotaxis_success_per_repeat.append(chemotaxis_success)
 
-        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat) / num_experiment_repeats
+        chemotaxis_success_ratios[xi] = np.sum(chemotaxis_success_per_repeat)/num_experiment_repeats
 
     print("=========")
 
@@ -2819,7 +2840,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
                                                                        produce_graphs, produce_animation,
                                                                        environment_wide_variable_defns)
                         if not (relevant_environment.simulation_complete() and (
-                                relevant_environment.curr_tpoint * relevant_environment.T / 3600.) == total_time_in_hours):
+                                relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                             print("Simulation is not complete.")
                             no_data = True
                             break
@@ -2848,7 +2869,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(date_str, experiment_number, sub
     print("=========")
 
     if num_cells == None:
-        num_cells = box_height * box_width
+        num_cells = box_height*box_width
 
     datavis.graph_fixed_cells_vary_coa_cil_data(sub_experiment_number, test_cils, test_coas, average_cell_persistence,
                                                 num_cells, box_width, box_height, save_dir=experiment_set_directory)
@@ -2881,7 +2902,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
 
     for xi, tnc in enumerate(test_num_cells):
         for yi, th in enumerate(test_heights):
-            calculated_width = int(np.ceil(float(tnc) / th))
+            calculated_width = int(np.ceil(float(tnc)/th))
             print("=========")
             print(("num_cells = {}, height = {}".format(tnc, th)))
             experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number,
@@ -2936,7 +2957,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(date_str, experiment_num
                                                                        produce_graphs, produce_animation,
                                                                        environment_wide_variable_defns)
                         if not (relevant_environment.simulation_complete() and (
-                                relevant_environment.curr_tpoint * relevant_environment.T / 3600.) == total_time_in_hours):
+                                relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                             print("Simulation is not complete.")
                             no_data = True
                             break
@@ -3016,7 +3037,7 @@ def corridor_migration_collective_tests(date_str, experiment_number, sub_experim
 
     for xi, tnc_and_th in enumerate(zip(test_num_cells, test_heights)):
         tnc, th = tnc_and_th
-        tw = max(1, int(np.ceil(float(tnc) / th)))
+        tw = max(1, int(np.ceil(float(tnc)/th)))
         print("=========")
         print(("num_cells = {}, height = {}, width = {}".format(tnc, th, tw)))
 
@@ -3440,9 +3461,9 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
                               delete_and_rerun_experiments_without_stored_env=True, run_experiments=True,
                               remake_graphs=False, remake_animation=False, do_final_analysis=False,
                               biased_rgtpase_distrib_defn_dict={
-                                  'default': ['unbiased uniform', np.array([0, 2 * np.pi]), 0.3]}):
+                                  'default': ['unbiased uniform', np.array([0, 2*np.pi]), 0.3]}):
     num_tests = len(test_num_nodes)
-    num_timepoints = int(total_time_in_hours * 3600.0 / timestep_length) + 1
+    num_timepoints = int(total_time_in_hours*3600.0/timestep_length) + 1
 
     cell_full_speeds = np.zeros((num_tests, 2), dtype=np.float64)
     active_racs = np.zeros((num_tests, 2), dtype=np.float64)
@@ -3458,7 +3479,7 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
 
         this_parameter_dict = copy.deepcopy(parameter_dict)
         this_parameter_dict['num_nodes'] = np.array([nn], dtype=np.int64)[0]
-        this_parameter_dict['interaction_factor_migr_bdry_contact'] = default_interaction_factor_migr_bdry_contact / nn
+        this_parameter_dict['interaction_factor_migr_bdry_contact'] = default_interaction_factor_migr_bdry_contact/nn
         experiment_name, drift_args = corridor_migration_test(date_str, experiment_number, sub_experiment_number,
                                                               this_parameter_dict, no_randomization=no_randomization,
                                                               base_output_dir=base_output_dir,
@@ -3467,8 +3488,8 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
                                                               integration_params=integration_params,
                                                               max_timepoints_on_ram=max_timepoints_on_ram, seed=seed,
                                                               allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-                                                              default_coa=coa_dict[2] / nn,
-                                                              default_cil=default_cil / nn,
+                                                              default_coa=coa_dict[2]/nn,
+                                                              default_cil=default_cil/nn,
                                                               num_experiment_repeats=num_experiment_repeats,
                                                               timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,
                                                               produce_graphs=produce_graphs,
@@ -3492,15 +3513,15 @@ def convergence_test_corridor(date_str, experiment_number, sub_experiment_number
         # cell_x_positions = [cps[:,0] for cps in all_cell_centroids_per_repeat]
         # cell_positions[xi] = [np.array([xs_per_t[:, k] for k in range(2)]) for xs_per_t in cell_x_positions]
 
-        cell_full_speeds[xi] = [np.average(cell_full_speeds_per_repeat[0][k][int((num_timepoints - 1) / 2):]) for k in
+        cell_full_speeds[xi] = [np.average(cell_full_speeds_per_repeat[0][k][int((num_timepoints - 1)/2):]) for k in
                                 range(2)]
-        active_racs[xi] = [np.average(cell_rac_active_max_conc_per_repeat[0][k][int(num_timepoints / 2):]) for k in
+        active_racs[xi] = [np.average(cell_rac_active_max_conc_per_repeat[0][k][int(num_timepoints/2):]) for k in
                            range(2)]
-        inactive_racs[xi] = [np.average(cell_rac_inactive_max_conc_per_repeat[0][k][int(num_timepoints / 2):]) for k in
+        inactive_racs[xi] = [np.average(cell_rac_inactive_max_conc_per_repeat[0][k][int(num_timepoints/2):]) for k in
                              range(2)]
-        active_rhos[xi] = [np.average(cell_rho_active_max_conc_per_repeat[0][k][int(num_timepoints / 2):]) for k in
+        active_rhos[xi] = [np.average(cell_rho_active_max_conc_per_repeat[0][k][int(num_timepoints/2):]) for k in
                            range(2)]
-        inactive_rhos[xi] = [np.average(cell_rho_inactive_max_conc_per_repeat[0][k][int(num_timepoints / 2):]) for k in
+        inactive_rhos[xi] = [np.average(cell_rho_inactive_max_conc_per_repeat[0][k][int(num_timepoints/2):]) for k in
                              range(2)]
 
     print("=========")
@@ -3638,7 +3659,7 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
                                              delete_and_rerun_experiments_without_stored_env=True,
                                              animation_time_resolution='normal', remake_graphs=False,
                                              remake_animation=False):
-    num_cells_in_group = box_width * box_height
+    num_cells_in_group = box_width*box_height
 
     experiment_name_format_string = "multigroup_corridor_migration_{}_NC=({}, {})_NG={}".format("{}", box_width,
                                                                                                 box_height, num_groups)
@@ -3653,22 +3674,22 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
     experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
                                                                experiment_name)
 
-    total_time = total_time_in_hours * 3600
-    num_timesteps = int(total_time / timestep_length)
+    total_time = total_time_in_hours*3600
+    num_timesteps = int(total_time/timestep_length)
 
     num_boxes = num_groups
     num_cells_in_boxes = [num_cells_in_group, num_cells_in_group]
-    box_heights = [box_height * cell_diameter] * num_boxes
-    box_widths = [box_width * cell_diameter] * num_boxes
+    box_heights = [box_height*cell_diameter]*num_boxes
+    box_widths = [box_width*cell_diameter]*num_boxes
 
     x_space_between_boxes = []
-    box_x_offsets = [10] * num_boxes
-    box_y_offsets = [30 + box_height * cell_diameter * n for n in range(num_boxes)]
-    plate_width, plate_height = box_widths[0] * 10 * 1.5, (np.sum(box_heights) + 40) * 2.4
+    box_x_offsets = [10]*num_boxes
+    box_y_offsets = [30 + box_height*cell_diameter*n for n in range(num_boxes)]
+    plate_width, plate_height = box_widths[0]*10*1.5, (np.sum(box_heights) + 40)*2.4
 
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, plate_width, plate_height,
-        "OVERRIDE", "OVERRIDE", origin_y_offset=30, migratory_corridor_size=[box_widths[0] * 100, np.sum(box_heights)],
+        "OVERRIDE", "OVERRIDE", origin_y_offset=30, migratory_corridor_size=[box_widths[0]*100, np.sum(box_heights)],
         physical_bdry_polygon_extra=20, box_x_offsets=box_x_offsets, box_y_offsets=box_y_offsets)
 
     environment_wide_variable_defns = {'num_timesteps': num_timesteps,
@@ -3681,7 +3702,7 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
                                        'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc}
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
-        [dict([(x, default_coa) for x in boxes])] * num_boxes]
+        [dict([(x, default_coa) for x in boxes])]*num_boxes]
 
     ic_dict_tuple_list = []
     for n in range(num_boxes):
@@ -3697,8 +3718,8 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [dict(ic_dict_tuple_list)]
 
     biased_rgtpase_distrib_defn_dicts = [
-        [{'default': ['unbiased random', np.array([-0.25 * np.pi, 0.25 * np.pi]), 1.0]}] * num_groups]
-    parameter_override_dicts_per_sub_experiment = [[parameter_dict] * num_boxes]
+        [{'default': ['unbiased random', np.array([-0.25*np.pi, 0.25*np.pi]), 1.0]}]*num_groups]
+    parameter_override_dicts_per_sub_experiment = [[parameter_dict]*num_boxes]
     experiment_descriptions_per_subexperiment = ["from experiment template: corridor migration, multi-group"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
 
@@ -3714,10 +3735,10 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
         this_box_height = box_heights[bi]
 
         cell_group_dict = {'cell_group_name': bi, 'num_cells': num_cells_in_boxes[bi],
-                           'init_cell_radius': cell_diameter * 0.5 * 1e-6, 'C_total': 3e6, 'H_total': 1.5e6,
+                           'init_cell_radius': cell_diameter*0.5*1e-6, 'C_total': 3e6, 'H_total': 1.5e6,
                            'cell_group_bounding_box': np.array(
                                [this_box_x_offset, this_box_x_offset + this_box_width, this_box_y_offset,
-                                this_box_height + this_box_y_offset]) * 1e-6,
+                                this_box_height + this_box_y_offset])*1e-6,
                            'intercellular_contact_factor_magnitudes_defn':
                                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[si][bi],
                            'cell_dependent_coa_signal_strengths_defn':
@@ -3734,13 +3755,13 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
     if animation_time_resolution not in ['normal', 'high', 'adaptive']:
         raise Exception("Unknown animation_time_resolution specified: {}".format(animation_time_resolution))
     elif animation_time_resolution == 'normal':
-        short_video_length_definition = 1000.0 * timestep_length
+        short_video_length_definition = 1000.0*timestep_length
         short_video_duration = 2.0
     elif 'high':
-        short_video_length_definition = 100.0 * timestep_length
+        short_video_length_definition = 100.0*timestep_length
         short_video_duration = 4.0
     elif 'adaptive':
-        short_video_length_definition = int(0.1 * num_timesteps) * timestep_length
+        short_video_length_definition = int(0.1*num_timesteps)*timestep_length
         short_video_duration = 2.0
 
     animation_settings = setup_animation_settings(timestep_length, global_scale, plate_height, plate_width,
@@ -3750,8 +3771,8 @@ def corridor_migration_multigroup_experiment(date_str, experiment_number, baseli
                                                   string_together_pictures_into_animation=True,
                                                   show_coa_overlay=show_coa_overlay, coa_too_close_dist_squared=1,
                                                   coa_distribution_exponent=np.log(
-                                                      parameter_dict['coa_sensing_value_at_dist']) / (parameter_dict[
-                                                                                                          'coa_sensing_dist_at_value'] / 1e-6),
+                                                      parameter_dict['coa_sensing_value_at_dist'])/(parameter_dict[
+                                                                                                          'coa_sensing_dist_at_value']/1e-6),
                                                   coa_intersection_exponent=parameter_dict['coa_intersection_exponent'])
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,

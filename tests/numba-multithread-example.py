@@ -15,7 +15,7 @@ def func_np(a, b):
     """
     Control function using Numpy.
     """
-    return np.exp(2.1 * a + 3.2 * b)
+    return np.exp(2.1*a + 3.2*b)
 
 @jit('void(double[:], double[:], double[:])', nopython=True, nogil=True)
 def inner_func_nb(result, a, b):
@@ -23,7 +23,7 @@ def inner_func_nb(result, a, b):
     Function under test.
     """
     for i in range(len(result)):
-        result[i] = math.exp(2.1 * a[i] + 3.2 * b[i])
+        result[i] = math.exp(2.1*a[i] + 3.2*b[i])
 
 def timefunc(correct, s, func, *args, **kwargs):
     """
@@ -36,7 +36,7 @@ def timefunc(correct, s, func, *args, **kwargs):
         assert np.allclose(res, correct), (res, correct)
     # time it
     print('{:>5.0f} ms'.format(min(repeat(lambda: func(*args, **kwargs),
-                                          number=5, repeat=2)) * 1000))
+                                          number=5, repeat=2))*1000))
     return res
 
 def make_singlethread(inner_func):
@@ -65,11 +65,11 @@ def make_multithread(inner_func, numthreads):
         for i in range(numthreads):
             chunk = []
             for arg in args:
-                chunk.append(arg[i * chunklen:(i + 1) * chunklen])
+                chunk.append(arg[i*chunklen:(i + 1)*chunklen])
             chunks.append(chunk)
             
         # Create argument tuples for each input chunk
-#        chunks = [[arg[i * chunklen:(i + 1) * chunklen] for arg in args]
+#        chunks = [[arg[i*chunklen:(i + 1)*chunklen] for arg in args]
 #                  for i in range(numthreads)]
         # Spawn one thread per chunk
         threads = [threading.Thread(target=inner_func, args=c)

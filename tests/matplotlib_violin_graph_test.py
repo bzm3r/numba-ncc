@@ -54,7 +54,7 @@ ax.set_ylabel('persistence')
 
 
 box = ax.get_position()
-ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
 black_patch = mpatches.Patch(color='k', label='CIL=120')
 ax.legend(handles=[black_patch], loc='center left', bbox_to_anchor=(1, 0.5))
 
