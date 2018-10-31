@@ -393,8 +393,12 @@ class Cell():
         
         coa_signals = np.zeros(self.num_nodes, dtype=np.float64)
         self.system_history[access_index, :, parameterorg.coa_signal_index] = coa_signals
+        endocytosis_effect_factor_on_nodes = np.zeros(self.num_nodes, dtype=np.float64)
+        self.system_history[access_index, :,
+        parameterorg.endocytosis_effect_factor_on_nodes_index] = endocytosis_effect_factor_on_nodes
         chemoattractant_signal_on_nodes = np.zeros(self.num_nodes, dtype=np.float64)
-        self.system_history[access_index, :, parameterorg.chemoattractant_signal_on_nodes_index] = np.zeros(self.num_nodes, dtype=np.float64)
+        self.system_history[access_index, :, parameterorg.chemoattractant_signal_on_nodes_index] = chemoattractant_signal_on_nodes
+
         
         intercellular_contact_factors = np.zeros(self.num_nodes)
         self.system_history[access_index, :, parameterorg.cil_signal_index] = intercellular_contact_factors
@@ -427,7 +431,7 @@ class Cell():
         
         self.system_history[access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
         
-        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
+        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
         
         self.system_history[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -576,7 +580,7 @@ class Cell():
         return rfs
         
 # -----------------------------------------------------------------
-    def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):
+    def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, endocytosis_effect_length_squared, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):
         
         new_tpoint = self.curr_tpoint + 1
         next_tstep_system_history_access_index = self.get_system_history_access_index(new_tpoint)
@@ -646,6 +650,8 @@ class Cell():
         np.random.shuffle(random_order_cell_indices)
         
         coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix, self.closeness_dist_squared_criteria, self.coa_intersection_exponent)
+
+        endocytosis_effect_factor_on_nodes = chemistry.calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, endocytosis_effect_length_squared)
         
         if self.verbose == True:
             print("max_coa: ", np.max(coa_signals))
@@ -726,7 +732,7 @@ class Cell():
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
         
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
         
         kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         

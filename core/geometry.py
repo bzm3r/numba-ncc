@@ -1175,7 +1175,6 @@ def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y)
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)      
 def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords, space_migratory_bdry_polygon, space_physical_bdry_polygon):
-    num_intersections = 0
     coords_a = all_polygon_coords[pi_a, vi_a]
     coords_b = all_polygon_coords[pi_b, vi_b]
     

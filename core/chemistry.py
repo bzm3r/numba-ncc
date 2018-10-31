@@ -122,7 +122,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
+def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]
     result = np.empty(num_vertices, dtype=np.float64)
     kgtp_rac_autoact = 0.0
@@ -135,12 +135,7 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_f
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]#*(1.0 - smooth_factor)
         
-        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
-        
-        if chemoattractant_signal_at_node > 1e-6:
-            chemoattractant_signal = chemoattractant_signal_at_node#2*chemoattractant_signal_halfmax*hill_function(3, chemoattractant_signal_halfmax, chemoattractant_signal_at_node)
-        else:
-            chemoattractant_signal = 0.0
+        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]*endocytosis_effect_factor_on_nodes[i]
         
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
@@ -148,7 +143,7 @@ def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_f
         rac_autoact_hill_function = hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
         kgtp_rac_autoact = kgtp_rac_autoact_baseline*rac_autoact_hill_function
         
-        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact*(chemoattractant_signal + 1.0)
+        result[i] = (randomization_factors[i] + coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact*(chemoattractant_signal_at_node + 1.0)
         
     return result
 
@@ -312,3 +307,29 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
         coa_signals[ni] = this_node_coa_signal
 
     return coa_signals
+
+# -------------------------------------------------------------------------------------------------
+@nb.jit(nopython=True)
+def calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_dist_squared_matrix, line_segment_intersection_matrix, endocytosis_effect_length):
+    endocytosis_effect_factors = np.zeros(num_nodes, dtype=np.float64)
+
+    for ni in range(num_nodes):
+        this_node_relevant_line_seg_intersection_slice = line_segment_intersection_matrix[ni]
+        this_node_relevant_dist_squared_slice = intercellular_dist_squared_matrix[ni]
+
+        sum_weights = 0.0
+
+        for other_ci in range(num_cells):
+            if other_ci != this_cell_index:
+                this_node_other_cell_relevant_line_seg_intersection_slice = \
+                this_node_relevant_line_seg_intersection_slice[other_ci]
+                this_node_other_cell_relevant_dist_squared_slice = this_node_relevant_dist_squared_slice[other_ci]
+
+                for other_ni in range(num_nodes):
+                    if this_node_other_cell_relevant_line_seg_intersection_slice[other_ni] == 0:
+                        ds = this_node_other_cell_relevant_dist_squared_slice[other_ni]
+                        sum_weights += np.exp(np.log(0.25)*(ds/endocytosis_effect_length))
+
+        endocytosis_effect_factors[ni] = 1./(1.0 + sum_weights)
+
+    return endocytosis_effect_factors
