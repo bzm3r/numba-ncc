@@ -8,6 +8,7 @@ Created on Fri Mar 25 14:58:28 2016
 import h5py
 from . import parameterorg
 import numpy as np
+import h5py_cache
 
 # ============================================================================== 
 def create_parameter_exploration_dataset(storefile_path, length_results_axis1):
@@ -98,13 +99,16 @@ def get_exec_order_for_tsteps(tsteps, storefile_path):
     
 def get_node_coords_for_all_tsteps(cell_index, storefile_path):
     on_ram_dset = np.array([])
-    with h5py.File(storefile_path, "a") as f:
+    print("    opening storefile...")
+    with h5py.File(storefile_path, "r+") as f:
         dset = f[str(cell_index)]
+        print("size: {}".format(dset.shape))
         on_ram_dset = np.copy(dset)
-    
+
+    print("    creating return result...")
     if on_ram_dset.shape[0] == 0:
         raise Exception("on_ram_dset is empty!")
-        
+
     x_coords = on_ram_dset[:,:,parameterorg.x_index]
     y_coords = on_ram_dset[:,:,parameterorg.y_index]
     

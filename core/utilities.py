@@ -1908,21 +1908,28 @@ def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number,
                                chemotaxis_score_cutoff_radius):
     num_cells = relevant_environment.num_cells
 
+    if rpt_number == 0:
+        print("===================")
+    print("repeat number: {}".format(rpt_number))
     all_node_coords = np.empty((0, 2), dtype=np.float64)
     for ci in range(num_cells):
         print(("    Analyzing cell {}...".format(ci)))
 
+        print("    getting data from harddrive...")
         node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(ci, storefile_path)
 
+        print("    appending data to main list...")
         for ni in range(node_coords_per_tstep.shape[1]):
             all_node_coords = np.append(all_node_coords, node_coords_per_tstep[:, ni, :], axis=0)
         # cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*relevant_environment.cells_in_environment[n].L/1e-6
 
         # all_cell_centroids = np.append(all_cell_centroids, cell_centroids, axis=0)
 
+    print("    calculating distances...")
     distance_from_chemoattractant_source_per_timestep = np.linalg.norm(all_node_coords - np.array([source_x, source_y]),
                                                                        axis=1)
 
+    print("    finding minimum distance...")
     min_distance = np.min(distance_from_chemoattractant_source_per_timestep)
 
     if min_distance < chemotaxis_score_cutoff_radius:
@@ -1930,11 +1937,4 @@ def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number,
     else:
         return 0.0, min_distance
 
-#
-#    
-# def calculate_cell_directions_per_timestep(num_cells, storefile_path, max_tstep=None):
-#    direction_data_per_cell = []
-#    for cell_index in range(num_cells):
-#        direction_data_per_cell.append(calculate_directions_per_timestep_for_cell(cell_index, storefile_path, max_tstep=max_tstep))
-#        
-#    return direction_data_per_cell
+    print("===================")

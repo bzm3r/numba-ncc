@@ -335,7 +335,11 @@ class Cell():
             raise Exception("Unknown randomization scheme given: {}.".format(randomization_scheme))
             
         self.randomization_print_string = "next_randomization_event_tstep ({}): ".format(randomization_scheme) + "{}"
-        
+
+        # =============================================================
+
+        self.virtual_size_factor = parameters_dict["virtual_size_factor"]
+
         # =============================================================
         
         self.all_cellwide_phase_var_indices = [parameterorg.rac_cytosolic_gdi_bound_index, parameterorg.rho_cytosolic_gdi_bound_index]
@@ -814,9 +818,15 @@ class Cell():
             close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors = geometry.do_close_points_to_each_node_on_other_cells_exist(num_cells, num_nodes, this_cell_index, all_cells_node_coords[this_cell_index], intercellular_squared_dist_array, self.closeness_dist_squared_criteria_0_until, self.closeness_dist_squared_criteria_1_at, all_cells_node_coords, are_nodes_inside_other_cells)
              
             state_array = dynamics.pack_state_array_from_system_history(self.nodal_phase_var_indices, self.ode_cellwide_phase_var_indices, self.system_history, self.get_system_history_access_index(self.curr_tpoint))
-            
-            chemoattractant_signal_on_nodes = [chemoattractant_signal_fn(x*self.L/1e-6) for x in all_cells_node_coords[this_cell_index]]
-            
+
+            this_cell_node_coords = all_cells_node_coords[this_cell_index]
+            this_cell_centroid = geometry.calculate_centroid(this_cell_node_coords)
+            out_vectors = this_cell_node_coords - this_cell_centroid
+            virtual_cell_node_coords = this_cell_node_coords + out_vectors*self.virtual_size_factor
+
+            chemoattractant_signal_on_nodes = [chemoattractant_signal_fn(x*self.L/1e-6) for x in virtual_cell_node_coords]
+            #self.system_history[next_tstep_system_history_access_index, :, [parameterorg.unit_in_vec_x_index, parameterorg.unit_in_vec_y_index]]
+
             rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes)
             
             #print "Integrating..."

@@ -43,14 +43,14 @@ interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interac
 
 randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'randomization_type', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
 
-model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius']
+model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius', 'virtual_size_factor']
 
 all_parameter_labels = rho_gtpase_parameter_labels + mech_parameter_labels + space_parameter_labels + interaction_parameter_labels + randomization_parameter_labels + model_run_parameter_labels
 
 
 #-----------------------------------------------------------------
 
-polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None}
+polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None, 'virtual_size_factor': [0.0, np.inf]}
 
 user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'tension_mediated_rac_inhibition_magnitude': [1.0, 100.0], 'strain_calculation_type': None, 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.01, 1]}
 
@@ -153,8 +153,9 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['coa_intersection_exponent'] = user_parameter_dict['coa_intersection_exponent']
     
     num_nodes, init_cell_radius = user_parameter_dict['num_nodes'], user_parameter_dict['init_cell_radius']
+    virtual_size_factor = user_parameter_dict['virtual_size_factor']
     cell_parameter_dict['num_nodes'], cell_parameter_dict['init_cell_radius'] = num_nodes, init_cell_radius
-    
+    cell_parameter_dict['virtual_size_factor'] = virtual_size_factor
     cell_node_thetas = np.pi*np.linspace(0, 2, endpoint=False, num=num_nodes)
     cell_node_coords = np.transpose(np.array([init_cell_radius*np.cos(cell_node_thetas), init_cell_radius*np.sin(cell_node_thetas)]))
     edge_vectors = geometry.calculate_edge_vectors(cell_node_coords)

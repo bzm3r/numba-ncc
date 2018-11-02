@@ -2636,6 +2636,35 @@ def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, tes
     x = datetime.datetime.now()
     show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "({})".format([(nr, nc, bw, bh) for nr, nc, bw, bh in zip(num_experiment_repeats, num_cells, box_widths, box_heights)]))
 
+def graph_virtual_size_chemotaxis_efficiency_data(test_virtual_sizes, test_magnitude, test_slope, chemotaxis_success_ratios_per_virtual_size, num_experiment_repeats, save_dir=None, fontsize=22):
+    set_fontsize(fontsize)
+    fig, ax = plt.subplots()
+
+    indices = np.arange(len(test_virtual_sizes))
+
+    xpoints = np.array([[index, index + 1, np.nan] for index in indices]).flatten()
+    ypoints = np.array([[c, c, np.nan] for c in chemotaxis_success_ratios_per_virtual_size]).flatten()
+
+    ax.plot(xpoints, ypoints, color=colors.color_list20[0], label="{}, {}x{}, N={}".format(1, 1, 1, num_experiment_repeats))
+
+    ax.set_ylabel("success ratio")
+    ax.set_xticks([index + 0.5 for index in indices])
+
+    xlabels = [2*vs + 1.0 for vs in test_virtual_sizes]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("virtual size (cell diameters)")
+    ax.set_title("success ratios")
+
+    ax.set_ylim([-0.1, 1.5])
+    ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
+
+    ax.set_title("slope: {}, magnitude: {}".format(40.0*test_slope, np.round(test_magnitude, decimals=2)))
+    ax.legend(loc='best', fontsize=fontsize)
+
+    x = datetime.datetime.now()
+    #fig, figsize, save_dir, base_name, extra_label, figtype="eps", bbox_inches='tight'
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_vs-{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "", figtype="png")
 
 def convert_rgba_to_rgb(rgba, background_color):
     rgb = [0.0, 0.0, 0.0]
