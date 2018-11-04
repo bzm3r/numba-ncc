@@ -2636,6 +2636,39 @@ def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, tes
     x = datetime.datetime.now()
     show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "({})".format([(nr, nc, bw, bh) for nr, nc, bw, bh in zip(num_experiment_repeats, num_cells, box_widths, box_heights)]))
 
+def graph_group_chemotaxis_efficiency_data(test_magnitude, test_slope, chemotaxis_success_ratios_per_num_cells, num_experiment_repeats, num_cells, save_dir=None, fontsize=22):
+
+    set_fontsize(fontsize)
+    fig, ax = plt.subplots()
+
+    indices = np.arange(len(num_cells))
+
+    for i in indices:
+        csr = chemotaxis_success_ratios_per_num_cells[i]
+        nr = num_experiment_repeats[i]
+        nc = num_cells[i]
+        xpoints = np.array([i, i + 1])
+        ypoints = np.array([csr, csr])
+
+        ax.plot(xpoints, ypoints, color=colors.color_list20[i], label="NC={}, N={}".format(nr, nc))
+
+    ax.set_ylabel("success ratio")
+    ax.set_xticks([index + 0.5 for index in indices])
+
+    ax.set_xticklabels(num_cells)
+    ax.set_xlabel("number of cells")
+    ax.set_title("success ratios")
+
+    ax.set_ylim([-0.1, 1.5])
+    ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
+
+    ax.legend(loc='best', fontsize=fontsize)
+
+    ax.set_title("C={}, S={}".format(test_magnitude, test_slope))
+
+    x = datetime.datetime.now()
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "C={}-S={}-({})".format(test_magnitude, 40.0*test_slope, num_cells))
 
 def convert_rgba_to_rgb(rgba, background_color):
     rgb = [0.0, 0.0, 0.0]

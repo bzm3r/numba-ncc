@@ -580,7 +580,7 @@ class Cell():
         return rfs
         
 # -----------------------------------------------------------------
-    def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, endocytosis_effect_length_squared, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):
+    def set_next_state(self, next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors):
         
         new_tpoint = self.curr_tpoint + 1
         next_tstep_system_history_access_index = self.get_system_history_access_index(new_tpoint)
@@ -651,7 +651,6 @@ class Cell():
         
         coa_signals = chemistry.calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_cell_indices, self.coa_distribution_exponent,  self.interaction_factors_coa_per_celltype, self.max_coa_signal, intercellular_squared_dist_array, line_segment_intersection_matrix, self.closeness_dist_squared_criteria, self.coa_intersection_exponent)
 
-        endocytosis_effect_factor_on_nodes = chemistry.calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, endocytosis_effect_length_squared)
         
         if self.verbose == True:
             print("max_coa: ", np.max(coa_signals))
@@ -760,7 +759,7 @@ class Cell():
         self.curr_node_forces = F #- F_adhesion
 
 # -----------------------------------------------------------------
-    def pack_rhs_arguments(self, t, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes):
+    def pack_rhs_arguments(self, t, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes):
         access_index = self.get_system_history_access_index(t)
         
         state_parameters = self.system_history[access_index, :, self.nodal_pars_indices]
@@ -773,7 +772,7 @@ class Cell():
         
         transduced_coa_signals = self.system_history[access_index, :, parameterorg.coa_signal_index]
         
-        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_interaction_factors_intercellular_contact_per_celltype_index, self.nodal_migr_bdry_contact_index, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, chemoattractant_signal_on_nodes, self.interaction_factors_intercellular_contact_per_celltype, self.randomization_rac_kgtp_multipliers
+        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_interaction_factors_intercellular_contact_per_celltype_index, self.nodal_migr_bdry_contact_index, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.interaction_factors_intercellular_contact_per_celltype, self.randomization_rac_kgtp_multipliers
 
 # -----------------------------------------------------------------
     def trim_system_history(self, environment_tpoint):
@@ -805,11 +804,13 @@ class Cell():
             self.system_history[0, :, parameterorg.info_indices_dict[info_label]] = fetched_data
         
 # -----------------------------------------------------------------
-    def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False):
+    def execute_step(self, this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, endocytosis_effect_length_squared, chemoattractant_signal_fn, be_talkative=False):
         dynamics.print_var = True
         
-        if self.skip_dynamics == False:            
-            intercellular_squared_dist_array = intercellular_squared_dist_array/(self.L**2)
+        if self.skip_dynamics == False:
+            L_squared = self.L**2
+            endocytosis_effect_length_squared = endocytosis_effect_length_squared/L_squared
+            intercellular_squared_dist_array = intercellular_squared_dist_array/L_squared
             all_cells_node_coords = all_cells_node_coords/self.L
             all_cells_node_forces = all_cells_node_forces/self.ML_T2
             
@@ -822,15 +823,16 @@ class Cell():
             state_array = dynamics.pack_state_array_from_system_history(self.nodal_phase_var_indices, self.ode_cellwide_phase_var_indices, self.system_history, self.get_system_history_access_index(self.curr_tpoint))
             
             chemoattractant_signal_on_nodes = [chemoattractant_signal_fn(x*self.L/1e-6) for x in all_cells_node_coords[this_cell_index]]
+            endocytosis_effect_factor_on_nodes = chemistry.calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, endocytosis_effect_length_squared)
             
-            rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes)
+            rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes)
             
             #print "Integrating..."
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]
             
-            self.set_next_state(next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors)
+            self.set_next_state(next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors)
             
         else:
             self.system_history[self.get_system_history_access_index(self.curr_tpoint + 1)] = self.system_history[self.get_system_history_access_index(self.curr_tpoint)]
