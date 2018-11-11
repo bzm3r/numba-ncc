@@ -301,6 +301,7 @@ class Cell():
         self.coa_intersection_exponent = parameters_dict['coa_intersection_exponent']
         
         self.max_coa_signal = parameters_dict['max_coa_signal']
+        self.max_chemoattractant_signal = parameters_dict['max_chemoattractant_signal']
         
         # take into account the fact that no COA signal can be found outside of migratory polygon (fibronectin patch!), since C3a has to bind to fibronectin
         # =============================================================
@@ -430,8 +431,11 @@ class Cell():
         conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
         
         self.system_history[access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
-        
-        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
+
+        num_nodes = init_node_coords.shape[0]
+        coa_dampening_factor = np.max([0.8, 1.0 - (np.sum(chemoattractant_signal_on_nodes)/(num_nodes*self.max_chemoattractant_signal))])
+
+        self.system_history[access_index, :, parameterorg.kgtp_rac_index] = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, coa_dampening_factor, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
         
         self.system_history[access_index, :, parameterorg.kgtp_rho_index] = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -653,13 +657,15 @@ class Cell():
 
         
         if self.verbose == True:
-            print("max_coa: ", np.max(coa_signals))
-            print("min_coa: ", np.min(coa_signals))
-            print("min_cil: ", np.min(intercellular_contact_factors))
-            print("max_cil: ", np.max(intercellular_contact_factors))
-            print("rfs: ", np.max(self.randomization_rac_kgtp_multipliers))
-#           print "max_ext: ", np.max(chemoattractant_signal_on_nodes)
-#           print "min_ext: ", np.min(chemoattractant_signal_on_nodes)
+            # print("max_coa: ", np.max(coa_signals))
+            # print("min_coa: ", np.min(coa_signals))
+            # print("min_cil: ", np.min(intercellular_contact_factors))
+            # # print("max_cil: ", np.max(intercellular_contact_factors))
+            # print("rfs: ", np.max(self.randomization_rac_kgtp_multipliers))
+            print("max_chemo: {}".format(np.max(chemoattractant_signal_on_nodes)))
+            print("min_chemo: {}".format(np.min(chemoattractant_signal_on_nodes)))
+            print("max_endo: {}".format(np.max(endocytosis_effect_factor_on_nodes)))
+            print("min_endo: {}".format(np.min(endocytosis_effect_factor_on_nodes)))
         
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.coa_signal_index] = coa_signals
         self.system_history[next_tstep_system_history_access_index, :, parameterorg.cil_signal_index] = intercellular_contact_factors
@@ -729,9 +735,10 @@ class Cell():
         
         conc_rho_membrane_actives = chemistry.calculate_concentrations(self.num_nodes, rho_membrane_actives, avg_edge_lengths)
         
-        self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers 
-        
-        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
+        self.system_history[next_tstep_system_history_access_index, :, parameterorg.randomization_rac_kgtp_multipliers_index] = self.randomization_rac_kgtp_multipliers
+
+        coa_dampening_factor = np.max([0.8, 1.0 - (np.sum(chemoattractant_signal_on_nodes)/(num_nodes*self.max_chemoattractant_signal))])
+        kgtp_rac_per_node = chemistry.calculate_kgtp_rac(self.num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, self.exponent_rac_autoact, self.threshold_rac_autoact, self.kgtp_rac_baseline, self.kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, coa_dampening_factor, chemoattractant_signal_on_nodes, self.randomization_rac_kgtp_multipliers, intercellular_contact_factors, close_point_smoothness_factors)
         
         kgtp_rho_per_node = chemistry.calculate_kgtp_rho(self.num_nodes, conc_rho_membrane_actives, intercellular_contact_factors, migr_bdry_contact_factors, self.exponent_rho_autoact, self.threshold_rho_autoact, self.kgtp_rho_baseline, self.kgtp_rho_autoact_baseline)
         
@@ -771,8 +778,9 @@ class Cell():
         intercellular_contact_factors = chemistry.calculate_intercellular_contact_factors(this_cell_index, num_nodes, num_cells, self.interaction_factors_intercellular_contact_per_celltype, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_smoothness_factors)
         
         transduced_coa_signals = self.system_history[access_index, :, parameterorg.coa_signal_index]
-        
-        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_interaction_factors_intercellular_contact_per_celltype_index, self.nodal_migr_bdry_contact_index, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, endocytosis_effect_factor_on_nodes, chemoattractant_signal_on_nodes, self.interaction_factors_intercellular_contact_per_celltype, self.randomization_rac_kgtp_multipliers
+        coa_dampening_factor = np.max([0.8, 1.0 - (np.sum(chemoattractant_signal_on_nodes)/(num_nodes*self.max_chemoattractant_signal))])
+
+        return state_parameters, this_cell_index, self.num_nodes, self.num_nodal_phase_vars, self.num_ode_cellwide_phase_vars, self.nodal_rac_membrane_active_index, self.length_edge_resting, self.nodal_rac_membrane_inactive_index, self.nodal_rho_membrane_active_index, self.nodal_rho_membrane_inactive_index, self.nodal_x_index, self.nodal_y_index, self.kgtp_rac_baseline, self.kdgtp_rac_baseline, self.kgtp_rho_baseline, self.kdgtp_rho_baseline, self.kgtp_rac_autoact_baseline, self.kgtp_rho_autoact_baseline, self.kdgtp_rho_mediated_rac_inhib_baseline, self.kdgtp_rac_mediated_rho_inhib_baseline, self.kgdi_rac, self.kdgdi_rac, self.kgdi_rho, self.kdgdi_rho, self.threshold_rac_autoact, self.threshold_rho_autoact, self.threshold_rho_mediated_rac_inhib, self.threshold_rac_mediated_rho_inhib, self.exponent_rac_autoact, self.exponent_rho_autoact, self.exponent_rho_mediated_rac_inhib, self.exponent_rac_mediated_rho_inhib, self.diffusion_const_active, self.diffusion_const_inactive, self.nodal_interaction_factors_intercellular_contact_per_celltype_index, self.nodal_migr_bdry_contact_index, self.eta, num_cells, all_cells_node_coords, all_cells_node_forces, all_cells_centres, intercellular_squared_dist_array, self.stiffness_edge, self.threshold_force_rac_activity, self.threshold_force_rho_activity, self.max_force_rac, self.max_force_rho, self.force_adh_constant, self.closeness_dist_criteria, self.area_resting, self.stiffness_cytoplasmic, transduced_coa_signals, self.space_physical_bdry_polygon, self.exists_space_physical_bdry_polygon, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, intercellular_contact_factors, self.tension_mediated_rac_inhibition_half_strain, self.tension_mediated_rac_inhibition_magnitude, self.strain_calculation_type, endocytosis_effect_factor_on_nodes, coa_dampening_factor, chemoattractant_signal_on_nodes, self.interaction_factors_intercellular_contact_per_celltype, self.randomization_rac_kgtp_multipliers
 
 # -----------------------------------------------------------------
     def trim_system_history(self, environment_tpoint):
