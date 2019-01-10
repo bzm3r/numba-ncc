@@ -39,23 +39,23 @@ def create_cell_dataset(cell_index, storefile_path, num_nodes, num_info_labels):
 def append_exec_orders_to_dataset(exec_orders, storefile_path):
     with h5py.File(storefile_path, "a") as f:
         dset = f["exec_order"]
-        
+
         orig_index = dset.shape[0]
         dset.resize(dset.shape[0] + exec_orders.shape[0], axis=0)
         dset[orig_index:,:] = exec_orders
-        
+
     return
 
 # ============================================================================== 
 
 def append_cell_data_to_dataset(cell_index, cell_data, storefile_path):
+
     with h5py.File(storefile_path, "a") as f:
         dset = f[str(cell_index)]
-        
         orig_index = dset.shape[0]
-        
+
         dset.resize(dset.shape[0] + cell_data.shape[0], axis=0)
-        dset[orig_index:,:,:] = cell_data
+        dset[orig_index:, :, :] = cell_data
         
     return
         
@@ -64,13 +64,13 @@ def append_cell_data_to_dataset(cell_index, cell_data, storefile_path):
 def append_parameter_exploration_data_to_dataset(new_last_executed_chunk_index, parameter_exploration_results, storefile_path):
     with h5py.File(storefile_path, "a") as f:
         dset = f["exploration_results"]
-        
+
         orig_index = dset.shape[0]
         dset.resize(dset.shape[0] + parameter_exploration_results.shape[0], axis=0)
         dset[orig_index:,:] = parameter_exploration_results
         
         dset = f["last_executed_chunk_index"]
-        
+
         dset[0] = new_last_executed_chunk_index
 
     return

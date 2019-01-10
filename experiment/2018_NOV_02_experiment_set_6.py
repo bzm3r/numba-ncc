@@ -41,7 +41,7 @@ parameter_dict.update([('kgtp_rac_multiplier', 12.0),
   ('tension_mediated_rac_inhibition_magnitude', 40.0),
   ('max_force_rac', 3000.0),
   ('eta', 2.9*10000.0),
-  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25), ('endocytosis_effect_length_squared', (40e-6)**2)])
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25), ('chemoattractant_shielding_effect_length_squared', (40e-6)**2)])
 
 sub_experiment_number = 0
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
   slope = 0.02/40.0
   x_offset_in_corrdior = 625.0
   st = time.time()
-  parameter_dict.update([('max_chemoattractant_signal', test_chemo_magnitude)])
+  parameter_dict.update([('allow_coa_chemoattractant_interaction', False),])
   ets.chemotaxis_test_group_sizes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemo_magnitude=test_chemo_magnitude, test_chemo_slope=slope, num_experiment_repeats=5, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, default_coa_dict=coa_dict, default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[16])
   et = time.time()
   print("time taken: {}s".format(np.round(et - st, decimals=2)))

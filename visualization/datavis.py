@@ -2605,36 +2605,36 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
 
 
-def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios_per_num_cells, num_experiment_repeats, num_cells, box_widths, box_heights, save_dir=None, fontsize=22):
+def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios, num_experiment_repeats, num_cells, box_width, box_height, save_dir=None, fontsize=22):
     set_fontsize(fontsize)
     assert (len(test_magnitudes) == len(test_slopes))
     fig, ax = plt.subplots()
 
-    for i, nr, chemotaxis_success_ratios, nc, bw, bh in zip(np.arange(len(num_cells)), num_experiment_repeats, chemotaxis_success_ratios_per_num_cells, num_cells, box_widths, box_heights):
+    for i, nr, chemotaxis_success_ratios in zip(np.arange(len(test_magnitudes)), num_experiment_repeats, chemotaxis_success_ratios):
         indices = np.arange(len(test_slopes))
 
         xpoints = np.array([[index, index + 1, np.nan] for index in indices]).flatten()
         ypoints = np.array([[c, c, np.nan] for c in chemotaxis_success_ratios]).flatten()
 
-        ax.plot(xpoints, ypoints, color=colors.color_list20[i], label="{}, {}x{}, N={}".format(nc, bw, bh, nr))
+        ax.plot(xpoints, ypoints, color=colors.color_list20[0],)
 
-        ax.set_ylabel("success ratio")
-        ax.set_xticks([index + 0.5 for index in indices])
+    ax.set_ylabel("success ratio")
+    ax.set_xticks([index + 0.5 for index in indices])
 
-        xlabels = ["{},\n{}".format(s, m) for s, m in
-                   zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
-        ax.set_xticklabels(xlabels)
-        ax.set_xlabel("(gradient, magnitude at source)")
-        ax.set_title("success ratios")
+    xlabels = ["{},\n{}".format(s, m) for s, m in
+               zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    ax.set_xticklabels(xlabels)
+    ax.set_xlabel("(gradient, magnitude at source)")
+    ax.set_title("{} cells, {}x{} configuration".format(num_cells, box_width, box_height))
 
-        ax.set_ylim([-0.1, 1.5])
-        ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
-        ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_ylim([0.0, 1.25])
+    ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
 
     ax.legend(loc='best', fontsize=fontsize)
 
     x = datetime.datetime.now()
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "({})".format([(nr, nc, bw, bh) for nr, nc, bw, bh in zip(num_experiment_repeats, num_cells, box_widths, box_heights)]))
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute, x.second), "")
 
 def graph_group_chemotaxis_efficiency_data(test_magnitude, test_slope, chemotaxis_success_ratios_per_num_cells, num_experiment_repeats, num_cells, save_dir=None, fontsize=22):
 
@@ -2668,7 +2668,7 @@ def graph_group_chemotaxis_efficiency_data(test_magnitude, test_slope, chemotaxi
     ax.set_title("C={}, S={}".format(test_magnitude, test_slope))
 
     x = datetime.datetime.now()
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "C={}-S={}-({})".format(test_magnitude, 40.0*test_slope, num_cells))
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "C={}-S={}-({})".format(test_magnitude, test_slope, num_cells))
 
 def convert_rgba_to_rgb(rgba, background_color):
     rgb = [0.0, 0.0, 0.0]

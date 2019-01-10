@@ -41,7 +41,7 @@ parameter_dict.update([('kgtp_rac_multiplier', 12.0),
   ('tension_mediated_rac_inhibition_magnitude', 40.0),
   ('max_force_rac', 3000.0),
   ('eta', 2.9*10000.0),
-  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25), ('endocytosis_effect_length_squared', (40e-6)**2)])
+  ('stiffness_edge', 8000.0), ('randomization_time_mean', 20.0), ('randomization_time_variance_factor', 0.1), ('randomization_magnitude', 12.0), ('randomization_node_percentage', 0.25), ('chemoattractant_shielding_effect_length_squared', (40e-6)**2)])
 
 sub_experiment_number = 0
 

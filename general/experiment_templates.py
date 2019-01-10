@@ -22,7 +22,7 @@ global_randomization_scheme_dict = {'m': 'kgtp_rac_multipliers', 'w': 'wipeout'}
 # =======================================================================
 
 def setup_animation_settings(timestep_length, global_scale, plate_height, plate_width, velocity_scale=1,
-                             rgtpase_scale_factor=312.5, coa_scale_factor=62.5, show_velocities=False,
+                             rgtpase_scale_factor=312.5, coa_scale_factor=62.5, chemoattractant_scale_factor=62.5, show_velocities=False,
                              show_rgtpase=True, show_inactive_rgtpase=False, show_centroid_trail=False,
                              show_rac_random_spikes=False, show_coa=False, color_each_group_differently=False,
                              only_show_cells=[], polygon_line_width=1,
@@ -44,10 +44,10 @@ def setup_animation_settings(timestep_length, global_scale, plate_height, plate_
                              rgtpase_background_shine_color=None, migratory_bdry_color=colors.RGB_BRIGHT_RED,
                              physical_bdry_color=colors.RGB_BLACK, allowed_drift_before_geometry_recalc=-1.0,
                              specific_timesteps_to_draw_as_svg=[], chemoattractant_source_location=[],
-                             chemotaxis_target_radius=-1.0):
+                             chemotaxis_target_radius=-1.0, show_chemoattractant=False):
     return dict([('global_scale', global_scale), ('plate_height_in_micrometers', plate_height),
                  ('plate_width_in_micrometers', plate_width), ('velocity_scale', velocity_scale),
-                 ('rgtpase_scale', global_scale*rgtpase_scale_factor), ('coa_scale', global_scale*coa_scale_factor),
+                 ('rgtpase_scale', global_scale*rgtpase_scale_factor), ('coa_scale', global_scale*coa_scale_factor), ('chemoattractant_scale', global_scale*chemoattractant_scale_factor),
                  ('show_velocities', show_velocities), ('show_rgtpase', show_rgtpase),
                  ('show_centroid_trail', show_centroid_trail), ('show_rac_random_spikes', show_rac_random_spikes),
                  ('show_coa', show_coa), ('color_each_group_differently', color_each_group_differently),
@@ -74,7 +74,7 @@ def setup_animation_settings(timestep_length, global_scale, plate_height, plate_
                  ('specific_timesteps_to_draw_as_svg', specific_timesteps_to_draw_as_svg),
                  ('chemoattractant_source_location', chemoattractant_source_location),
                  ('chemotaxis_target_radius', chemotaxis_target_radius),
-                 ('show_inactive_rgtpase', show_inactive_rgtpase)])
+                 ('show_inactive_rgtpase', show_inactive_rgtpase), ('show_chemoattractant', show_chemoattractant)])
 
 
 def make_default_migr_polygon(make_migr_space_poly, width_corridor, height_corridor, corridor_x_offset,
@@ -1618,19 +1618,15 @@ def collate_corridor_convergence_data(num_experiment_repeats, experiment_dir):
 
 # ============================================================================
 
-def make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition):
+def make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, chemoattractant_mediated_coa_dampening_factor):
     if len(chemoattractant_source_definition.keys()) == 0:
         return ''
     else:
         if chemoattractant_source_definition['source_type'] == "linear":
-            return "-CS=L-{}-{}-{}".format(chemoattractant_source_definition["x_offset_in_corridor"],
-                                           chemoattractant_source_definition["max_value"],
-                                           chemoattractant_source_definition["slope"])
+            return "-CS=L-{}-{}-{}-COAd={}".format(chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["max_value"], chemoattractant_source_definition["slope"], chemoattractant_mediated_coa_dampening_factor)
 
         elif chemoattractant_source_definition['source_type'] == 'normal':
-            return "-CS=N-{}-{}-{}".format(chemoattractant_source_definition["x_offset_in_corridor"],
-                                           chemoattractant_source_definition["gaussian_width"],
-                                           chemoattractant_source_definition["gaussian_height"])
+            return "-CS=N-{}-{}-{}-COAd={}".format(chemoattractant_source_definition["x_offset_in_corridor"], chemoattractant_source_definition["gaussian_width"], chemoattractant_source_definition["gaussian_height"], chemoattractant_mediated_coa_dampening_factor)
         else:
             return "-CS=ERROR"
 
@@ -1955,7 +1951,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                      max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False,
                                      coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal",
                                      specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0,
-                                     show_centroid_trail=False):
+                                     show_centroid_trail=False, show_chemoattractant=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if num_cells == 0:
@@ -1970,13 +1966,13 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {}){}_COA={}_CIL={}{}_S={}".format(
             sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor,
             cell_placement_method, np.round(default_coa, decimals=3), np.round(default_cil, decimals=3),
-            make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition), seed)
+            make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict["chemoattractant_mediated_coa_dampening_factor"]), seed)
     else:
         experiment_name_format_string = "ch_{}_{}_NC=({}, {}, {}, {})({}, {}, {})_COA={}_CIL={}{}_S={}".format(
             sub_experiment_number, "{}", num_cells, box_width, box_height, box_y_placement_factor,
             cell_placement_method, max_placement_distance_factor, init_random_cell_placement_x_factor,
             np.round(default_coa, decimals=3), np.round(default_cil, decimals=3),
-            make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition), seed)
+            make_chemoattractant_source_info_tag_for_experiment_name(chemoattractant_source_definition, parameter_dict["chemoattractant_mediated_coa_dampening_factor"]), seed)
 
     if no_randomization:
         parameter_dict.update([('randomization_scheme', None)])
@@ -2054,9 +2050,10 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
         chemoattractant_source_location = np.array(
             [chemoattractant_source_definition['source_x'], chemoattractant_source_definition['source_y']])
 
-    chemoattractant_gradient_fn_per_subexperiment = [
-        make_chemoattractant_gradient_function(**chemoattractant_source_definition)]
+    chemoattractant_gradient_fn = make_chemoattractant_gradient_function(**chemoattractant_source_definition)
 
+    chemoattractant_gradient_fn_per_subexperiment = [chemoattractant_gradient_fn]
+    parameter_dict.update([('max_chemoattractant_signal', chemoattractant_gradient_fn(np.array([0.0, 0.0])))])
     user_cell_group_defns_per_subexperiment = []
     user_cell_group_defns = []
 
@@ -2109,7 +2106,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
                                                       specific_timesteps_to_draw_as_svg=specific_timesteps_to_draw_as_svg,
                                                       chemoattractant_source_location=chemoattractant_source_location,
                                                       chemotaxis_target_radius=chemotaxis_target_radius,
-                                                      show_centroid_trail=show_centroid_trail)
+                                                      show_centroid_trail=show_centroid_trail, show_chemoattractant=show_chemoattractant)
     elif colorscheme == "scifi":
         animation_settings = setup_animation_settings(timestep_length, global_scale, plate_height, plate_width,
                                                       show_centroid_trail=True, show_rac_random_spikes=False,
@@ -2150,7 +2147,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
 
     eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns,
                                 user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment,
-                                parameter_dict["endocytosis_effect_length_squared"],
+                                parameter_dict['chemoattractant_shielding_effect_length_squared'],
                                 chemoattractant_gradient_fn_per_subexperiment,
                                 num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings,
                                 produce_intermediate_visuals=produce_intermediate_visuals,
@@ -2400,18 +2397,8 @@ def corridor_migration_symmetric_test(date_str, experiment_number, sub_experimen
 
 # =============================================================================
 
-def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, parameter_dict,
-                                         no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\",
-                                         total_time_in_hours=3, timestep_length=2, verbose=True,
-                                         integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None,
-                                         allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0,
-                                         test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10,
-                                         timesteps_between_generation_of_intermediate_visuals=None,
-                                         produce_animation=True, produce_graphs=True, full_print=True,
-                                         delete_and_rerun_experiments_without_stored_env=True, run_experiments=True,
-                                         remake_graphs=False, remake_animation=False, default_coas=[], default_cil=60.0,
-                                         chemotaxis_target_radius=160.0, box_widths=[], box_heights=[],
-                                         box_y_placement_factor=0.5, num_cells=[]):
+def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, parameter_dict, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, test_x_offset_in_corridor=625.0, test_chemo_magnitudes=[], test_chemo_slope=0.0016, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coas=[], default_cil=60.0, chemotaxis_target_radius=160.0, box_widths=[], box_heights=[], box_y_placement_factor=0.5, num_cells=[]):
+
     test_chemo_magnitudes = sorted(test_chemo_magnitudes)
 
     assert(len(num_cells) == len(box_widths) == len(box_heights))
@@ -2420,39 +2407,21 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
     if type(num_experiment_repeats) == int:
         num_experiment_repeats = [num_experiment_repeats]*num_cases
 
-    chemotaxis_success_ratios_per_magslope_per_num_cells = []
+    chemotaxis_success_ratios_per_mag_per_num_cells = []
     experiment_set_directory = eu.get_experiment_set_directory_path(base_output_dir, date_str, experiment_number)
-
-    closest_to_source_per_repeat_per_magslope_per_num_cells = []
-    protrusion_lifetimes_and_directions_per_magslope = []
 
     for nci, nr, nc, bh, bw in zip(np.arange(num_cases), num_experiment_repeats, num_cells, box_heights, box_widths):
         chemotaxis_success_ratios = []
-        closest_to_source_per_repeat = []
         for xi, chm in enumerate(test_chemo_magnitudes):
             print("=========")
             print("mag: {}".format(chm))
-            experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(
-                date_str, experiment_number, sub_experiment_number, parameter_dict,
-                chemoattractant_source_definition={'source_type': 'linear',
-                                                   'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm,
-                                                   'slope': test_chemo_slope}, no_randomization=no_randomization,
-                base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length,
-                verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram,
-                seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-                default_coa=default_coas[nci], default_cil=default_cil, num_experiment_repeats=nr,
-                timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,
-                produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print,
-                delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
-                box_width=bw, box_height=bh, box_y_placement_factor=box_y_placement_factor,
-                num_cells=nc, run_experiments=run_experiments, remake_graphs=remake_graphs,
-                remake_animation=remake_animation, do_final_analysis=True,
-                chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
+            experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition={'source_type': 'linear', 'x_offset_in_corridor': test_x_offset_in_corridor, 'max_value': chm, 'slope': test_chemo_slope}, no_randomization=no_randomization, base_output_dir=base_output_dir, total_time_in_hours=total_time_in_hours, timestep_length=timestep_length, verbose=verbose, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=default_coas[nci], default_cil=default_cil, num_experiment_repeats=nr, timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, box_width=bw, box_height=bh, box_y_placement_factor=box_y_placement_factor, num_cells=nc, run_experiments=run_experiments, remake_graphs=remake_graphs, remake_animation=remake_animation, do_final_analysis=True, chemotaxis_target_radius=chemotaxis_target_radius, show_centroid_trail=False)
 
-            experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number,
-                                                                       experiment_name)
+            experiment_dir = eu.get_template_experiment_directory_path(base_output_dir, date_str, experiment_number, experiment_name)
+
             experiment_name_format_string = "RPT={}"
 
+            chemotaxis_success_per_repeat = None
             if run_experiments == False:
                 if not os.path.exists(experiment_dir):
                     raise Exception("Experiment directory does not exist.")
@@ -2474,88 +2443,64 @@ def chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experi
                                 relevant_environment.curr_tpoint*relevant_environment.T/3600.) == total_time_in_hours):
                             raise Exception("Simulation is not complete.")
 
-                    print("Data exists.")
+                        chemotaxis_success_per_repeat = np.load(os.path.join(experiment_dir, "chemotaxis_success_per_repeat.np"))
+            else:
+                all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(nr, experiment_dir)
 
-            all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat = collate_final_analysis_data(
-                nr, experiment_dir)
-
-            protrusion_lifetimes_and_directions = []
-            for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
-                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
-                    for l, d in protrusion_lifetime_dirn:
-                        protrusion_lifetimes_and_directions.append((l, d))
-
-            datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0,
-                                                        save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
-
-            chemotaxis_success_per_repeat = []
-            closest_to_source_per_repeat = []
-            for rpt_number in range(nr):
-                environment_name = experiment_name_format_string.format(rpt_number)
-                environment_dir = os.path.join(experiment_dir, environment_name)
-                storefile_path = eu.get_storefile_path(environment_dir)
-                # empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
-                relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False,
-                                                               produce_graphs, produce_animation,
-                                                               environment_wide_variable_defns)
-
-                chemotaxis_success, closest_to_source = cu.analyze_chemotaxis_success(relevant_environment, storefile_path,
-                                                                                      rpt_number, source_x, source_y,
-                                                                                      chemotaxis_target_radius)
-
-                chemotaxis_success_per_repeat.append(chemotaxis_success)
-                closest_to_source_per_repeat.append(closest_to_source)
-
-            success_protrusion_lifetimes_and_directions = []
-            fail_protrusion_lifetimes_and_directions = []
-            for i, protrusion_lifetime_dirn_per_cell in enumerate(all_cell_protrusion_lifetimes_and_directions_per_repeat):
-                if chemotaxis_success_per_repeat[i] == 1:
+                protrusion_lifetimes_and_directions = []
+                for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
                     for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                         for l, d in protrusion_lifetime_dirn:
-                            success_protrusion_lifetimes_and_directions.append((l, d))
-                else:
-                    for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
-                        for l, d in protrusion_lifetime_dirn:
-                            fail_protrusion_lifetimes_and_directions.append((l, d))
+                            protrusion_lifetimes_and_directions.append((l, d))
 
-            datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12,
-                                                        total_time_in_hours*60.0,
-                                                        save_dir=experiment_dir,
-                                                        save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(np.sum(chemotaxis_success_per_repeat)))
+                datavis.graph_protrusion_lifetimes_radially(protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0, save_dir=experiment_dir, save_name="all_cells_protrusion_life_dir")
 
-            datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12,
-                                                        total_time_in_hours*60.0,
-                                                        save_dir=experiment_dir,
-                                                        save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(nr - np.sum(chemotaxis_success_per_repeat)))
+                chemotaxis_success_per_repeat = []
+                for rpt_number in range(nr):
+                    environment_name = experiment_name_format_string.format(rpt_number)
+                    environment_dir = os.path.join(experiment_dir, environment_name)
+                    storefile_path = eu.get_storefile_path(environment_dir)
+                    # empty_env_pickle_path, produce_intermediate_visuals, produce_final_visuals, environment_wide_variable_defns, simulation_execution_enabled=False
+                    relevant_environment = eu.retrieve_environment(eu.get_pickled_env_path(environment_dir), False, produce_graphs, produce_animation, environment_wide_variable_defns)
 
-            chemotaxis_success_ratios.append(np.sum(chemotaxis_success_per_repeat)/nr)
-            closest_to_source_per_repeat.append(closest_to_source_per_repeat)
+                    chemotaxis_success, closest_to_source = cu.analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y, chemotaxis_target_radius)
 
-        chemotaxis_success_ratios_per_magslope_per_num_cells.append(copy.deepcopy(chemotaxis_success_ratios))
-        closest_to_source_per_repeat_per_magslope_per_num_cells.append(copy.deepcopy(closest_to_source_per_repeat_per_magslope_per_num_cells))
+                    chemotaxis_success_per_repeat.append(chemotaxis_success)
+
+                success_protrusion_lifetimes_and_directions = []
+                fail_protrusion_lifetimes_and_directions = []
+                for i, protrusion_lifetime_dirn_per_cell in enumerate(all_cell_protrusion_lifetimes_and_directions_per_repeat):
+                    if chemotaxis_success_per_repeat[i] == 1:
+                        for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                            for l, d in protrusion_lifetime_dirn:
+                                success_protrusion_lifetimes_and_directions.append((l, d))
+                    else:
+                        for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
+                            for l, d in protrusion_lifetime_dirn:
+                                fail_protrusion_lifetimes_and_directions.append((l, d))
+
+                datavis.graph_protrusion_lifetimes_radially(success_protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0, save_dir=experiment_dir, save_name="successful_cells_protrusion_lifetime_dirn_N={}".format(np.sum(chemotaxis_success_per_repeat)))
+
+                datavis.graph_protrusion_lifetimes_radially(fail_protrusion_lifetimes_and_directions, 12, total_time_in_hours*60.0, save_dir=experiment_dir, save_name="fail_cells_protrusion_lifetime_dirn_N={}".format(nr - np.sum(chemotaxis_success_per_repeat)))
+
+                chemotaxis_success_save_fp = os.path.join(experiment_dir, "chemotaxis_success_per_repeat.np")
+                np.save(chemotaxis_success_save_fp, chemotaxis_success_per_repeat)
+
+            chemotaxis_success_ratios.append(np.sum(chemotaxis_success_per_repeat[:nr])/nr)
+
+        chemotaxis_success_ratios_per_mag_per_num_cells.append(copy.deepcopy(chemotaxis_success_ratios))
 
     print("=========")
-    # sub_experiment_number, test_chemo_magnitudes, test_chemo_slope, chemotaxis_success_ratios, box_width, box_height, num_cells, save_dir=None, fontsize=22
     datavis.graph_chemotaxis_efficiency_data(
         sub_experiment_number,
         test_chemo_magnitudes,
         [test_chemo_slope]*len(test_chemo_magnitudes),
-        chemotaxis_success_ratios_per_magslope_per_num_cells,
+        chemotaxis_success_ratios_per_mag_per_num_cells,
         num_experiment_repeats,
         num_cells,
         box_widths,
         box_heights,
         save_dir=experiment_set_directory)
-    # datavis.graph_chemotaxis_efficiency_data_using_violins(
-    #     sub_experiment_number,
-    #     test_chemo_magnitudes,
-    #     [test_chemo_slope]*len(test_chemo_magnitudes),
-    #     closest_to_source_per_repeat_per_magslope_per_num_cells,
-    #     box_widths,
-    #     box_heights,
-    #     num_cells,
-    #     save_dir=experiment_set_directory)
-    # datavis.graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_chemo_magnitudes, [test_chemo_slope]*len(test_chemo_magnitudes), protrusion_lifetimes_and_directions_per_magslope, box_width, box_height, num_cells, save_dir=experiment_set_directory)
 
     print("Complete.")
 

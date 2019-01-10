@@ -255,7 +255,7 @@ class Environment():
     """
 
     def __init__(self, environment_name='', num_timesteps=0, space_physical_bdry_polygon=np.array([], dtype=np.float64),
-                 space_migratory_bdry_polygon=np.array([], dtype=np.float64), endocytosis_effect_length_squared=0.0, chemoattractant_signal_fn=lambda x: 0.0,
+                 space_migratory_bdry_polygon=np.array([], dtype=np.float64), chemoattractant_shielding_effect_length_squared=0.0, chemoattractant_signal_fn=lambda x: 0.0,
                  cell_group_defns=None, environment_dir=None, verbose=True, T=(1/0.5), integration_params={},
                  full_print=False, persist=True, parameter_explorer_run=False,
                  parameter_explorer_init_rho_gtpase_conditions=None, max_timepoints_on_ram=1000, seed=None,
@@ -299,7 +299,7 @@ class Environment():
 
         self.space_physical_bdry_polygon = space_physical_bdry_polygon
         self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
-        self.endocytosis_effect_length_squared = endocytosis_effect_length_squared
+        self.chemoattractant_shielding_effect_length_squared = chemoattractant_shielding_effect_length_squared
         self.chemoattractant_signal_fn = chemoattractant_signal_fn
         self.cell_group_defns = cell_group_defns
 
@@ -605,7 +605,7 @@ class Environment():
             # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
             current_cell.execute_step(cell_index, self.num_nodes, environment_cells_node_coords,
                                       environment_cells_node_forces, cells_node_distance_matrix[cell_index],
-                                      cells_line_segment_intersection_matrix[cell_index], self.endocytosis_effect_length_squared,
+                                      cells_line_segment_intersection_matrix[cell_index], self.chemoattractant_shielding_effect_length_squared,
                                       self.chemoattractant_signal_fn, be_talkative=self.full_print)
 
             if current_cell.skip_dynamics == False:

@@ -470,13 +470,14 @@ def draw_coa_overlay(coa_overlay_color, resolution, coa_grid_points, coa_data_pe
 # -------------------------------------
         
 class AnimationCell():
-    def __init__(self, polygon_edge_and_vertex_color, polygon_fill_color, rgtpase_colors, rgtpase_background_shine_color, velocity_colors, centroid_color, coa_color, hidden, show_rgtpase, show_velocities, show_centroid_trail, show_coa, polygon_line_width, rgtpase_line_width, velocity_line_width, centroid_line_width, coa_line_width):
+    def __init__(self, polygon_edge_and_vertex_color, polygon_fill_color, rgtpase_colors, rgtpase_background_shine_color, velocity_colors, centroid_color, coa_color, chemoattractant_color, hidden, show_rgtpase, show_velocities, show_centroid_trail, show_coa, show_chemoattractant, polygon_line_width, rgtpase_line_width, velocity_line_width, centroid_line_width, coa_line_width, chemoattractant_line_width):
         self.hidden = hidden
         
         self.show_velocities = show_velocities
         self.show_rgtpase = show_rgtpase
         self.show_centroid_trail = show_centroid_trail
         self.show_coa = show_coa
+        self.show_chemoattractant = show_chemoattractant
         
         self.polygon_edge_and_vertex_color = polygon_edge_and_vertex_color
         self.polygon_fill_color = polygon_fill_color
@@ -494,6 +495,9 @@ class AnimationCell():
         
         self.coa_color = coa_color
         self.coa_line_width = coa_line_width
+
+        self.chemoattractant_color = chemoattractant_color
+        self.chemoattractant_line_width = chemoattractant_line_width
 
     # -------------------------------------
         
@@ -598,6 +602,23 @@ class AnimationCell():
             context.move_to(x0, y0)
             context.line_to(x1, y1)
             context.stroke()
+
+    # -------------------------------------
+
+    def draw_chemoattractant(self, context, polygon_coords, chemoattractant_line_coords):
+        context.set_line_width(self.coa_line_width)
+
+        r, g, b = self.chemoattractant_color
+        context.set_source_rgb(r, g, b)
+
+        for polygon_coord, chemoattractant_line_coord in zip(polygon_coords, chemoattractant_line_coords):
+            x0, y0 = polygon_coord
+            x1, y1 = polygon_coord + 0.1*chemoattractant_line_coord
+
+            context.new_path()
+            context.move_to(x0, y0)
+            context.line_to(x1, y1)
+            context.stroke()
                 
     # -------------------------------------
     
@@ -623,7 +644,7 @@ class AnimationCell():
             
     # -------------------------------------
     
-    def draw(self, context, polygon_coords, rgtpase_line_coords_per_label, rac_random_spikes_info, velocity_line_coords_per_label, centroid_coords_per_frame, coa_line_coords):
+    def draw(self, context, polygon_coords, rgtpase_line_coords_per_label, rac_random_spikes_info, velocity_line_coords_per_label, centroid_coords_per_frame, coa_line_coords, chemoattractant_line_coords):
         if self.hidden == False:
             
             self.draw_cell_polygon(context, polygon_coords)
@@ -642,6 +663,9 @@ class AnimationCell():
                 
             if (self.show_coa == True):
                 self.draw_coa(context, polygon_coords, coa_line_coords)
+
+            if (self.show_chemoattractant == True):
+                self.draw_chemoattractant(context, polygon_coords, chemoattractant_line_coords)
                 
             return True
         else:
@@ -722,9 +746,34 @@ def prepare_coa_data(coa_scale, cell_index, unique_undrawn_timesteps, polygon_co
 
     unit_inside_pointing_vecs = geometry.calculate_unit_inside_pointing_vecs_per_timestep(polygon_coords_per_timestep)
     
-    coa_signal = coa_mag*unit_inside_pointing_vecs + polygon_coords_per_timestep
+    coa_signal = geometry.multiply_vectors_by_scalars(unit_inside_pointing_vecs, coa_mag) + polygon_coords_per_timestep
     
     return coa_signal
+
+
+def prepare_chemoattractant_data(chemoattractant_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timestep, offset_magnitude, storefile_path):
+    chemoattractant_mag = chemoattractant_scale * hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "chemoattractant_signal_on_nodes", storefile_path) * hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "chemoattractant_shielding_effect_factor_on_nodes", storefile_path)
+
+    unit_inside_pointing_vecs = geometry.calculate_unit_inside_pointing_vecs_per_timestep(polygon_coords_per_timestep)
+
+    num_timesteps = unit_inside_pointing_vecs.shape[0]
+    num_nodes = unit_inside_pointing_vecs.shape[1]
+
+    unit_inside_pointing_vecs = unit_inside_pointing_vecs.reshape((num_timesteps * num_nodes, 2))
+
+    normal_to_uivs = geometry.rotate_2D_vectors_CCW(unit_inside_pointing_vecs)
+    normal_to_uivs = normal_to_uivs.reshape((num_timesteps, num_nodes, 2))
+
+    chemoattractant_mag = chemoattractant_mag.reshape((num_timesteps*num_nodes,))
+    chemoattractant_vecs = geometry.multiply_vectors_by_scalars(-1*unit_inside_pointing_vecs, chemoattractant_mag)
+    chemoattractant_vecs = chemoattractant_vecs.reshape((num_timesteps, num_nodes, 2))
+    unit_inside_pointing_vecs = unit_inside_pointing_vecs.reshape((num_timesteps, num_nodes, 2))
+
+    offset_vecs = offset_magnitude * normal_to_uivs  # 0*normal_to_uivs
+
+    positive_offset = offset_vecs + polygon_coords_per_timestep
+
+    return -1*chemoattractant_vecs
     
 def prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, storefile_path):
     rac_random_spike_info = hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "randomization_rac_kgtp_multipliers", storefile_path)
@@ -950,7 +999,7 @@ def draw_timestamp(timestep, timestep_length, text_color, font_size, global_scal
 
 def draw_animation_frame(task):
     
-    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = task
+    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spikes_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_line_coords_per_timepoint_per_cell, coa_overlay_color, coa_overlay_resolution, coa_grid_points, coa_data_per_gridpoint, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = task
     
     if image_format == ".png":
             surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels)
@@ -1006,8 +1055,13 @@ def draw_animation_frame(task):
             coa_data = None
         else:
             coa_data = coa_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
+
+        if type(chemoattractant_line_coords_per_timepoint_per_cell) != np.ndarray:
+            chemoattractant_data = None
+        else:
+            chemoattractant_data = chemoattractant_line_coords_per_timepoint_per_cell[cell_index][timestep_index]
         
-        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data)
+        anicell.draw(context, polygon_coords_per_timepoint_per_cell[cell_index][timestep_index], rgtpase_data, rac_random_spikes_info, velocity_data, centroid_data, coa_data, chemoattractant_data)
     
     if len(chemoattractant_source_location) != 0:
         context.new_path()
@@ -1038,7 +1092,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
 # --------------------------------------------------------------------------     
     
 class EnvironmentAnimation():
-    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, show_velocities=False, show_rgtpase=False, show_inactive_rgtpase=False, show_centroid_trail=False, show_coa=True, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, chemoattractant_dot_color=colors.RGB_LIGHT_GREEN, migratory_bdry_color=colors.RGB_BRIGHT_RED, physical_bdry_color=colors.RGB_BLACK, default_cell_polygon_fill_color=colors.RGB_WHITE, cell_polygon_edge_and_vertex_colors=[], default_cell_polygon_edge_and_vertex_color=colors.RGB_BLACK, rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], rgtpase_background_shine_color=None, velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.0, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, show_physical_bdry_polygon=False, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_source_location=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, show_coa_overlay=True, max_coa_signal=-1.0, coa_too_close_dist_squared=1e-12, coa_distribution_exponent=0.0, coa_intersection_exponent=0.0, coa_overlay_color=colors.RGB_LIGHT_GREEN, coa_overlay_resolution=1, cell_dependent_coa_signal_strengths=[], short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, allowed_drift_before_geometry_recalc=-1.0, specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1):        
+    def __init__(self, general_animation_save_folder_path, environment_name, num_cells, num_nodes, max_num_timepoints, cell_group_indices, cell_Ls, cell_etas, cell_skip_dynamics, env_storefile_path, global_scale=1, plate_height_in_micrometers=400, plate_width_in_micrometers=600, rotation_theta=0.0, translation_x=10, translation_y=10, velocity_scale=1, rgtpase_scale=1, coa_scale=1, chemoattractant_scale=1, show_velocities=False, show_rgtpase=False, show_inactive_rgtpase=False, show_centroid_trail=False, show_coa=False, show_chemoattractant=False, color_each_group_differently=False, show_rac_random_spikes=False, only_show_cells=[], background_color=colors.RGB_WHITE, chemoattractant_dot_color=colors.RGB_LIGHT_GREEN, migratory_bdry_color=colors.RGB_BRIGHT_RED, physical_bdry_color=colors.RGB_BLACK, default_cell_polygon_fill_color=colors.RGB_WHITE, cell_polygon_edge_and_vertex_colors=[], default_cell_polygon_edge_and_vertex_color=colors.RGB_BLACK, rgtpase_colors=[colors.RGB_BRIGHT_BLUE, colors.RGB_LIGHT_BLUE, colors.RGB_BRIGHT_RED, colors.RGB_LIGHT_RED], rgtpase_background_shine_color=None, velocity_colors=[colors.RGB_ORANGE, colors.RGB_LIGHT_GREEN, colors.RGB_LIGHT_GREEN, colors.RGB_CYAN, colors.RGB_MAGENTA], coa_color=colors.RGB_DARK_GREEN, font_size=16, font_color=colors.RGB_BLACK, offset_scale=0.2, polygon_line_width=1, rgtpase_line_width=1, velocity_line_width=1, coa_line_width=1, chemoattractant_line_width=1, show_physical_bdry_polygon=False, space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_source_location=np.array([]), centroid_colors_per_cell=[], centroid_line_width=1, show_coa_overlay=True, max_coa_signal=-1.0, coa_too_close_dist_squared=1e-12, coa_distribution_exponent=0.0, coa_intersection_exponent=0.0, coa_overlay_color=colors.RGB_LIGHT_GREEN, coa_overlay_resolution=1, cell_dependent_coa_signal_strengths=[], short_video_length_definition=2000.0, short_video_duration=5.0, timestep_length=None, fps=30, origin_offset_in_pixels=np.zeros(2), string_together_pictures_into_animation=True, allowed_drift_before_geometry_recalc=-1.0, specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1):
         self.global_scale = global_scale
         self.rotation_theta = rotation_theta
         self.translation_x = translation_x
@@ -1072,10 +1126,12 @@ class EnvironmentAnimation():
         self.show_inactive_rgtpase = show_inactive_rgtpase
         self.show_centroid_trail = show_centroid_trail
         self.show_coa = show_coa
+        self.show_chemoattractant = show_chemoattractant
         
         self.velocity_scale = velocity_scale
         self.rgtpase_scale = rgtpase_scale
         self.coa_scale = coa_scale
+        self.chemoattractant_scale = chemoattractant_scale
         
         self.only_show_cells = only_show_cells
         self.background_color = background_color
@@ -1115,6 +1171,7 @@ class EnvironmentAnimation():
         self.velocity_line_width = velocity_line_width
         self.centroid_line_width = centroid_line_width
         self.coa_line_width = coa_line_width
+        self.chemoattractant_line_width = chemoattractant_line_width
         
         self.show_physical_bdry_polygon = show_physical_bdry_polygon
         if self.show_physical_bdry_polygon == True:
@@ -1208,9 +1265,14 @@ class EnvironmentAnimation():
             rac_random_spike_info_per_timepoint_per_cell = None
             
         if self.show_coa:
-            coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, self.max_num_timepoints, self.num_nodes, 2), dtype=np.float64)
+            coa_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes, 2), dtype=np.float64)
         else:
             coa_line_coords_per_timepoint_per_cell = None
+
+        if self.show_chemoattractant:
+            chemoattractant_line_coords_per_timepoint_per_cell = np.zeros((self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes, 2), dtype=np.float64)
+        else:
+            chemoattractant_line_coords_per_timepoint_per_cell = None
             
         coa_grid_points, coa_grid_point_data = np.array([]), np.array([])
         
@@ -1243,7 +1305,10 @@ class EnvironmentAnimation():
                 rac_random_spike_info_per_timepoint_per_cell[cell_index,:,:] = prepare_rac_random_spike_data(cell_index, unique_undrawn_timesteps, self.storefile_path)
                 
             if self.show_coa:
-                coa_line_coords_per_timepoint_per_cell[cell_index,:,:,:] = prepare_coa_data(self.coa_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timepoint_per_cell, self.storefile_path)
+                coa_line_coords_per_timepoint_per_cell[cell_index,:,:,:] = prepare_coa_data(self.coa_scale, cell_index, unique_undrawn_timesteps, this_cell_polygon_coords_per_timestep, self.storefile_path)
+
+            if self.show_chemoattractant:
+                chemoattractant_line_coords_per_timepoint_per_cell[cell_index,:,:,:] = prepare_chemoattractant_data(self.chemoattractant_scale, cell_index, unique_undrawn_timesteps, this_cell_polygon_coords_per_timestep, offset_magnitude, self.storefile_path)
                 
         if self.show_coa_overlay:
 #            assert(self.allowed_drift_before_geometry_recalc >= 0)
@@ -1282,7 +1347,7 @@ class EnvironmentAnimation():
             coa_grid_points, coa_grid_point_data = generate_coa_overlay_data(unique_undrawn_timesteps, self.plate_width_in_micrometers, self.plate_height_in_micrometers, self.max_coa_signal, self.coa_too_close_dist_squared, self.coa_distribution_exponent, self.coa_intersection_exponent, self.cell_dependent_coa_signal_strengths, polygon_coords_per_timepoint_per_cell, self.space_migratory_bdry_polygon, self.space_physical_bdry_polygon, self.coa_overlay_data_store_path, resolution=self.coa_overlay_resolution)
                 
         print("Done gathering visualization data.")              
-        return polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, coa_grid_points, coa_grid_point_data
+        return polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, coa_grid_points, coa_grid_point_data, chemoattractant_line_coords_per_timepoint_per_cell
                                     
     # ---------------------------------------------------------------------
                                     
@@ -1305,11 +1370,13 @@ class EnvironmentAnimation():
                 show_rgtpase = False
                 show_centroid_trail = False
                 show_coa = False
+                show_chemoattractant = False
             else:
                 show_velocities = self.show_velocities
                 show_rgtpase = self.show_rgtpase
                 show_centroid_trail = self.show_centroid_trail
                 show_coa = self.show_coa
+                show_chemoattractant = self.show_chemoattractant
             
             polygon_edge_and_vertex_color = self.default_cell_polygon_edge_and_vertex_color
             if len_cell_poly_colors > 0:
@@ -1318,7 +1385,7 @@ class EnvironmentAnimation():
                         polygon_edge_and_vertex_color = self.cell_polygon_colors[i][1]
                         
             colors.color_list20[cell_index%20]
-            animation_cell = AnimationCell(polygon_edge_and_vertex_color, self.default_cell_polygon_fill_color, self.rgtpase_colors, self.rgtpase_background_shine_color, self.velocity_colors, colors.color_list20[cell_index%20], self.coa_color, hidden, show_rgtpase, show_velocities, show_centroid_trail, show_coa, self.polygon_line_width, self.rgtpase_line_width, self.velocity_line_width, self.centroid_line_width, self.coa_line_width)
+            animation_cell = AnimationCell(polygon_edge_and_vertex_color, self.default_cell_polygon_fill_color, self.rgtpase_colors, self.rgtpase_background_shine_color, self.velocity_colors, colors.color_list20[cell_index%20], self.coa_color, self.chemoattractant_dot_color, hidden, show_rgtpase, show_velocities, show_centroid_trail, show_coa, show_chemoattractant, self.polygon_line_width, self.rgtpase_line_width, self.velocity_line_width, self.centroid_line_width, self.coa_line_width, self.chemoattractant_line_width)
             
             animation_cells.append(animation_cell)
             
@@ -1377,7 +1444,7 @@ class EnvironmentAnimation():
             max_global_image_number_length = len(str(self.max_num_timepoints))
             global_image_name_format_str = "global_img{{:0>{}}}.svg".format(max_global_image_number_length)
         
-        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, coa_grid_points, coa_data_per_grid_point_per_timepoint = self.gather_data(timestep_to_draw_till, unique_undrawn_timesteps)
+        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, coa_grid_points, coa_data_per_grid_point_per_timepoint, chemoattractant_line_coords_per_timepoint_per_cell = self.gather_data(timestep_to_draw_till, unique_undrawn_timesteps)
 
         animation_cells = self.create_animation_cells()
         
@@ -1413,8 +1480,9 @@ class EnvironmentAnimation():
                 this_image_coa_data = coa_data_per_grid_point_per_timepoint[i]
                 
             self.image_drawn_array[t] = 1
-            drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format))
-    
+
+            drawing_tasks.append((i, t, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_line_coords_per_timepoint_per_cell, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format))
+
         pool = ProcessPool(nodes=4)
         pool.map(draw_animation_frame, drawing_tasks)
 

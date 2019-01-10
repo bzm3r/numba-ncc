@@ -15,7 +15,7 @@ import copy
 
 output_mech_labels = ['x', 'y', 'edge_lengths', 'F_x', 'F_y', 'EFplus_x', 'EFplus_y', 'EFminus_x', 'EFminus_y', 'F_rgtpase_x', 'F_rgtpase_y', 'F_cytoplasmic_x', 'F_cytoplasmic_y', 'F_adhesion_x', 'F_adhesion_y', 'local_strains', 'interaction_factors_intercellular_contact_per_celltype', 'migr_bdry_contact', 'unit_in_vec_x', 'unit_in_vec_y']
 
-output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'chemoattractant_signal_on_nodes', 'endocytosis_effect_factor_on_nodes']
+output_chem_labels = ['rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound', 'coa_signal', 'cil_signal', 'kdgdi_rac', 'kdgdi_rho', 'kgtp_rac', 'kgtp_rho', 'kdgtp_rac', 'kdgtp_rho', 'migr_bdry_contact_factor_mag', 'randomization_event_occurred', 'randomization_rac_kgtp_multipliers', 'chemoattractant_signal_on_nodes', 'chemoattractant_shielding_effect_factor_on_nodes']
 
 output_info_labels = output_mech_labels + output_chem_labels
 
@@ -39,9 +39,9 @@ mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge'
 
 space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
 
-interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria', 'coa_intersection_exponent']
+interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria', 'coa_intersection_exponent', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist', 'chemoattractant_mediated_coa_dampening_factor', 'max_chemoattractant_signal']
 
-randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'randomization_type', 'max_chemoattractant_signal', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist']
+randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'randomization_type']
 
 model_run_parameter_labels = ['num_nodes', 'skip_dynamics', 'biased_rgtpase_distrib_defn', 'init_node_coords', 'init_cell_radius']
 
@@ -52,10 +52,11 @@ all_parameter_labels = rho_gtpase_parameter_labels + mech_parameter_labels + spa
 
 polygon_model_parameters = {'init_cell_radius': 2e-05, 'num_nodes': None}
 
-user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'tension_mediated_rac_inhibition_magnitude': [1.0, 100.0], 'strain_calculation_type': None, 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_chemoattractant_signal': [0.0, np.inf], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000], 'threshold_rac_activity_multiplier': [0.01, 1]}
+user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgtpase_membrane_active_frac': [0, 1], 'coa_sensing_value_at_dist': 0.5, 'threshold_rho_activity_multiplier': [0.01, 1], 'kgtp_rac_autoact_multiplier': [1, 1000], 'C_total': [2e6, 3e6], 'kdgtp_rho_multiplier': [1, 2000], 'coa_sensing_dist_at_value': 0.00011, 'tension_mediated_rac_inhibition_half_strain': [0.01, 0.99], 'tension_mediated_rac_inhibition_magnitude': [1.0, 100.0], 'strain_calculation_type': None, 'init_rgtpase_cytosol_frac': [0, 1], 'hill_exponent': 3, 'kgtp_rac_multiplier': [1, 500], 'max_coa_signal': [-1, 10], 'H_total': [0.5e6, 1.5e6], 'diffusion_const': [2e-14, 4.5e-13], 'kdgtp_rac_multiplier': [1, 2000], 'kgtp_rho_multiplier': [1, 500], 'kgdi_multiplier': [1, 2], 'kgtp_rho_autoact_multiplier': [1, 1000], 'init_rgtpase_membrane_inactive_frac': [0, 1], 'kdgtp_rac_mediated_rho_inhib_multiplier': [1, 2000], 'kdgtp_rho_mediated_rac_inhib_multiplier': [1, 2000],
+                                           'threshold_rac_activity_multiplier': [0.01, 1], 'max_chemoattractant_signal': None, 'chemoattractant_mediated_coa_dampening_factor': [0.0, 1.0]}
 
 
-user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0], 'endocytosis_effect_length_squared': None}
+user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0], 'chemoattractant_shielding_effect_length_squared': None}
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
@@ -148,10 +149,11 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['tension_mediated_rac_inhibition_magnitude'] = user_parameter_dict['tension_mediated_rac_inhibition_magnitude']
     cell_parameter_dict['strain_calculation_type'] = user_parameter_dict['strain_calculation_type']
     cell_parameter_dict['max_coa_signal'] = user_parameter_dict['max_coa_signal']
-    cell_parameter_dict['max_chemoattractant_signal'] = user_parameter_dict['max_chemoattractant_signal']
     cell_parameter_dict['coa_sensing_dist_at_value'] = user_parameter_dict['coa_sensing_dist_at_value']
     cell_parameter_dict['coa_sensing_value_at_dist'] = user_parameter_dict['coa_sensing_value_at_dist']
     cell_parameter_dict['coa_intersection_exponent'] = user_parameter_dict['coa_intersection_exponent']
+    cell_parameter_dict['chemoattractant_mediated_coa_dampening_factor'] = user_parameter_dict['chemoattractant_mediated_coa_dampening_factor']
+    cell_parameter_dict['max_chemoattractant_signal'] = user_parameter_dict['max_chemoattractant_signal']
     
     num_nodes, init_cell_radius = user_parameter_dict['num_nodes'], user_parameter_dict['init_cell_radius']
     cell_parameter_dict['num_nodes'], cell_parameter_dict['init_cell_radius'] = num_nodes, init_cell_radius
@@ -251,7 +253,7 @@ def find_undefined_labels(cell_group_parameter_dict):
     
 # ==============================================================
 
-def make_environment_given_user_cell_group_defns(animation_settings, environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), endocytosis_effect_length_squared=0.0, chemoattractant_signal_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
+def make_environment_given_user_cell_group_defns(animation_settings, environment_name='', num_timesteps=0, user_cell_group_defns=[], space_physical_bdry_polygon=np.array([]), space_migratory_bdry_polygon=np.array([]), chemoattractant_shielding_effect_length_squared=0.0, chemoattractant_signal_fn=lambda x: 0, verbose=False, environment_dir="B:\\numba-ncc\\output", T=(1/0.5), integration_params={}, persist=True, parameter_explorer_run=False, max_timepoints_on_ram=1000, seed=None, allowed_drift_before_geometry_recalc=1.0, parameter_explorer_init_rho_gtpase_conditions=None, justify_parameters=True, cell_placement_method='r', max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, convergence_test=False, graph_group_centroid_splits=False):
     
     num_cell_groups = len(user_cell_group_defns)
         
@@ -267,7 +269,7 @@ def make_environment_given_user_cell_group_defns(animation_settings, environment
         
     
     the_environment = environment.Environment(environment_name=environment_name, num_timesteps=num_timesteps, cell_group_defns=user_cell_group_defns, space_physical_bdry_polygon=space_physical_bdry_polygon, space_migratory_bdry_polygon=space_migratory_bdry_polygon, environment_dir=environment_dir, verbose=verbose, T=T, integration_params=integration_params, persist=persist, parameter_explorer_run=parameter_explorer_run,
-      endocytosis_effect_length_squared=endocytosis_effect_length_squared,
+      chemoattractant_shielding_effect_length_squared=chemoattractant_shielding_effect_length_squared,
       chemoattractant_signal_fn=chemoattractant_signal_fn, max_timepoints_on_ram=max_timepoints_on_ram, seed=seed, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions, cell_placement_method=cell_placement_method, max_placement_distance_factor=max_placement_distance_factor, init_random_cell_placement_x_factor=init_random_cell_placement_x_factor, convergence_test=convergence_test, graph_group_centroid_splits=graph_group_centroid_splits)
     
     return the_environment

@@ -121,30 +121,33 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     return 1 - hill_function(tension_mediated_rac_hill_exponent, tension_mediated_rac_inhibition_half_strain, strain)
     
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)        
-def calculate_kgtp_rac(num_nodes, conc_rac_membrane_actives, migr_bdry_contact_factors, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, endocytosis_effect_factor_on_nodes, coa_dampening_factor, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
+@nb.jit(nopython=True)
+def calculate_kgtp_rac(conc_rac_membrane_actives, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_shielding_effect_factor_on_nodes, chemoattractant_mediated_coa_dampening, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]
     result = np.empty(num_vertices, dtype=np.float64)
-    kgtp_rac_autoact = 0.0
 
     for i in range(num_vertices):
-        i_plus1 = (i + 1)%num_vertices
-        i_minus1 = (i - 1)%num_vertices
-        
-        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] + intercellular_contact_factors[i_minus1])/3.0
+        i_plus1 = (i + 1) % num_vertices
+        i_minus1 = (i - 1) % num_vertices
+
+        cil_factor = (intercellular_contact_factors[i] + intercellular_contact_factors[i_plus1] +
+                      intercellular_contact_factors[i_minus1]) / 3.0
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]
-        
-        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]*endocytosis_effect_factor_on_nodes[i]
-        
+
+        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i] * chemoattractant_shielding_effect_factor_on_nodes[i]
+
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
 
-        rac_autoact_hill_function = hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
-        kgtp_rac_autoact = kgtp_rac_autoact_baseline*rac_autoact_hill_function
-        
-        result[i] = (randomization_factors[i] + coa_dampening_factor*coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact*(chemoattractant_signal_at_node*(1 - 0.5*coa_dampening_factor) + 1.0)
-        
+        rac_autoact_hill_effect = hill_function(exponent_rac_autoact, threshold_rac_autoact, conc_rac_membrane_actives[i])
+        kgtp_rac_autoact = kgtp_rac_autoact_baseline*rac_autoact_hill_effect*(1.0 + chemoattractant_signal_at_node)
+
+        if kgtp_rac_autoact > 1.25*kgtp_rac_autoact_baseline:
+            kgtp_rac_autoact = 1.25*kgtp_rac_autoact_baseline
+
+        result[i]=(randomization_factors[i] + chemoattractant_mediated_coa_dampening*coa_signal)*kgtp_rac_baseline + kgtp_rac_autoact
+
     return result
 
 # -----------------------------------------------------------------
@@ -310,8 +313,8 @@ def calculate_coa_signals(this_cell_index, num_nodes, num_cells, random_order_ce
 
 # -------------------------------------------------------------------------------------------------
 @nb.jit(nopython=True)
-def calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_dist_squared_matrix, line_segment_intersection_matrix, endocytosis_effect_length):
-    endocytosis_effect_factors = np.zeros(num_nodes, dtype=np.float64)
+def calculate_chemoattractant_shielding_effect_factors(this_cell_index, num_nodes, num_cells, intercellular_dist_squared_matrix, line_segment_intersection_matrix, chemoattractant_shielding_effect_length):
+    chemoattractant_shielding_effect_factors = np.zeros(num_nodes, dtype=np.float64)
 
     for ni in range(num_nodes):
         this_node_relevant_line_seg_intersection_slice = line_segment_intersection_matrix[ni]
@@ -328,8 +331,8 @@ def calculate_endocytosis_effect_factors(this_cell_index, num_nodes, num_cells, 
                 for other_ni in range(num_nodes):
                     if this_node_other_cell_relevant_line_seg_intersection_slice[other_ni] == 0:
                         ds = this_node_other_cell_relevant_dist_squared_slice[other_ni]
-                        sum_weights += np.exp(np.log(0.25)*(ds/endocytosis_effect_length))
+                        sum_weights += np.exp(np.log(0.25)*(ds/chemoattractant_shielding_effect_length))
 
-        endocytosis_effect_factors[ni] = 1./(1.0 + sum_weights)
+        chemoattractant_shielding_effect_factors[ni] = 1./(1.0 + sum_weights)
 
-    return endocytosis_effect_factors
+    return chemoattractant_shielding_effect_factors
