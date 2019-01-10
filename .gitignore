@@ -7,3 +7,7 @@
 build/
 output/
 .idea
+
+venv/Include
+venv/Lib
+venv/Scripts
