@@ -39,7 +39,7 @@ mech_parameter_labels = ['length_edge_resting', 'area_resting', 'stiffness_edge'
 
 space_parameter_labels = ['space_physical_bdry_polygon', 'space_migratory_bdry_polygon']
 
-interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria', 'coa_intersection_exponent', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist', 'chemoattractant_mediated_coa_dampening_factor', 'max_chemoattractant_signal']
+interaction_parameter_labels = ['interaction_factor_migr_bdry_contact', 'interaction_factors_intercellular_contact_per_celltype', 'interaction_factors_coa_per_celltype', 'closeness_dist_squared_criteria', 'coa_intersection_exponent', 'max_coa_signal', 'coa_sensing_dist_at_value', 'coa_sensing_value_at_dist', 'chemoattractant_mediated_coa_dampening_factor', 'max_chemoattractant_signal', 'enable_chemoattractant_shielding_effect']
 
 randomization_parameter_labels = ['randomization_scheme', 'randomization_time_mean', 'randomization_time_variance_factor', 'randomization_magnitude', 'randomization_node_percentage', 'randomization_type']
 
@@ -56,7 +56,7 @@ user_rho_gtpase_biochemistry_parameters = {'kdgdi_multiplier': [1, 2], 'init_rgt
                                            'threshold_rac_activity_multiplier': [0.01, 1], 'max_chemoattractant_signal': None, 'chemoattractant_mediated_coa_dampening_factor': [0.0, 1.0]}
 
 
-user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0], 'chemoattractant_shielding_effect_length_squared': None}
+user_interaction_parameters = {'interaction_factors_intercellular_contact_per_celltype': None, 'interaction_factor_migr_bdry_contact': None, 'interaction_factors_coa_per_celltype': None, 'closeness_dist_squared_criteria': [(0.25e-6)**2, (5e-6)**2], 'coa_intersection_exponent': [0.0, 1000.0], 'chemoattractant_shielding_effect_length_squared': None, 'enable_chemoattractant_shielding_effect': None}
 
 user_space_parameters = {'space_physical_bdry_polygon': None, 'space_migratory_bdry_polygon': None}
 
@@ -154,6 +154,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict['coa_intersection_exponent'] = user_parameter_dict['coa_intersection_exponent']
     cell_parameter_dict['chemoattractant_mediated_coa_dampening_factor'] = user_parameter_dict['chemoattractant_mediated_coa_dampening_factor']
     cell_parameter_dict['max_chemoattractant_signal'] = user_parameter_dict['max_chemoattractant_signal']
+    cell_parameter_dict['enable_chemoattractant_shielding_effect'] = user_parameter_dict['enable_chemoattractant_shielding_effect']
     
     num_nodes, init_cell_radius = user_parameter_dict['num_nodes'], user_parameter_dict['init_cell_radius']
     cell_parameter_dict['num_nodes'], cell_parameter_dict['init_cell_radius'] = num_nodes, init_cell_radius

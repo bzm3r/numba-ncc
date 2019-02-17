@@ -2605,18 +2605,21 @@ def graph_intercellular_distance_after_first_collision(all_cell_centroids_per_re
     show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
 
 
-def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, test_slopes, chemotaxis_success_ratios, num_experiment_repeats, num_cells, box_width, box_height, save_dir=None, fontsize=22):
+def graph_chemotaxis_efficiency_data(test_magnitudes, test_slopes, chemotaxis_success_ratios_per_mag_per_num_cells, num_experiment_repeats, num_cells, box_width, box_height, save_dir=None, fontsize=22):
     set_fontsize(fontsize)
     assert (len(test_magnitudes) == len(test_slopes))
     fig, ax = plt.subplots()
 
-    for i, nr, chemotaxis_success_ratios in zip(np.arange(len(test_magnitudes)), num_experiment_repeats, chemotaxis_success_ratios):
-        indices = np.arange(len(test_slopes))
+    offset = 0.25/float(len(chemotaxis_success_ratios_per_mag_per_num_cells) + 1.0)
+    offset_start = 0.5 - (0.25/2.)
 
-        xpoints = np.array([[index, index + 1, np.nan] for index in indices]).flatten()
-        ypoints = np.array([[c, c, np.nan] for c in chemotaxis_success_ratios]).flatten()
+    indices=np.arange(len(test_slopes))
 
-        ax.plot(xpoints, ypoints, color=colors.color_list20[0],)
+    for i, setup_data in enumerate(zip(chemotaxis_success_ratios_per_mag_per_num_cells, num_experiment_repeats, num_cells, box_width, box_height)):
+
+        csrs_per_mag, nr, nc, bw, bh = setup_data
+
+        ax.plot([j + offset_start + (i + 1)*offset for j in indices], [c for c in csrs_per_mag], color=colors.color_list20[i], label="nc={} ({}x{}), nr={}".format(nc, bw, bh, nr), marker='.', markersize=8, ls='')
 
     ax.set_ylabel("success ratio")
     ax.set_xticks([index + 0.5 for index in indices])
@@ -2625,7 +2628,6 @@ def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, tes
                zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
     ax.set_xticklabels(xlabels)
     ax.set_xlabel("(gradient, magnitude at source)")
-    ax.set_title("{} cells, {}x{} configuration".format(num_cells, box_width, box_height))
 
     ax.set_ylim([0.0, 1.25])
     ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
@@ -2636,82 +2638,50 @@ def graph_chemotaxis_efficiency_data(sub_experiment_number, test_magnitudes, tes
     x = datetime.datetime.now()
     show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute, x.second), "")
 
-def graph_group_chemotaxis_efficiency_data(test_magnitude, test_slope, chemotaxis_success_ratios_per_num_cells, num_experiment_repeats, num_cells, save_dir=None, fontsize=22):
-
-    set_fontsize(fontsize)
-    fig, ax = plt.subplots()
-
-    indices = np.arange(len(num_cells))
-
-    for i in indices:
-        csr = chemotaxis_success_ratios_per_num_cells[i]
-        nr = num_experiment_repeats[i]
-        nc = num_cells[i]
-        xpoints = np.array([i, i + 1])
-        ypoints = np.array([csr, csr])
-
-        ax.plot(xpoints, ypoints, color=colors.color_list20[i], label="NC={}, N={}".format(nr, nc))
-
-    ax.set_ylabel("success ratio")
-    ax.set_xticks([index + 0.5 for index in indices])
-
-    ax.set_xticklabels(num_cells)
-    ax.set_xlabel("number of cells")
-    ax.set_title("success ratios")
-
-    ax.set_ylim([-0.1, 1.5])
-    ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
-    ax.set_yticklabels([0.0, 0.25, 0.5, 0.75, 1.0])
-
-    ax.legend(loc='best', fontsize=fontsize)
-
-    ax.set_title("C={}, S={}".format(test_magnitude, test_slope))
-
-    x = datetime.datetime.now()
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_target_{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute), "C={}-S={}-({})".format(test_magnitude, test_slope, num_cells))
-
-def convert_rgba_to_rgb(rgba, background_color):
-    rgb = [0.0, 0.0, 0.0]
-    a = rgba[3]
-
-    for i in range(3):
-        rgb[i] = ((1.0 - a)*background_color[i]) + (a*rgba[i])
-
-    return rgb
+def convert_rgb_a_to_rgb(rgb_bg, rgb_color, a):
+    return [(1 - a) * rgb_bg[i] + a * rgb_color[i] for i in range(3)]
 
 
-def graph_chemotaxis_efficiency_data_using_violins(sub_experiment_number, test_magnitudes, test_slopes,
-                                                   closest_to_source_per_run_per_mag, box_width, box_height, num_cells,
-                                                   save_dir=None, fontsize=22):
+def graph_chemotaxis_closest_distance_data(test_magnitudes, test_slopes, chemotaxis_min_distances_per_mag_per_num_cells, num_experiment_repeats, num_cells, box_width, box_height, save_dir=None, fontsize=22):
     set_fontsize(fontsize)
     assert (len(test_magnitudes) == len(test_slopes))
     fig, ax = plt.subplots()
 
-    # closest_to_source_per_run_per_mag = [np.random.rand(100) for i in range(closest_to_source_per_run_per_mag.shape[0])]
-    closest_to_source_per_run_per_mag = np.transpose(closest_to_source_per_run_per_mag)
-    indices = np.arange(closest_to_source_per_run_per_mag.shape[1])
+    offset = 0.8/float(len(chemotaxis_min_distances_per_mag_per_num_cells) + 1.0)
+    offset_start = 0.5 - (0.8/2.)
+    violin_width = 1.0/len(chemotaxis_min_distances_per_mag_per_num_cells)
 
-    violin = ax.violinplot(closest_to_source_per_run_per_mag, positions=indices, showmeans=True, showmedians=True)
-    bgcol = ax.get_facecolor()
-    [x.set_color(convert_rgba_to_rgb((0.160, 0.537, 0.243, 0.5), bgcol)) for x in violin['bodies']]
-    violin['cbars'].set_color('g')
-    violin['cmins'].set_color('g')
-    violin['cmaxes'].set_color('g')
-    violin['cmeans'].set_color('r')
-    violin['cmedians'].set_color('b')
-    #    [x.set_color('g') for x in violin['bodies']]
+    indices=np.arange(len(test_slopes))
+
+    patches = []
+    for i, setup_data in enumerate(zip(chemotaxis_min_distances_per_mag_per_num_cells, num_experiment_repeats, num_cells, box_width, box_height)):
+        mds_per_mag, nr, nc, bw, bh=setup_data
+
+        violin = ax.violinplot(mds_per_mag, positions=[j + offset_start + (i + 1)*offset for j in indices], showmeans=False, showmedians=True, widths=[0.6*violin_width]*len(indices))
+        bg_col = ax.get_facecolor()
+        requested_color = colors.color_list20[i]
+        light_color = convert_rgb_a_to_rgb(bg_col, requested_color, 0.5)
+        [x.set_color(light_color) for x in violin['bodies']]
+        violin['cbars'].set_color(requested_color)
+        violin['cmins'].set_color(requested_color)
+        violin['cmaxes'].set_color(requested_color)
+        violin['cmedians'].set_color(requested_color)
+
+        patches.append(mpatch.Patch(color=light_color, label="nc={} ({}x{}), nr={}".format(nc, bw, bh, nr)))
 
     ax.set_ylabel("closest distance to source ($\mu$m)")
-    ax.set_xticks(indices)
+    ax.set_xticks([index + 0.5 for index in indices])
 
-    xlabels = ["{},\n{}".format(s, m) for s, m in
-               zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
+    xlabels=["{},\n{}".format(s, m) for s, m in zip([40.0*x for x in test_slopes], np.round(test_magnitudes, decimals=2))]
     ax.set_xticklabels(xlabels)
     ax.set_xlabel("(gradient, magnitude at source)")
-    ax.set_title("{}x{} initial box, {} cells".format(box_width, box_height, num_cells))
 
-    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_efficiency_violins",
-                     "({}, {}, {})".format(box_width, box_height, num_cells))
+    ax.set_ylim(bottom=0.0)
+
+    ax.legend(handles=patches, loc='center left', bbox_to_anchor=(1, 0.5), fontsize=fontsize)
+
+    x=datetime.datetime.now()
+    show_or_save_fig(fig, (14, 8), save_dir, "chemotaxis_min_distance_{}-{}-{}-{}-{}-{}".format(x.year, x.month, x.day, x.hour, x.minute, x.second), "")
 
 
 def graph_chemotaxis_protrusion_lifetimes(sub_experiment_number, test_magnitudes, test_slopes,

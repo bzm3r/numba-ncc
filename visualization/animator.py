@@ -752,7 +752,7 @@ def prepare_coa_data(coa_scale, cell_index, unique_undrawn_timesteps, polygon_co
 
 
 def prepare_chemoattractant_data(chemoattractant_scale, cell_index, unique_undrawn_timesteps, polygon_coords_per_timestep, offset_magnitude, storefile_path):
-    chemoattractant_mag = chemoattractant_scale * hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "chemoattractant_signal_on_nodes", storefile_path) * hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "chemoattractant_shielding_effect_factor_on_nodes", storefile_path)
+    chemoattractant_mag = chemoattractant_scale * hardio.get_data_for_tsteps(cell_index, unique_undrawn_timesteps, "chemoattractant_signal_on_nodes", storefile_path)
 
     unit_inside_pointing_vecs = geometry.calculate_unit_inside_pointing_vecs_per_timestep(polygon_coords_per_timestep)
 

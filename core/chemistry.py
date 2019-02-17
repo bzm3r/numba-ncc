@@ -122,7 +122,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(strain, ten
     
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
-def calculate_kgtp_rac(conc_rac_membrane_actives, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_shielding_effect_factor_on_nodes, chemoattractant_mediated_coa_dampening, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
+def calculate_kgtp_rac(conc_rac_membrane_actives, exponent_rac_autoact, threshold_rac_autoact, kgtp_rac_baseline, kgtp_rac_autoact_baseline, coa_signals, chemoattractant_mediated_coa_dampening, chemoattractant_signal_on_nodes, randomization_factors, intercellular_contact_factors, close_point_smoothness_factors):
     num_vertices = conc_rac_membrane_actives.shape[0]
     result = np.empty(num_vertices, dtype=np.float64)
 
@@ -135,7 +135,7 @@ def calculate_kgtp_rac(conc_rac_membrane_actives, exponent_rac_autoact, threshol
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]
 
-        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i] * chemoattractant_shielding_effect_factor_on_nodes[i]
+        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
 
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
