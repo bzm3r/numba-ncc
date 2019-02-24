@@ -12,7 +12,7 @@ import numpy as np
 # ============================================================================== 
 def create_parameter_exploration_dataset(storefile_path, length_results_axis1):
     with h5py.File(storefile_path, "a") as f:
-        f.create_dataset("exploration_results", shape=(0, length_results_axis1), maxshape=(None, length_results_axis1),  shuffle=True)
+        f.create_dataset("exploration_results", shape=(0, length_results_axis1), maxshape=(None, length_results_axis1),  compression="gzip", compression_opts=9)
         f.create_dataset("last_executed_chunk_index", shape=(1,), maxshape=(1,))
         
     return
@@ -30,7 +30,7 @@ def create_exec_order_dataset(storefile_path, num_cells):
     
 def create_cell_dataset(cell_index, storefile_path, num_nodes, num_info_labels):
     with h5py.File(storefile_path, "a") as f:
-        f.create_dataset(str(cell_index), shape=(0, num_nodes, num_info_labels), maxshape=(None, num_nodes, num_info_labels),  shuffle=True)
+        f.create_dataset(str(cell_index), shape=(0, num_nodes, num_info_labels), maxshape=(None, num_nodes, num_info_labels),  compression="gzip", compression_opts=9)
         
     return
     
