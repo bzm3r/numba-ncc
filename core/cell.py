@@ -242,6 +242,7 @@ class Cell():
                 
         # ======================================================
         self.chemoattractant_mediated_coa_dampening_factor = parameters_dict['chemoattractant_mediated_coa_dampening_factor']
+        self.chemoattractant_mediated_coa_production_factor = parameters_dict['chemoattractant_mediated_coa_production_factor']
         self.enable_chemoattractant_shielding_effect = parameters_dict['enable_chemoattractant_shielding_effect']
         self.kgtp_rac_baseline = parameters_dict['kgtp_rac_baseline']*self.T
         self.kgtp_rac_autoact_baseline = parameters_dict['kgtp_rac_autoact_baseline']*self.T

@@ -572,6 +572,7 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil}}]
 
     biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict]]
+    parameter_dict.update([('max_chemoattractant_signal', 0.0)])
     parameter_dict_per_sub_experiment = [[parameter_dict]]
     experiment_descriptions_per_subexperiment = ["from experiment template: single cell, no randomization"]
     chemoattractant_gradient_fn_per_subexperiment = [lambda x: 0.0]
@@ -622,17 +623,9 @@ def single_cell_polarization_test(date_str, experiment_number, sub_experiment_nu
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
                                                                       timesteps_between_generation_of_intermediate_visuals)
 
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns,
-                                user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment,
-                                chemoattractant_gradient_fn_per_subexperiment,
-                                num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings,
-                                produce_intermediate_visuals=produce_intermediate_visuals,
-                                produce_graphs=produce_graphs, produce_animation=produce_animation,
-                                full_print=full_print,
-                                delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
-                                extend_simulation=True, run_experiments=run_experiments,
-                                new_num_timesteps=num_timesteps, justify_parameters=justify_parameters,
-                                remake_graphs=remake_graphs, remake_animation=remake_animation)
+    chemoattractant_shielding_effect_length_squared = 0.0
+    
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, chemoattractant_shielding_effect_length_squared, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, run_experiments=run_experiments, new_num_timesteps=num_timesteps, justify_parameters=justify_parameters, remake_graphs=remake_graphs, remake_animation=remake_animation)
 
     if do_final_analysis:
         centroids_persistences_speeds_per_repeat = []
@@ -1308,6 +1301,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
                                        'max_timepoints_on_ram': max_timepoints_on_ram, 'seed': seed,
                                        'allowed_drift_before_geometry_recalc': allowed_drift_before_geometry_recalc,
                                        "cell_placement_method": cell_placement_method}
+    parameter_dict.update([('max_chemoattractant_signal', 0.0)])
 
     cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
         [dict([(x, default_coa) for x in boxes])]*num_boxes]
@@ -1372,17 +1366,7 @@ def many_cells_coa_test(date_str, experiment_number, sub_experiment_number, para
     produce_intermediate_visuals = produce_intermediate_visuals_array(num_timesteps,
                                                                       timesteps_between_generation_of_intermediate_visuals)
 
-    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns,
-                                user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment,
-                                chemoattractant_gradient_fn_per_subexperiment,
-                                num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings,
-                                produce_intermediate_visuals=produce_intermediate_visuals,
-                                produce_graphs=produce_graphs, produce_animation=produce_animation,
-                                full_print=full_print,
-                                delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
-                                extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs,
-                                remake_animation=remake_animation, run_experiments=run_experiments,
-                                justify_parameters=justify_parameters)
+    eu.run_template_experiments(experiment_dir, parameter_dict, environment_wide_variable_defns, user_cell_group_defns_per_subexperiment, experiment_descriptions_per_subexperiment, 0, chemoattractant_gradient_fn_per_subexperiment, num_experiment_repeats=num_experiment_repeats, animation_settings=animation_settings, produce_intermediate_visuals=produce_intermediate_visuals, produce_graphs=produce_graphs, produce_animation=produce_animation, full_print=full_print, delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env, extend_simulation=True, new_num_timesteps=num_timesteps, remake_graphs=remake_graphs, remake_animation=remake_animation, run_experiments=run_experiments, justify_parameters=justify_parameters)
 
     experiment_name_format_string = "RPT={}"
     cell_centroids_persistences_speeds_per_repeat = []
@@ -1934,24 +1918,7 @@ def corridor_migration_test(date_str, experiment_number, sub_experiment_number, 
 
 # ============================================================================
 
-def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict,
-                                     chemoattractant_source_definition, no_randomization=False,
-                                     base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3,
-                                     timestep_length=2, verbose=True, integration_params={'rtol': 1e-4},
-                                     max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0,
-                                     default_coa=0, default_cil=0, num_experiment_repeats=1,
-                                     timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True,
-                                     produce_graphs=True, full_print=True,
-                                     delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4,
-                                     box_y_placement_factor=0.0, cell_placement_method="",
-                                     max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25,
-                                     box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False,
-                                     remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={
-            'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False,
-                                     max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False,
-                                     coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal",
-                                     specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0,
-                                     show_centroid_trail=False, show_chemoattractant=True):
+def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment_number, parameter_dict, chemoattractant_source_definition, no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3, timestep_length=2, verbose=True, integration_params={'rtol': 1e-4}, max_timepoints_on_ram=10, seed=None, allowed_drift_before_geometry_recalc=1.0, default_coa=0, default_cil=0, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_animation=True, produce_graphs=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, box_y_placement_factor=0.0, cell_placement_method="", max_placement_distance_factor=1.0, init_random_cell_placement_x_factor=0.25, box_x_offset=0, num_cells=0, run_experiments=True, remake_graphs=False, remake_animation=False, do_final_analysis=True, biased_rgtpase_distrib_defn_dict={'default': ['unbiased random', np.array([0, 2*np.pi]), 0.3]}, graph_group_centroid_splits=False, max_animation_corridor_length=None, global_scale=1, show_coa_overlay=False, coa_overlay_resolution=10, justify_parameters=True, colorscheme="normal", specific_timesteps_to_draw_as_svg=[], chemotaxis_target_radius=-1.0, show_centroid_trail=False, show_chemoattractant=True):
     cell_diameter = 2*parameter_dict["init_cell_radius"]/1e-6
 
     if num_cells == 0:
@@ -1994,15 +1961,15 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
 
     x_space_between_boxes = []
 
-    if 'x_offset_in_corridor':
+    if 'x_offset_in_corridor' in chemoattractant_source_definition:
         source_x_location = chemoattractant_source_definition["x_offset_in_corridor"]
-        plate_width = max(2.2*source_x_location, 5*box_width)
+        plate_width = max(2.2*source_x_location, 2.5*box_width)
         initial_x_placement_options = "OVERRIDE"
-        box_x_offsets = [1.1*source_x_location - 0.5*box_width]
+        box_x_offsets = [0.0]
     else:
         plate_width = 5*box_width
         initial_x_placement_options = "ORIGIN"
-        box_x_offsets = []
+        box_x_offsets = [0.0]
 
     plate_height = plate_width
 
@@ -2043,7 +2010,7 @@ def no_corridor_chemoattraction_test(date_str, experiment_number, sub_experiment
 
     chemoattractant_source_location = np.array([])
     if 'x_offset_in_corridor' in chemoattractant_source_definition.keys():
-        chemoattractant_source_definition['source_x'] = box_x_offsets[0] + chemoattractant_source_definition[
+        chemoattractant_source_definition['source_x'] = box_x_offsets[0] + box_widths[0] + chemoattractant_source_definition[
             'x_offset_in_corridor']
         del chemoattractant_source_definition['x_offset_in_corridor']
         chemoattractant_source_definition['source_y'] = box_y_offsets[0] + box_height*cell_diameter*0.5
