@@ -846,10 +846,14 @@ class Cell():
 
             rhs_args = self.pack_rhs_arguments(self.curr_tpoint, this_cell_index, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, are_nodes_inside_other_cells, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors, chemoattractant_signal_on_nodes)
             
-            #print "Integrating..."
             output_array = scint.odeint(dynamics.cell_dynamics, state_array, [0, 1], args=rhs_args, **self.integration_params)
             
             next_state_array = output_array[1]
+
+            #print "Integrating..."
+#            integration_output = scint.solve_ivp(lambda t, y: dynamics.cell_dynamics(y, t, *rhs_args), (0, 1), state_array, method='RK45', **self.integration_params)
+#            assert(integration_output.success)
+#            next_state_array = integration_output.y[:,-1]
             
             self.set_next_state(next_state_array, this_cell_index, num_cells, intercellular_squared_dist_array, line_segment_intersection_matrix, all_cells_node_coords, all_cells_node_forces, are_nodes_inside_other_cells, chemoattractant_signal_on_nodes, close_point_on_other_cells_to_each_node_exists, close_point_on_other_cells_to_each_node, close_point_on_other_cells_to_each_node_indices, close_point_on_other_cells_to_each_node_projection_factors, close_point_smoothness_factors)
             
