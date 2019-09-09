@@ -8,18 +8,17 @@ Created on Thu Jul 27 13:47:52 2017
 import os
 import parse
 
-experiment_set_dir = "B:\\numba-ncc\\output\\2019_JAN_20\\SET=0"
+experiment_set_dir = "B:\\numba-ncc\\output\\2019_FEB_26\\SET=1"
 experiment_set_dir_contents = os.listdir(experiment_set_dir)
 
-experiment_set_dir_subdirs = [x for x in experiment_set_dir_contents if os.path.isdir(os.path.join(experiment_set_dir, x))]
+experiment_set_dir_subdirs = [
+    x
+    for x in experiment_set_dir_contents
+    if os.path.isdir(os.path.join(experiment_set_dir, x))
+]
 
-parse_compilation = parse.compile("ch_{}_rand-{}_{}")
-
-for old_dir_name in experiment_set_dir_subdirs:
-    sen, randscheme, other = parse_compilation.parse(old_dir_name)
-    new_dir_name = "ch_{}_{}-rand-{}".format(sen, other, randscheme)
-    
-    current_experiment_dir = os.path.join(experiment_set_dir, old_dir_name)
-    new_experiment_dir = os.path.join(experiment_set_dir, new_dir_name)
-    
-    os.rename(current_experiment_dir, new_experiment_dir)
+for subdir in experiment_set_dir_subdirs:
+    subdir_contents = os.listdir(os.path.join(experiment_set_dir, subdir))
+    chemotaxis_data_fp = os.path.join(experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np.npy")
+    if os.path.isfile(chemotaxis_data_fp):
+        os.rename(chemotaxis_data_fp, os.path.join(experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np"))

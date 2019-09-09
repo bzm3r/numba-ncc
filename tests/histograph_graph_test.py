@@ -27,17 +27,15 @@ for xi, x in enumerate(xs):
 fig, ax = plt.subplots()
 
 
-cax = ax.imshow(data, interpolation='none', cmap=cm.coolwarm)
+cax = ax.imshow(data, interpolation="none", cmap=cm.coolwarm)
 ax.set_xticks(np.arange(len(xs)))
 ax.set_yticks(np.arange(len(ys)))
 ax.set_xticklabels(xs)
 ax.set_yticklabels(ys)
 # Add colorbar, make sure to specify tick locations to match desired ticklabels
-cbar = fig.colorbar(cax, boundaries=np.linspace(0, 1, num=100), ticks=np.linspace(0, 1, num=5))
-
+cbar = fig.colorbar(
+    cax, boundaries=np.linspace(0, 1, num=100), ticks=np.linspace(0, 1, num=5)
+)
 
 
 plt.show()
-
-
-

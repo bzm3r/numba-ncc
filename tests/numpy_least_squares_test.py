@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 # np.log(y) = -1*t/p
 # np.log(y) = -1*t/p
 
-p = 3.
-x = np.linspace(0., 3.)
-y = np.exp(-1*x/p)
+p = 3.0
+x = np.linspace(0.0, 3.0)
+y = np.exp(-1 * x / p)
 A = np.zeros((x.shape[0], 2), dtype=np.float64)
 A[:, 0] = x
-est_p = -1./(np.linalg.lstsq(A, np.log(y))[0][0])
+est_p = -1.0 / (np.linalg.lstsq(A, np.log(y))[0][0])
