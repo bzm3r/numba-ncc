@@ -19,6 +19,13 @@ experiment_set_dir_subdirs = [
 
 for subdir in experiment_set_dir_subdirs:
     subdir_contents = os.listdir(os.path.join(experiment_set_dir, subdir))
-    chemotaxis_data_fp = os.path.join(experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np.npy")
+    chemotaxis_data_fp = os.path.join(
+        experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np.npy"
+    )
     if os.path.isfile(chemotaxis_data_fp):
-        os.rename(chemotaxis_data_fp, os.path.join(experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np"))
+        os.rename(
+            chemotaxis_data_fp,
+            os.path.join(
+                experiment_set_dir, subdir, "chemotaxis_success_per_repeat.np"
+            ),
+        )

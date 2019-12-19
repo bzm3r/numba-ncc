@@ -10,9 +10,6 @@ from . import environment
 from . import geometry
 import copy
 
-# g_cell_autonit_ignored_args = ['randomize_rgtpase_distrib', 'init_rgtpase_cytosol_frac', 'init_rgtpase_membrane_active_frac', 'init_rgtpase_membrane_inactive_frac']
-
-
 output_mech_labels = [
     "x",
     "y",
@@ -215,6 +212,7 @@ user_interaction_parameters = {
     "coa_intersection_exponent": [0.0, 1000.0],
     "chemoattractant_shielding_effect_length_squared": None,
     "enable_chemoattractant_shielding_effect": None,
+    "num_cells_responsive_to_chemoattractant": [-1, -1],
 }
 
 user_space_parameters = {
@@ -414,7 +412,7 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict[
         "chemoattractant_mediated_coa_production_factor"
     ] = user_parameter_dict["chemoattractant_mediated_coa_production_factor"]
-    
+
     cell_parameter_dict["max_chemoattractant_signal"] = user_parameter_dict[
         "max_chemoattractant_signal"
     ]
@@ -632,7 +630,6 @@ def make_environment_given_user_cell_group_defns(
         user_cell_group_parameter_dict = copy.deepcopy(
             user_cell_group_defn["parameter_dict"]
         )
-
         user_cell_group_parameter_dict[
             "interaction_factors_intercellular_contact_per_celltype"
         ] = expand_interaction_factors_intercellular_contact_per_celltype_array(

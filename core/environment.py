@@ -422,8 +422,12 @@ class Environment:
         if self.environment_dir != None:
             self.init_random_state(seed)
             self.storefile_path = os.path.join(self.environment_dir, "store.hdf5")
-            self.empty_self_pickle_path = os.path.join(self.environment_dir, "environment.pkl")
-            self.data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
+            self.empty_self_pickle_path = os.path.join(
+                self.environment_dir, "environment.pkl"
+            )
+            self.data_dict_pickle_path = os.path.join(
+                self.environment_dir, "general_data_dict.pkl"
+            )
         else:
             self.storefile_path = None
             self.empty_self_pickle_path = None
@@ -602,6 +606,11 @@ class Environment:
         cell_group_name = cell_group_defn["cell_group_name"]
         num_cells = cell_group_defn["num_cells"]
         cell_group_bounding_box = cell_group_defn["cell_group_bounding_box"]
+        num_cells_responsive_to_chemoattractant = cell_group_defn["num_cells_responsive_to_chemoattractant"]
+        if not(num_cells_responsive_to_chemoattractant < 0 or num_cells_responsive_to_chemoattractant >= num_cells):
+            responsive_cells = np.random.choice(np.arange(num_cells), size=num_cells_responsive_to_chemoattractant)
+        else:
+            responsive_cells = np.arange(num_cells)
 
         cell_parameter_dict = copy.deepcopy(cell_group_defn["parameter_dict"])
         init_cell_radius = cell_parameter_dict["init_cell_radius"]
@@ -668,6 +677,7 @@ class Environment:
                     self.verbose,
                     cell_parameter_dict,
                     init_rho_gtpase_conditions=self.parameter_explorer_init_rho_gtpase_conditions,
+                    responsive_to_chemoattractant=(cell_number in responsive_cells),
                 )
             else:
                 new_cell = cell.Cell(
@@ -681,6 +691,7 @@ class Environment:
                     self.max_timepoints_on_ram,
                     self.verbose,
                     cell_parameter_dict,
+                    responsive_to_chemoattractant=(cell_number in responsive_cells),
                 )
 
             cells_in_group.append(new_cell)
@@ -915,144 +926,174 @@ class Environment:
     ):
         if self.environment_dir == None:
             raise Exception("self.environment_dir is None!")
-            
+
         data_dict = {}
 
         datavis.add_to_general_data_structure(data_dict, [("T", self.T)])
 
-        if produce_graphs:
+        cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment]) / 1e-6
+
+        some_graph_to_be_made = np.any(
+            [
+                b if type(b) != dict else np.any([c for c in b.values()])
+                for b in produce_graphs.values()
+            ]
+        )
+        all_graphs_to_be_made = np.all(
+            [
+                b if type(b) != dict else np.all([c for c in b.values()])
+                for b in produce_graphs.values()
+            ]
+        )
+        if some_graph_to_be_made:
             data_dict = {}
 
-            for cell_index in range(self.num_cells):
-                this_cell = self.cells_in_environment[cell_index]
-                if this_cell.skip_dynamics == True:
-                    continue
+            if produce_graphs["cell specific"]:
+                for cell_index in range(self.num_cells):
+                    this_cell = self.cells_in_environment[cell_index]
+                    if this_cell.skip_dynamics == True:
+                        continue
 
-                save_dir_for_cell = os.path.join(save_dir, "cell_{}".format(cell_index))
+                    save_dir_for_cell = os.path.join(
+                        save_dir, "cell_{}".format(cell_index)
+                    )
 
-                if not os.path.exists(save_dir_for_cell):
-                    os.makedirs(save_dir_for_cell)
+                    if not os.path.exists(save_dir_for_cell):
+                        os.makedirs(save_dir_for_cell)
 
-                averaged_score, scores_per_tstep = cu.calculate_rgtpase_polarity_score(
-                    cell_index,
-                    self.storefile_path,
-                    significant_difference=0.2,
-                    max_tstep=t,
-                )
-                #
-                cell_Ls = (
-                    np.array([a_cell.L for a_cell in self.cells_in_environment]) / 1e-6
-                )
+                    averaged_score, scores_per_tstep = cu.calculate_rgtpase_polarity_score(
+                        cell_index,
+                        self.storefile_path,
+                        significant_difference=0.2,
+                        max_tstep=t,
+                    )
+                    #
 
-                data_dict = datavis.graph_important_cell_variables_over_time(
+                    data_dict = datavis.graph_important_cell_variables_over_time(
+                        self.T / 60.0,
+                        cell_Ls[cell_index],
+                        cell_index,
+                        self.storefile_path,
+                        polarity_scores=scores_per_tstep,
+                        save_name="C={}".format(cell_index)
+                        + "_important_cell_vars_graph_T={}".format(t - 1),
+                        save_dir=save_dir_for_cell,
+                        max_tstep=t,
+                        general_data_structure=data_dict,
+                        convergence_test=self.convergence_test,
+                    )
+                    datavis.graph_rates(
+                        self.T / 60.0,
+                        this_cell.kgtp_rac_baseline,
+                        this_cell.kgtp_rho_baseline,
+                        this_cell.kdgtp_rac_baseline,
+                        this_cell.kdgtp_rho_baseline,
+                        cell_index,
+                        self.storefile_path,
+                        save_name="C={}".format(cell_index)
+                        + "_rates_graph_T={}".format(t - 1),
+                        save_dir=save_dir_for_cell,
+                        max_tstep=t,
+                    )
+                    data_dict = datavis.graph_edge_and_areal_strains(
+                        self.T / 60.0,
+                        cell_index,
+                        self.storefile_path,
+                        save_name="C={}".format(cell_index)
+                        + "_strain_graph_T={}".format(t - 1),
+                        save_dir=save_dir_for_cell,
+                        max_tstep=t,
+                        general_data_structure=data_dict,
+                    )
+
+            if produce_graphs["all cell speeds"]:
+                data_dict = datavis.graph_cell_speed_over_time(
+                    self.num_cells,
                     self.T / 60.0,
-                    cell_Ls[cell_index],
-                    cell_index,
+                    cell_Ls,
                     self.storefile_path,
-                    polarity_scores=scores_per_tstep,
-                    save_name="C={}".format(cell_index)
-                    + "_important_cell_vars_graph_T={}".format(t - 1),
-                    save_dir=save_dir_for_cell,
+                    save_name="cell_velocities_T={}".format(t - 1),
+                    save_dir=save_dir,
                     max_tstep=t,
                     general_data_structure=data_dict,
                     convergence_test=self.convergence_test,
                 )
-                datavis.graph_rates(
+
+            if produce_graphs["group area/cell separation"]:
+                data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(
+                    self.num_cells,
+                    self.num_nodes,
+                    t,
                     self.T / 60.0,
-                    this_cell.kgtp_rac_baseline,
-                    this_cell.kgtp_rho_baseline,
-                    this_cell.kdgtp_rac_baseline,
-                    this_cell.kdgtp_rho_baseline,
-                    cell_index,
                     self.storefile_path,
-                    save_name="C={}".format(cell_index)
-                    + "_rates_graph_T={}".format(t - 1),
-                    save_dir=save_dir_for_cell,
-                    max_tstep=t,
+                    save_dir=save_dir,
+                    general_data_structure=data_dict,
+                    graph_group_centroid_splits=self.graph_group_centroid_splits,
                 )
-                data_dict = datavis.graph_edge_and_areal_strains(
+
+            if np.any([b for b in produce_graphs["centroid related data"].values()]):
+                data_dict = datavis.graph_centroid_related_data(
+                    [c.skip_dynamics for c in self.cells_in_environment],
+                    self.num_cells,
+                    self.num_timepoints,
                     self.T / 60.0,
-                    cell_index,
+                    "min.",
+                    cell_Ls,
                     self.storefile_path,
-                    save_name="C={}".format(cell_index)
-                    + "_strain_graph_T={}".format(t - 1),
-                    save_dir=save_dir_for_cell,
+                    save_name="centroid_data_T={}".format(t - 1),
+                    save_dir=save_dir,
                     max_tstep=t,
                     general_data_structure=data_dict,
+                    graphs_to_produce=produce_graphs["centroid related data"],
                 )
 
-            data_dict = datavis.graph_cell_speed_over_time(
-                self.num_cells,
-                self.T / 60.0,
-                cell_Ls,
-                self.storefile_path,
-                save_name="cell_velocities_T={}".format(t - 1),
-                save_dir=save_dir,
-                max_tstep=t,
-                general_data_structure=data_dict,
-                convergence_test=self.convergence_test,
-            )
+            if produce_graphs["protrusion existence"]:
+                protrusion_existence_per_tstep_per_cell, protrusion_lifetime_and_average_directions_per_cell, protrusion_group_directions = cu.collate_protrusion_data(
+                    self.num_cells, self.T, self.storefile_path, max_tstep=t
+                )
+                datavis.add_to_general_data_structure(
+                    data_dict,
+                    [
+                        (
+                            "all_cell_protrusion_lifetimes_and_directions",
+                            protrusion_lifetime_and_average_directions_per_cell,
+                        ),
+                        (
+                            "all_cell_protrusion_group_directions",
+                            protrusion_group_directions,
+                        ),
+                        (
+                            "all_cell_protrusion_existence",
+                            np.array(protrusion_existence_per_tstep_per_cell),
+                        ),
+                    ],
+                )
 
-            data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(
-                self.num_cells,
-                self.num_nodes,
-                t,
-                self.T / 60.0,
-                self.storefile_path,
-                save_dir=save_dir,
-                general_data_structure=data_dict,
-                graph_group_centroid_splits=self.graph_group_centroid_splits,
-            )
+            if produce_graphs["protrusion bias"]:
+                datavis.graph_protrusion_bias_vectors(
+                    protrusion_lifetime_and_average_directions_per_cell,
+                    num_polar_graph_bins,
+                    t * self.T / 60.0,
+                    save_dir=save_dir,
+                    save_name="protrusion_bias_vector",
+                )
 
-            data_dict = datavis.graph_centroid_related_data(
-                [c.skip_dynamics for c in self.cells_in_environment],
-                self.num_cells,
-                self.num_timepoints,
-                self.T / 60.0,
-                "min.",
-                cell_Ls,
-                self.storefile_path,
-                save_name="centroid_data_T={}".format(t - 1),
-                save_dir=save_dir,
-                max_tstep=t,
-                general_data_structure=data_dict,
-            )
+                all_cell_protrusion_lifetime_and_direction_data = []
 
-            protrusion_existence_per_tstep_per_cell, protrusion_lifetime_and_average_directions_per_cell = cu.collate_protrusion_data(
-                self.num_cells, self.T, self.storefile_path, max_tstep=t
-            )
-            datavis.add_to_general_data_structure(
-                data_dict,
-                [
-                    (
-                        "all_cell_protrusion_lifetimes_and_directions",
-                        protrusion_lifetime_and_average_directions_per_cell,
-                    ),
-                    (
-                        "all_cell_protrusion_existence",
-                        np.array(protrusion_existence_per_tstep_per_cell),
-                    ),
-                ],
-            )
-                
-            datavis.graph_protrusion_bias_vectors(protrusion_lifetime_and_average_directions_per_cell, num_polar_graph_bins, t * self.T / 60.0, save_dir=save_dir, save_name="protrusion_bias_vector")
+                for cell_data in protrusion_lifetime_and_average_directions_per_cell:
+                    for pd in cell_data:
+                        all_cell_protrusion_lifetime_and_direction_data.append(pd)
 
-            all_cell_protrusion_lifetime_and_direction_data = []
-
-            for cell_data in protrusion_lifetime_and_average_directions_per_cell:
-                for pd in cell_data:
-                    all_cell_protrusion_lifetime_and_direction_data.append(pd)
-
-            all_cell_protrusion_lifetime_and_direction_data = np.array(
-                all_cell_protrusion_lifetime_and_direction_data
-            )
-            datavis.graph_protrusion_lifetimes_radially(
-                all_cell_protrusion_lifetime_and_direction_data,
-                num_polar_graph_bins,
-                t * self.T / 60.0,
-                save_dir=save_dir,
-                save_name="protrusion_dirn_and_lifetime",
-            )
+                all_cell_protrusion_lifetime_and_direction_data = np.array(
+                    all_cell_protrusion_lifetime_and_direction_data
+                )
+                datavis.graph_protrusion_lifetimes_radially(
+                    all_cell_protrusion_lifetime_and_direction_data,
+                    num_polar_graph_bins,
+                    t * self.T / 60.0,
+                    save_dir=save_dir,
+                    save_name="protrusion_dirn_and_lifetime",
+                )
 
             #            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
             #            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
@@ -1061,12 +1102,25 @@ class Environment:
             #            all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
         #            datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
 
-        
-            if os.path.isfile(self.data_dict_pickle_path):
+        if all_graphs_to_be_made or not os.path.exists(self.data_dict_pickle_path):
+            if os.path.exists(self.data_dict_pickle_path):
                 os.remove(self.data_dict_pickle_path)
 
             with open(self.data_dict_pickle_path, "wb") as f:
                 dill.dump(data_dict, f)
+        else:
+            if not os.path.exists(self.data_dict_pickle_path):
+                raise Exception("general data dict does not exist!")
+
+            existing_data_dict = None
+            with open(self.data_dict_pickle_path, "rb") as f:
+                existing_data_dict = dill.load(f)
+
+            existing_data_dict.update(data_dict)
+            os.remove(self.data_dict_pickle_path)
+
+            with open(self.data_dict_pickle_path, "wb") as f:
+                dill.dump(existing_data_dict, f)
 
         if produce_animation:
             animation_obj.create_animation_from_data(
@@ -1151,7 +1205,9 @@ class Environment:
     ):
         self.init_random_state(None)
         self.storefile_path = os.path.join(self.environment_dir, "store.hdf5")
-        self.data_dict_pickle_path = os.path.join(self.environment_dir, "general_data_dict.pkl")
+        self.data_dict_pickle_path = os.path.join(
+            self.environment_dir, "general_data_dict.pkl"
+        )
         self.empty_self_pickle_path = os.path.join(
             self.environment_dir, "environment.pkl"
         )
@@ -1221,7 +1277,19 @@ class Environment:
         self,
         animation_settings,
         produce_intermediate_visuals=True,
-        produce_graphs=True,
+        produce_graphs={
+            "cell specific": True,
+            "all cell speeds": True,
+            "group area/cell separation": True,
+            "centroid related data": {
+                "velocity alignment": True,
+                "persistence time": True,
+                "general group info": True,
+                "centroid drift": True,
+            },
+            "protrusion existence": True,
+            "protrusion bias": True,
+        },
         produce_animation=True,
         elapsed_timesteps_before_producing_intermediate_graphs=2500,
         elapsed_timesteps_before_producing_intermediate_animations=5000,
@@ -1269,7 +1337,19 @@ class Environment:
             if self.environment_dir == None:
                 animation_obj = None
                 produce_intermediate_visuals = False
-                produce_graphs = False
+                produce_graphs = {
+                    "cell specific": False,
+                    "all cell speeds": False,
+                    "group area/cell separation": False,
+                    "centroid related data": {
+                        "velocity alignment": False,
+                        "persistence time": False,
+                        "general group info": False,
+                        "centroid drift": False,
+                    },
+                    "protrusion existence": False,
+                    "protrusion bias": False,
+                }
                 produce_animation = False
             else:
                 cell_group_indices = []
@@ -1377,7 +1457,15 @@ class Environment:
             if self.environment_dir != None:
                 self.dump_to_store(self.curr_tpoint)
 
-            if produce_graphs == True or produce_animation:
+            produce_some_graphs = np.any(
+                np.array(
+                    [
+                        b if type(b) != dict else np.any([c for c in b.values()])
+                        for b in produce_graphs.values()
+                    ]
+                )
+            )
+            if produce_some_graphs or produce_animation:
                 t = self.num_timepoints
                 data_save_dir = os.path.join(self.environment_dir, "T={}".format(t))
 

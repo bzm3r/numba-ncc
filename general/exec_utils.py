@@ -503,7 +503,6 @@ def remake_graphics(
         **ani_sets
     )
 
-    print("remaking graphics...")
     an_environment.do_data_analysis_and_make_visuals(
         draw_tpoint,
         visuals_save_dir,
@@ -553,7 +552,7 @@ def check_if_simulation_exists_and_is_complete(
         return "environment dir does not exist", None, False
 
     storefile_path = os.path.join(environment_dir, "store.hdf5")
-    #data_dict_pickle_path = os.path.join(environment_dir, "general_data_dict.pkl")
+    # data_dict_pickle_path = os.path.join(environment_dir, "general_data_dict.pkl")
     env_pkl_path = os.path.join(environment_dir, "environment.pkl")
 
     if not os.path.exists(storefile_path):
@@ -569,7 +568,7 @@ def check_if_simulation_exists_and_is_complete(
             return "pickled environment does not exist, rerun requested", None, False
         else:
             return "pickled environment does not exist", None, False
-        
+
     an_environment = retrieve_environment(
         env_pkl_path,
         produce_graphs,

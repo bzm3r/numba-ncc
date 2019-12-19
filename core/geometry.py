@@ -216,8 +216,12 @@ def normalize_2D_vector(vector):
     mag = calculate_2D_vector_mag(vector)
     x, y = vector
 
-    normalized_vector[0] = x / mag
-    normalized_vector[1] = y / mag
+    if mag < 1e-8:
+        normalized_vector[0] = np.nan
+        normalized_vector[1] = np.nan
+    else:
+        normalized_vector[0] = x / mag
+        normalized_vector[1] = y / mag
 
     return normalized_vector
 
@@ -233,7 +237,11 @@ def normalize_vectors(vectors):
 
         normalized_vector = normalize_2D_vector(vector)
 
-        normalized_vectors[i, 0] = normalized_vector[0]
+        if normalized_vector[0] == np.nan or normalized_vector[1] == np.nan:
+            normalized_vectors[i, 0] = np.nan
+            normalized_vectors[i, 1] = np.nan
+        else:
+            normalized_vectors[i, 0] = normalized_vector[0]
         normalized_vectors[i, 1] = normalized_vector[1]
 
     return normalized_vectors

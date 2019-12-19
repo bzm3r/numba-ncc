@@ -11,3 +11,5 @@ output/
 venv/Include
 venv/Lib
 venv/Scripts
+
+numba-ncc.sublime-project

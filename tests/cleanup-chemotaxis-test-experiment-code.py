@@ -6,43 +6,55 @@ Created on Tue May 21 19:37:52 2019
 """
 import numpy as np
 
+
 def setup_initial_rgtpase_bias(uniform_initial_polarization):
     if uniform_initial_polarization == False:
-        return {
-            "default": ["unbiased random", np.array([0, 2 * np.pi]), 0.3]
-        }
-    else: 
-        return {
-            "default": ["unbiased uniform", np.array([0, 2 * np.pi]), 0.3]
-        }
+        return {"default": ["unbiased random", np.array([0, 2 * np.pi]), 0.3]}
+    else:
+        return {"default": ["unbiased uniform", np.array([0, 2 * np.pi]), 0.3]}
+
 
 def determine_chemotaxis_success_info_save_paths(experiment_dir):
     chemotaxis_success_save_fp = os.path.join(
-                experiment_dir, "chemotaxis_success_per_repeat.np"
-            )
+        experiment_dir, "chemotaxis_success_per_repeat.np"
+    )
     chemotaxis_min_dist_save_fp = os.path.join(
         experiment_dir, "chemotaxis_min_dist_per_repeat.np"
     )
-    
+
     return (chemotaxis_success_save_fp, chemotaxis_min_dist_save_fp)
 
-def perform_chemotaxis_analysis(run_experiments, experiment_dir, num_repeats, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, chemotaxis_success_ratios_per_variant_per_num_cells, chemotaxis_min_distances_per_variant_per_num_cells, source_x, source_y, chemotaxis_target_radius):
-    chemotaxis_success_save_fp, chemotaxis_min_dist_save_fp = determine_chemotaxis_success_info_save_paths(experiment_dir)
-    
+
+def perform_chemotaxis_analysis(
+    run_experiments,
+    experiment_dir,
+    num_repeats,
+    produce_graphs,
+    produce_animation,
+    environment_wide_variable_defns,
+    total_time_in_hours,
+    chemotaxis_success_ratios_per_variant_per_num_cells,
+    chemotaxis_min_distances_per_variant_per_num_cells,
+    source_x,
+    source_y,
+    chemotaxis_target_radius,
+):
+    chemotaxis_success_save_fp, chemotaxis_min_dist_save_fp = determine_chemotaxis_success_info_save_paths(
+        experiment_dir
+    )
+
     experiment_name_format_string = "RPT={}"
     chemotaxis_success_per_repeat = None
-    
+
     chemotaxis_success_ratios = []
     chemotaxis_min_distances = []
-    
+
     if run_experiments == False:
         if not os.path.exists(experiment_dir):
             raise Exception("Experiment directory does not exist.")
         else:
             for rpt_number in range(num_repeats):
-                environment_name = experiment_name_format_string.format(
-                    rpt_number
-                )
+                environment_name = experiment_name_format_string.format(rpt_number)
                 environment_dir = os.path.join(experiment_dir, environment_name)
                 if not os.path.exists(environment_dir):
                     raise Exception("Environment directory does not exist.")
@@ -129,17 +141,11 @@ def perform_chemotaxis_analysis(run_experiments, experiment_dir, num_repeats, pr
             all_cell_protrusion_lifetimes_and_directions_per_repeat
         ):
             if chemotaxis_success_per_repeat[i] == 1:
-                for (
-                    protrusion_lifetime_dirn
-                ) in protrusion_lifetime_dirn_per_cell:
+                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                     for l, d in protrusion_lifetime_dirn:
-                        success_protrusion_lifetimes_and_directions.append(
-                            (l, d)
-                        )
+                        success_protrusion_lifetimes_and_directions.append((l, d))
             else:
-                for (
-                    protrusion_lifetime_dirn
-                ) in protrusion_lifetime_dirn_per_cell:
+                for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                     for l, d in protrusion_lifetime_dirn:
                         fail_protrusion_lifetimes_and_directions.append((l, d))
 
@@ -176,9 +182,15 @@ def perform_chemotaxis_analysis(run_experiments, experiment_dir, num_repeats, pr
     chemotaxis_min_distances_per_variant_per_num_cells.append(
         copy.deepcopy(chemotaxis_min_distances)
     )
-    
-    return chemotaxis_success_ratios, chemotaxis_min_distances, chemotaxis_success_ratios_per_variant_per_num_cells, chemotaxis_min_distances_per_variant_per_num_cells
-            
+
+    return (
+        chemotaxis_success_ratios,
+        chemotaxis_min_distances,
+        chemotaxis_success_ratios_per_variant_per_num_cells,
+        chemotaxis_min_distances_per_variant_per_num_cells,
+    )
+
+
 def chemotaxis_no_corridor_tests(
     date_str,
     experiment_number,
@@ -224,26 +236,36 @@ def chemotaxis_no_corridor_tests(
 
     chemotaxis_success_ratios_per_variant_per_num_cells = []
     chemotaxis_min_distances_per_variant_per_num_cells = []
-    
+
     experiment_set_directory = eu.get_experiment_set_directory_path(
         base_output_dir, date_str, experiment_number
     )
-               
-    biased_rgtpase_distrib_defn_dict = setup_initial_rgtpase_bias(uniform_initial_polarization)
-    
-    if not(len(test_chemotaxis_magntidues) == 1 or len(test_randomization_parameters) == 1):
-        raise Exception("Currently, chemotaxis_no_corridors_test is designed to handle one of test_chemotaxis_magntidues or test_randomization_parameters having more than one case.")
-    
+
+    biased_rgtpase_distrib_defn_dict = setup_initial_rgtpase_bias(
+        uniform_initial_polarization
+    )
+
+    if not (
+        len(test_chemotaxis_magntidues) == 1 or len(test_randomization_parameters) == 1
+    ):
+        raise Exception(
+            "Currently, chemotaxis_no_corridors_test is designed to handle one of test_chemotaxis_magntidues or test_randomization_parameters having more than one case."
+        )
+
     if len(test_chemotaxis_magntidues) == 1:
         test_variants = test_chemotaxis_magntidues
         variant_label = "mag"
-        test_randomization_parameters = [copy.deepcopy(parameter_dict).update(test_randomization_parameters[0])]
+        test_randomization_parameters = [
+            copy.deepcopy(parameter_dict).update(test_randomization_parameters[0])
+        ]
     else:
         test_variants = test_randomization_parameters
         variant_label = "rand"
-        test_randomization_parameters = [copy.deepcopy(parameter_dict).update(rp) for rp in test_randomization_parameters]
-            
-    
+        test_randomization_parameters = [
+            copy.deepcopy(parameter_dict).update(rp)
+            for rp in test_randomization_parameters
+        ]
+
     for nci, nr, nc, bh, bw in zip(
         np.arange(num_cases), num_experiment_repeats, num_cells, box_heights, box_widths
     ):
@@ -257,7 +279,7 @@ def chemotaxis_no_corridor_tests(
             else:
                 chm = test_chemotaxis_magntidues[0]
                 pd = vv
-                
+
             experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(
                 date_str,
                 experiment_number,
@@ -303,7 +325,20 @@ def chemotaxis_no_corridor_tests(
                 base_output_dir, date_str, experiment_number, experiment_name
             )
 
-            chemotaxis_success_ratios_per_variant_per_num_cells, chemotaxis_min_distances_per_variant_per_num_cells = perform_chemotaxis_analysis(run_experiments, experiment_dir, nr, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, chemotaxis_success_ratios_per_variant_per_num_cells, chemotaxis_min_distances_per_variant_per_num_cells, source_x, source_y, chemotaxis_target_radius)
+            chemotaxis_success_ratios_per_variant_per_num_cells, chemotaxis_min_distances_per_variant_per_num_cells = perform_chemotaxis_analysis(
+                run_experiments,
+                experiment_dir,
+                nr,
+                produce_graphs,
+                produce_animation,
+                environment_wide_variable_defns,
+                total_time_in_hours,
+                chemotaxis_success_ratios_per_variant_per_num_cells,
+                chemotaxis_min_distances_per_variant_per_num_cells,
+                source_x,
+                source_y,
+                chemotaxis_target_radius,
+            )
 
     print("=========")
     datavis.graph_chemotaxis_efficiency_data(

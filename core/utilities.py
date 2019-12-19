@@ -1723,6 +1723,7 @@ def determine_protrusion_node_index_and_tpoint_start_ends(
 
     return protrusion_node_index_and_tpoint_start_ends[: (num_protrusions + 1)]
 
+
 @nb.jit(nopython=True)
 def determine_protrusion_lifetimes_and_average_directions(
     T, protrusion_node_index_and_tpoint_start_ends, protrusion_direction_per_tstep
@@ -1753,153 +1754,374 @@ def determine_protrusion_lifetimes_and_average_directions(
 
     return protrusion_lifetime_and_average_directions
 
-@nb.jit()
-def determine_protrusion_groups(protrusion_exists_per_node):
-    num_nodes = protrusion_exists_per_node.shape[0]
-    visited_nodes = np.zeros(num_nodes, dtype=np.bool)
-    protrusion_groups = []
-    
+
+@nb.jit(nopython=True)
+def determine_protrusion_groups(protrusion_existence_per_node):
+    num_nodes = protrusion_existence_per_node.shape[0]
+    visited_nodes = np.zeros(num_nodes, dtype=np.int64)
+
+    for ni in range(num_nodes):
+        if protrusion_existence_per_node[ni] == 0:
+            visited_nodes[ni] = 1
+
+    num_protrusion_groups = 0
+    protrusion_groups = np.zeros((int(num_nodes / 2), 2), dtype=np.int64)
+
     tracking_group = False
     currently_tracking_protrusion_index = 0
-    
+
     while not np.all(visited_nodes):
         if not tracking_group:
-            for ni, vn in enumerate(visited_nodes):
+            for ni in range(num_nodes):
+                vn = visited_nodes[ni] == 1
                 if not vn:
                     tracking_group = True
                     currently_tracking_protrusion_index = ni
-                    visited_nodes[ni] = True
+                    visited_nodes[ni] = 1
                     break
                 else:
-                    visited_nodes[ni] = True   
+                    visited_nodes[ni] = 1
         else:
             found_left_boundary = False
             found_right_boundary = False
-            
+
             left_boundary = currently_tracking_protrusion_index
             right_boundary = currently_tracking_protrusion_index
-            
+
             for ni in range(num_nodes):
                 if found_left_boundary:
                     break
-                
+
                 li = (left_boundary - 1) % num_nodes
-                
-                if protrusion_exists_per_node[li]:
+
+                if protrusion_existence_per_node[li]:
                     left_boundary = li
                 else:
                     found_left_boundary = True
-                    
-                visited_nodes[li] = True
-                
+
+                visited_nodes[li] = 1
+
             for ni in range(num_nodes):
                 if found_right_boundary:
                     break
-                
+
                 ri = (right_boundary + 1) % num_nodes
-                
-                if protrusion_exists_per_node[ri]:
+
+                if protrusion_existence_per_node[ri]:
                     right_boundary = ri
                 else:
                     found_right_boundary = True
-                    
-                visited_nodes[ri] = True
-                
-            protrusion_groups.append([left_boundary, right_boundary])
+
+                visited_nodes[ri] = 1
+
+            protrusion_groups[num_protrusion_groups][0] = left_boundary
+            protrusion_groups[num_protrusion_groups][1] = right_boundary
+            num_protrusion_groups += 1
             tracking_group = False
             currently_tracking_protrusion_index = 0
-            
-    return protrusion_groups
-                    
-def determine_num_nodes_in_protrusion_group(num_nodes, focus_group):
-    if focus_group[0] > focus_group[1]:
-        num_nodes_right = focus_group[1] + 1
-        num_nodes_left = num_nodes - focus_group[0]
-        
+
+    return num_protrusion_groups, protrusion_groups
+
+
+@nb.jit(nopython=True)
+def determine_num_nodes_in_protrusion_group(
+    num_nodes_in_cell, left_boundary, right_boundary
+):
+    if left_boundary > right_boundary:
+        num_nodes_right = right_boundary + 1
+        num_nodes_left = num_nodes_in_cell - left_boundary
+
         return num_nodes_right + num_nodes_left
     else:
-        return (focus_group[1] - focus_group[0]) + 1
-    
-def determine_if_protrusion_group_lies_in_focus_protrusion_group(group, focus_group):
+        return (right_boundary - left_boundary) + 1
+
+
+@nb.jit(nopython=True)
+def determine_if_protrusion_group_is_same_as_focus_protrusion_group(group, focus_group):
     if group[0] == focus_group[0] and group[1] == focus_group[1]:
         return True
     else:
-        if focus_group[0] > focus_group[1]:
-            right_boundary_within = group[1] <= focus_group[1]
-            left_boundary_within = (group[0] >= 0) or (group[0] >= focus_group[0])
+        return False
+
+
+def determine_if_protrusion_group_lies_in_focus_protrusion_group(group, focus_group):
+    if focus_group[0] > focus_group[1]:
+        right_boundary_within = group[1] <= focus_group[1]
+        left_boundary_within = (group[0] >= 0) or (group[0] >= focus_group[0])
+    else:
+        right_boundary_within = group[1] <= focus_group[1]
+        left_boundary_within = group[0] >= focus_group[0]
+
+    return right_boundary_within and left_boundary_within
+
+
+@nb.jit(nopython=True)
+def determine_central_protrusion_group_nodes(
+    num_nodes_in_cell, num_nodes_in_group, left_boundary, right_boundary
+):
+    central_node_delta = num_nodes_in_group / 2
+    from_left_center = (left_boundary + central_node_delta) % num_nodes_in_cell
+    from_right_center = (right_boundary - central_node_delta) % num_nodes_in_cell
+    return (
+        int(np.floor(from_left_center) % num_nodes_in_cell),
+        int(np.ceil(from_right_center) % num_nodes_in_cell),
+    )
+
+
+@nb.jit(nopython=True)
+def determine_if_protrusion_group_is_related_to_focus_group(
+    num_nodes_in_cell,
+    num_nodes_in_group,
+    num_nodes_in_focus_group,
+    group_central_node,
+    focus_group_central_node,
+):
+    central_nodes_delta = min(
+        (group_central_node - focus_group_central_node) % 16,
+        (focus_group_central_node - group_central_node) % 16,
+    )
+
+    if central_nodes_delta < num_nodes_in_focus_group / 4:
+        return central_nodes_delta, True
+    else:
+        return 0, False
+
+
+# @nb.jit(nopython=True)
+def determine_best_related_protrusion_group(
+    num_nodes_in_cell, focus_group, groups_to_compare_against
+):
+    num_nodes_in_focus_group = determine_num_nodes_in_protrusion_group(
+        num_nodes_in_cell, focus_group
+    )
+    num_groups = groups_to_compare_against.shape[0]
+    num_nodes_in_group_per_group = np.zeros(num_groups, dtype=np.int64)
+
+    for gi in range(num_groups):
+        num_nodes_in_group_per_group[gi] = determine_num_nodes_in_protrusion_group(
+            num_nodes_in_cell, groups_to_compare_against[gi]
+        )
+
+    group_central_nodes = np.zeros(num_groups, dtype=np.int64)
+    for gi in range(num_groups):
+        group_central_nodes[gi] = determine_central_protrusion_group_node(
+            num_nodes_in_cell,
+            num_nodes_in_group_per_group[gi],
+            groups_to_compare_against[gi],
+        )
+
+    focus_group_central_node = determine_central_protrusion_group_node(
+        num_nodes_in_cell, num_nodes_in_focus_group, focus_group
+    )
+
+    num_possible_related_groups = 0
+    possible_related_group_scores = np.zeros(num_groups, dtype=np.int64)
+    possible_related_group_indices = np.zeros(num_groups, dtype=np.int64)
+    for gi in enumerate(groups_to_compare_against):
+        group = groups_to_compare_against[gi]
+        if determine_if_protrusion_group_is_same_as_focus_protrusion_group(
+            group, focus_group
+        ):
+            return gi
         else:
-            right_boundary_within = group[1] <= focus_group[1]
-            left_boundary_within = group[0] >= focus_group[0]
-            
-        return (right_boundary_within and left_boundary_within)
-    
-def determine_best_related_protrusion_group(num_nodes, focus_group, groups_to_compare_against):
-    num_nodes_in_focus_group = calculate_num_nodes_in_protrusion_group(num_nodes, focus_group)
-        
-    most_relevant_groups_to_compare_against = []
-    for group in groups_to_compare_against:
-        if determine_if_group_lies_in_focus_group(group, focus_group):
-            pass
-        
-    return 0
-        
-@nb.jit()
-def determine_protrusion_group_lifetimes_and_directions(
-    T, protrusion_existence_per_tstep, protrusion_direction_per_tstep
+            delta, is_related = determine_if_protrusion_group_is_related_to_focus_group(
+                num_nodes_in_cell,
+                num_nodes_in_group_per_group[gi],
+                num_nodes_in_focus_group,
+                group_central_nodes[gi],
+                focus_group_central_node,
+            )
+
+            if is_related:
+                possible_related_group_scores[num_possible_related_groups] = delta
+                possible_related_group_indices[num_possible_related_groups] = gi
+                num_possible_related_groups += 1
+
+    possible_related_group_scores = possible_related_group_scores[
+        :num_possible_related_groups
+    ]
+    possible_related_group_indices = possible_related_group_indices[
+        :num_possible_related_groups
+    ]
+    if num_possible_related_groups == 0:
+        return -1
+    else:
+        sorted_indices = np.argsort(possible_related_group_scores)
+        return possible_related_group_indices[sorted_indices[0]]
+
+
+@nb.jit(nopython=True)
+def determine_protrusion_group_direction(
+    num_nodes_in_cell,
+    protrusion_directions,
+    protrusion_existence,
+    left_boundary,
+    right_boundary,
+):
+    num_nodes_in_protrusion_group = determine_num_nodes_in_protrusion_group(
+        num_nodes_in_cell, left_boundary, right_boundary
+    )
+    lc, rc = determine_central_protrusion_group_nodes(
+        num_nodes_in_cell, num_nodes_in_protrusion_group, left_boundary, right_boundary
+    )
+
+    if not (protrusion_existence[lc] == 1 and protrusion_existence[rc] == 1):
+        raise Exception("calculated central nodes are not protrusive!")
+
+    if lc == rc:
+        return protrusion_directions[lc]
+    else:
+        return (protrusion_directions[lc] + protrusion_directions[rc]) / 2
+
+
+# @nb.jit(nopython=True)
+# def determine_protrusion_group_lifetimes_and_directions(
+#    T, protrusion_existence_per_tstep, protrusion_direction_per_tstep
+# ):
+#    num_timesteps = protrusion_existence_per_tstep.shape[0]
+#    last_timestep = num_timesteps - 1
+#
+#    num_nodes = protrusion_existence_per_tstep.shape[1]
+#    max_num_protrusion_groups = int(num_nodes/2)
+#
+#    num_protrusion_groups_per_timestep = np.zeros(num_timesteps, dtype=np.int64)
+#    protrusion_groups_per_timestep = np.zeros((num_timesteps, max_num_protrusion_groups, 2), dtype=np.int64)
+#    for ti in range(num_timesteps):
+#        pe = protrusion_existence_per_tstep[ti]
+#        num_pgs, pgs = determine_protrusion_groups(pe)
+#        num_protrusion_groups_per_timestep[ti] = num_pgs
+#        protrusion_groups_per_timestep[ti] = pgs
+#
+#    max_num_organized_protrusion_groups = np.sum(num_protrusion_groups_per_timestep)
+#    num_organized_protrusion_groups = 0
+#    num_timesteps_per_organized_protrusion_groups = np.zeros(max_num_organized_protrusion_groups, dtype=np.int64)
+#    organized_protrusion_groups = np.zeros((max_num_organized_protrusion_groups, num_timesteps, 3), dtype=np.int64)
+#    visited_protrusion_groups = np.ones((num_timesteps, max_num_protrusion_groups), dtype=np.int64)
+#
+#    for ti in range(num_timesteps):
+#        num_protrusion_groups = num_protrusion_groups_per_timestep[ti]
+#        for pi in range(num_protrusion_groups):
+#            visited_protrusion_groups[ti][pi] = 0
+#
+#    tracking_protrusion_group = False
+#    tracked_protrusion_group_timestep = -1
+#    tracked_protrusion_group = np.zeros(2, dtype=np.int64)
+#    num_nodes_in_cell = protrusion_existence_per_tstep.shape[1]
+#
+#    while not np.all(visited_protrusion_groups == 1):
+#        if not tracking_protrusion_group:
+#            for xi in range(num_timesteps):
+#                ti = last_timestep - xi
+#                npg = num_protrusion_groups_per_timestep[ti]
+#                pgs = protrusion_groups_per_timestep[ti]
+#
+#                for pi, pg in enumerate(pgs[:npg]):
+#                    if visited_protrusion_groups[ti][pi]:
+#                        continue
+#                    else:
+#                        visited_protrusion_groups[ti][pi] = 1
+#                        tracking_protrusion_group = True
+#                        tracked_protrusion_group_timestep = ti
+#
+#                        tracked_protrusion_group[0] = pg[0]
+#                        tracked_protrusion_group[1] = pg[1]
+#                        break
+#
+#                if tracking_protrusion_group:
+#                    break
+#        else:
+#            num_related_protrusion_groups = 1
+#            related_protrusion_groups = np.zeros((num_timesteps, 3), dtype=np.int64)
+#            related_protrusion_groups[0][0] = tracked_protrusion_group_timestep
+#            related_protrusion_groups[0][1] = tracked_protrusion_group[0]
+#            related_protrusion_groups[0][2] = tracked_protrusion_group[1]
+#
+#            last_ti = tracked_protrusion_group_timestep
+#            for xi in range(last_ti):
+#                ti = last_ti - (xi + 1)
+#                protrusion_groups_to_compare_against = protrusion_groups_per_timestep[ti][:num_protrusion_groups_per_timestep[ti]]
+#
+#                best_related_protrusion_group_index = determine_best_related_protrusion_group(num_nodes_in_cell, related_protrusion_groups[num_related_protrusion_groups - 1][1:], protrusion_groups_to_compare_against)
+#
+#                if best_related_protrusion_group_index != -1:
+#                    pg = protrusion_groups_to_compare_against[best_related_protrusion_group_index]
+#                    related_protrusion_groups[num_related_protrusion_groups][0] = ti
+#                    related_protrusion_groups[num_related_protrusion_groups][1] = pg[0]
+#                    related_protrusion_groups[num_related_protrusion_groups][2] = pg[1]
+#                    num_related_protrusion_groups += 1
+#                    visited_protrusion_groups[ti][best_related_protrusion_group_index] = 1
+#                else:
+#                    break
+#
+#            num_timesteps_per_organized_protrusion_groups[num_organized_protrusion_groups] = num_related_protrusion_groups
+#            organized_protrusion_groups[num_organized_protrusion_groups][:num_related_protrusion_groups] = np.flip(related_protrusion_groups[:num_related_protrusion_groups], axis=0)
+#            num_organized_protrusion_groups += 1
+#            tracking_protrusion_group = False
+#
+#    protrusion_group_lifetimes_and_directions = np.zeros((num_organized_protrusion_groups, 2), dtype=np.float64)
+#    for nopg in num_organized_protrusion_groups:
+#        nts = num_timesteps_per_organized_protrusion_groups[nopg]
+#        lifetime = nts*T/60.0
+#        protrusion_group_lifetimes_and_directions[nopg][0] = lifetime
+#
+#        directions = np.zeros(nts, dtype=np.float64)
+#        opgs = organized_protrusion_groups[nopg][:nts]
+#        for xi in range(nts):
+#            ti = opgs[xi][0]
+#            directions[xi] = determine_protrusion_group_direction(num_nodes_in_cell, protrusion_direction_per_tstep[ti], opgs[xi][1:])
+#
+#        protrusion_group_lifetimes_and_directions[nopg][1] = np.average(directions)
+#
+#
+#    return protrusion_group_lifetimes_and_directions
+
+
+@nb.jit(nopython=True)
+def determine_protrusion_group_directions(
+    T, protrusion_existence_per_tstep, protrusion_directions_per_tstep
 ):
     num_timesteps = protrusion_existence_per_tstep.shape[0]
-    last_timestep = num_timesteps - 1
-    
-    protrusion_groups_per_timestep = []
-    for pe in protrusion_existence_per_tstep:
-        protrusion_groups_per_timestep.append(determine_protrusion_groups(pe))
-        
-    organized_protrusion_groups = []
-    visited_protrusion_groups = [[False for i in range(len(pgs))] for pgs in protrusion_groups_per_timestep]
-    
-    tracking_protrusion_group = False
-    tracked_protrusion_group = None
-    
-    while not np.all(np.all(organized_protrusion_groups)):
-        if not tracking_protrusion_group:
-            for xi in range(num_timesteps):
-                ti = last_timestep - xi
-                
-                for pi, pg in enumerate(protrusion_groups_per_timestep[ti]):
-                    if organized_protrusion_groups[ti][pi]:
-                        continue
-                    else:
-                        organized_protrusion_groups[ti][pi] = True
-                        tracking_protrusion_group = True
-                        tracked_protrusion_group = [ti, pi]
-                        break
-                    
-                if tracking_protrusion_group:
-                    break
-        else:
-            related_protrusion_groups = [copy.deepcopy(tracked_protrusion_group)]
-            
-            last_ti = tracked_protrusion_group[0]
-            for xi in range(last_ti):
-                ti = last_ti - (xi + 1)
-                protrusion_groups_to_compare_against = protrusion_groups_per_timestep[ti]
-                
-                best_related_protrusion_group_index = determine_best_related_protrusion_group(related_protrusion_groups[-1], protrusion_groups_to_compare_against)
-                
-                if best_related_protrusion_index != -1:
-                    related_protrusion_groups.append(copy.deepcopy(protrusion_groups_to_compare_against[best_related_protrusion_index]))
-                else:
-                    break
-                
-            organized_protrusion_groups.append(np.flip(np.array(related_protrusion_groups), axis=0))
-            
-    
-    
-    protrusion_group_lifetimes_and_directions = []
-    
-    protrusion_group_lifetimes_and_directions = np.array([list(x) for x in protrusion_group_lifetimes_and_directions])
-    
-    return protrusion_group_lifetimes_and_directions
+
+    num_nodes_in_cell = protrusion_existence_per_tstep.shape[1]
+    max_num_protrusion_groups = int(num_nodes_in_cell / 2)
+
+    num_protrusion_groups_per_timestep = np.zeros(num_timesteps, dtype=np.int64)
+    protrusion_groups_per_timestep = np.zeros(
+        (num_timesteps, max_num_protrusion_groups, 2), dtype=np.int64
+    )
+    for ti in range(num_timesteps):
+        pe = protrusion_existence_per_tstep[ti]
+        num_pgs, pgs = determine_protrusion_groups(pe)
+        num_protrusion_groups_per_timestep[ti] = num_pgs
+        protrusion_groups_per_timestep[ti] = pgs
+
+    protrusion_group_directions = np.zeros(
+        num_timesteps * max_num_protrusion_groups, dtype=np.float64
+    )
+    num_protrusion_group_directions = 0
+    for ti in range(num_timesteps):
+        num_protrusion_groups = num_protrusion_groups_per_timestep[ti]
+        relevant_protrusion_groups = protrusion_groups_per_timestep[ti][
+            :num_protrusion_groups
+        ]
+        relevant_protrusion_directions = protrusion_directions_per_tstep[ti]
+        relevant_protrusion_existence = protrusion_existence_per_tstep[ti]
+
+        for gi in range(num_protrusion_groups):
+            pg = relevant_protrusion_groups[gi]
+            protrusion_direction_vector = determine_protrusion_group_direction(
+                num_nodes_in_cell,
+                relevant_protrusion_directions,
+                relevant_protrusion_existence,
+                pg[0],
+                pg[1],
+            )
+            protrusion_group_directions[
+                num_protrusion_group_directions
+            ] = geometry.calculate_2D_vector_direction(protrusion_direction_vector)
+            num_protrusion_group_directions += 1
+
+    return protrusion_group_directions[:num_protrusion_group_directions]
 
 
 # @nb.jit(nopython=True)
@@ -2053,7 +2275,7 @@ def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=No
     normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(
         rac_membrane_active_per_tstep
     )
-    protrusion_existence_per_tstep, protrusion_direction_per_tstep = determine_protrusion_existence_and_direction(
+    protrusion_existence_per_tstep, protrusion_directions_per_tstep = determine_protrusion_existence_and_direction(
         normalized_rac_membrane_active_per_tstep,
         rac_membrane_active_per_tstep,
         rho_membrane_active_per_tstep,
@@ -2064,31 +2286,40 @@ def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=No
         protrusion_existence_per_tstep
     )
     protrusion_lifetime_and_average_directions = determine_protrusion_lifetimes_and_average_directions(
-        T, protrusion_node_index_and_tpoint_start_ends, protrusion_direction_per_tstep
-    )
-    
-    protrusion_group_lifetime_and_directions = determine_protrusion_lifetimes_and_average_directions_new(
-        T, protrusion_existence_per_tstep, protrusion_direction_per_tstep
+        T, protrusion_node_index_and_tpoint_start_ends, protrusion_directions_per_tstep
     )
 
-    return protrusion_existence_per_tstep, protrusion_lifetime_and_average_directions, protrusion_group_lifetime_and_directions
+    protrusion_group_directions = determine_protrusion_group_directions(
+        T, protrusion_existence_per_tstep, protrusion_directions_per_tstep
+    )
+
+    return (
+        protrusion_existence_per_tstep,
+        protrusion_lifetime_and_average_directions,
+        protrusion_group_directions,
+    )
 
 
 def collate_protrusion_data(num_cells, T, storefile_path, max_tstep=None):
     protrusion_existence_per_tstep_per_cell = []
-    protrusion_lifetime_and_average_directions_per_cell_old = []
-    protrusion_lifetime_and_average_directions_per_cell_new = []
+    protrusion_lifetime_and_average_directions_per_cell = []
+    protrusion_group_directions_per_cell = []
 
     for cell_index in range(num_cells):
-        protrusion_existence_per_tstep, protrusion_lifetime_and_average_directions_old, protrusion_lifetime_and_average_directions_new, = collate_protrusion_data_for_cell(
-                cell_index, T, storefile_path, max_tstep=max_tstep
-            )
-        protrusion_lifetime_and_average_directions_per_cell_old.append(protrusion_lifetime_and_average_directions_old)
-        protrusion_lifetime_and_average_directions_per_cell_new.append(protrusion_lifetime_and_average_directions_new)
+        protrusion_existence_per_tstep, protrusion_lifetime_and_average_directions, protrusion_group_directions, = collate_protrusion_data_for_cell(
+            cell_index, T, storefile_path, max_tstep=max_tstep
+        )
+        protrusion_lifetime_and_average_directions_per_cell.append(
+            protrusion_lifetime_and_average_directions
+        )
+        protrusion_group_directions_per_cell.append(protrusion_group_directions)
         protrusion_existence_per_tstep_per_cell.append(protrusion_existence_per_tstep)
-        
 
-    return protrusion_existence_per_tstep_per_cell, protrusion_lifetime_and_average_directions_per_cell_old, protrusion_lifetime_and_average_directions_per_cell_new
+    return (
+        protrusion_existence_per_tstep_per_cell,
+        protrusion_lifetime_and_average_directions_per_cell,
+        protrusion_group_directions_per_cell,
+    )
 
 
 # ==============================================================================
@@ -2552,11 +2783,14 @@ def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacement
 
         dacs[n] = (1.0 / m) * sum_cos_thetas
 
+
 # =====================================================
 
 
 @nb.jit(nopython=True, nogil=True)
-def calculate_protrusion_lifetime_autocorr_coeff_parallel_worker(N, ns, acs, protrusion_lifetimes_per_direction):
+def calculate_protrusion_lifetime_autocorr_coeff_parallel_worker(
+    N, ns, acs, protrusion_lifetimes_per_direction
+):
     for n in ns:
         m = 0.0
         sum_cos_thetas = 0.0
@@ -2571,6 +2805,7 @@ def calculate_protrusion_lifetime_autocorr_coeff_parallel_worker(N, ns, acs, pro
             i += 1
 
         dacs[n] = (1.0 / m) * sum_cos_thetas
+
 
 # =====================================================
 
@@ -2621,6 +2856,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
 
     first_negative_index = find_first_negative_n(dacs)
     return task_indices[:first_negative_index], dacs[:first_negative_index]
+
 
 # =====================================================
 
@@ -2694,17 +2930,17 @@ def calculate_mean_and_deviation(data):
 
 # =====================================================
 
-#def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y,
+# def analyze_chemotaxis_success(relevant_environment, storefile_path, rpt_number, source_x, source_y,
 #                               chemotaxis_score_cutoff_radius):
 #    num_cells = relevant_environment.num_cells
-#    
+#
 #    node_coords_per_tstep_per_cell = []
 #    for ci in range(num_cells):
 #        print(("    Analyzing cell {}...".format(ci)))
 #
 #        node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(ci, storefile_path)
 #        node_coords_per_tstep_per_cell.append(copy.deepcopy(node_coords_per_tstep))
-#        
+#
 #    normalized_areas, normalized_cell_separations, cell_subgroups = calculate_normalized_group_area_and_average_cell_separation_over_time(
 #        20,
 #        num_cells,
@@ -2714,7 +2950,7 @@ def calculate_mean_and_deviation(data):
 #    )
 #
 #    min_node_distance_from_source_per_tstep_per_cell = np.array([np.min(np.linalg.norm(node_coords_per_tstep - np.array([source_x, source_y]), axis=2), axis=1) for node_coords_per_tstep in node_coords_per_tstep_per_cell])
-#    
+#
 #    min_dist_tstep_per_cell = np.argmin(min_node_distance_from_source_per_tstep_per_cell, axis=1)
 #    min_dist_per_cell = np.array([min_node_distance_from_source_per_tstep_per_cell[ci][min_idx] for ci, min_idx in enumerate(min_dist_tstep_per_cell)])
 #    closest_cell = np.argmin(min_dist_per_cell)
@@ -2727,18 +2963,18 @@ def calculate_mean_and_deviation(data):
 #    else:
 #        return 0.0, min_distance
 
-#def analyze_chemotaxis_success(
+# def analyze_chemotaxis_success(
 #    relevant_environment,
 #    storefile_path,
 #    rpt_number,
 #    source_x,
 #    source_y,
 #    chemotaxis_score_cutoff_radius,
-#):
+# ):
 #    st = time.time()
 #    print("Analyzing chemotaxis data...")
 #    num_cells = relevant_environment.num_cells
-#    
+#
 #
 #    distance_from_chemoattractant_source_per_timestep_per_cell_centroid = []
 #    min_distance_and_timestep_per_cell = []
@@ -2746,20 +2982,20 @@ def calculate_mean_and_deviation(data):
 #        cell_centroids = calculate_cell_centroids_for_all_time(ci, storefile_path)*relevant_environment.cells_in_environment[ci].L/1e-6
 #        if ci == 0:
 #            num_timesteps = cell_centroids.shape[0]
-#            
+#
 #        distance_from_chemoattractant_source_per_timestep = np.linalg.norm(cell_centroids - np.array([source_x, source_y]), axis=1)
-#        
+#
 #        min_dist_timestep = np.argmin(distance_from_chemoattractant_source_per_timestep)
 #        min_distance_and_timestep_per_cell.append((min_dist_timestep, distance_from_chemoattractant_source_per_timestep[min_dist_timestep]))
-#    
+#
 #        distance_from_chemoattractant_source_per_timestep_per_cell_centroid.append(copy.deepcopy(distance_from_chemoattractant_source_per_timestep))
-#        
+#
 #    sorted_min_distance_and_timestep_per_cell = sorted(min_distance_and_timestep_per_cell, key=lambda x: x[1])
-#    
+#
 #    min_dist_timestep_over_all_cells = sorted_min_distance_and_timestep_per_cell[0][0]
-#    
+#
 #    dist_of_cells_at_min_dist_timestep = [distance_from_chemoattractant_source_per_timestep_per_cell_centroid[i][min_dist_timestep_over_all_cells] for i in range(num_cells)]
-#    
+#
 #    scoring_function = lambda x: 1.0 - ((x**5)/(chemotaxis_score_cutoff_radius**5 + x**5))
 #    normalized_areas, normalized_cell_separations, cell_subgroups = calculate_normalized_group_area_and_average_cell_separation_over_time(
 #        20,
@@ -2768,27 +3004,35 @@ def calculate_mean_and_deviation(data):
 #        storefile_path,
 #        get_subgroups=False,
 #    )
-#    
+#
 #    cell_chemotaxis_scores = [scoring_function(d)/normalized_areas[min_dist_timestep_over_all_cells] for d in dist_of_cells_at_min_dist_timestep]
 #
 #    et = time.time()
 #    print("Done. time taken = {} s".format(np.round(et - st, decimals=2)))
 #    return cell_chemotaxis_scores, sorted_min_distance_and_timestep_per_cell[0][1]
 
+
 @nb.jit(nopython=True)
-def calculate_cluster_centroid_x_per_tstep_given_all_cell_centroids_per_tstep(all_cell_centroids_per_tstep):
+def calculate_cluster_centroid_x_per_tstep_given_all_cell_centroids_per_tstep(
+    all_cell_centroids_per_tstep
+):
     num_cells = all_cell_centroids_per_tstep.shape[0]
     num_tsteps = all_cell_centroids_per_tstep.shape[1]
-    
+
     cluster_centroids_per_tstep = np.empty((num_tsteps, 2), dtype=np.float64)
     cell_centroids_at_tstep = np.empty((num_cells, 2), dtype=np.float64)
-    
+
     for t in range(num_tsteps):
         cell_centroids_at_tstep = all_cell_centroids_per_tstep[:, t]
-        cluster_centroids_per_tstep[t][0] = np.sum(cell_centroids_at_tstep[:, 0])/num_cells
-        cluster_centroids_per_tstep[t][1] = np.sum(cell_centroids_at_tstep[:, 1])/num_cells
-        
+        cluster_centroids_per_tstep[t][0] = (
+            np.sum(cell_centroids_at_tstep[:, 0]) / num_cells
+        )
+        cluster_centroids_per_tstep[t][1] = (
+            np.sum(cell_centroids_at_tstep[:, 1]) / num_cells
+        )
+
     return cluster_centroids_per_tstep
+
 
 def calculate_normalized_group_area_and_average_cell_separation_at_tstep(
     cell_radius, num_cells, init_cell_centroids, cell_centroids_at_tstep
@@ -2802,27 +3046,32 @@ def calculate_normalized_group_area_and_average_cell_separation_at_tstep(
         return 1.0
     elif num_cells == 2:
         init_distance_between_cells = np.linalg.norm(
-            init_cell_centroids[0]
-            - init_cell_centroids[1],
-        )
-        
-        final_distance_between_cells = np.linalg.norm(
-            cell_centroids_at_tstep[0]
-            - cell_centroids_at_tstep[1],
+            init_cell_centroids[0] - init_cell_centroids[1]
         )
 
-        return final_distance_between_cells/init_distance_between_cells
+        final_distance_between_cells = np.linalg.norm(
+            cell_centroids_at_tstep[0] - cell_centroids_at_tstep[1]
+        )
+
+        return final_distance_between_cells / init_distance_between_cells
     else:
         init_delaunay_triangulation = space.Delaunay(init_cell_centroids)
         final_delaunay_triangulation = space.Delaunay(cell_centroids_at_tstep)
-        
-        init_simplices = init_cell_centroids[init_delaunay_triangulation.simplices]
-        init_convex_hull_area = np.sum([geometry.calculate_polygon_area(simplex) for simplex in init_simplices])
-        
-        final_simplices = cell_centroids_at_tstep[final_delaunay_triangulation.simplices]
-        final_convex_hull_area = np.sum([geometry.calculate_polygon_area(simplex) for simplex in final_simplices])
 
-        return final_convex_hull_area/init_convex_hull_area
+        init_simplices = init_cell_centroids[init_delaunay_triangulation.simplices]
+        init_convex_hull_area = np.sum(
+            [geometry.calculate_polygon_area(simplex) for simplex in init_simplices]
+        )
+
+        final_simplices = cell_centroids_at_tstep[
+            final_delaunay_triangulation.simplices
+        ]
+        final_convex_hull_area = np.sum(
+            [geometry.calculate_polygon_area(simplex) for simplex in final_simplices]
+        )
+
+        return final_convex_hull_area / init_convex_hull_area
+
 
 def analyze_chemotaxis_success_at_cluster_level(
     relevant_environment,
@@ -2837,56 +3086,95 @@ def analyze_chemotaxis_success_at_cluster_level(
     print("=======================================")
     print("Analyzing chemotaxis data for repeat {}".format(rpt_number))
     num_cells = relevant_environment.num_cells
-    
+
     all_cell_centroids_per_tstep = []
     for ci in range(num_cells):
-        cell_centroids_per_tstep = calculate_cell_centroids_for_all_time(ci, storefile_path)*relevant_environment.cells_in_environment[ci].L/1e-6
-        
+        cell_centroids_per_tstep = (
+            calculate_cell_centroids_for_all_time(ci, storefile_path)
+            * relevant_environment.cells_in_environment[ci].L
+            / 1e-6
+        )
+
         if ci == 0:
             num_tsteps = cell_centroids_per_tstep.shape[0]
-        
+
         all_cell_centroids_per_tstep.append(copy.deepcopy(cell_centroids_per_tstep))
-    
+
     all_cell_centroids_per_tstep = np.array(all_cell_centroids_per_tstep)
-    all_cell_straight_line_dist_to_end = np.array([np.linalg.norm(x[num_tsteps] - x[0]) for x in all_cell_centroids_per_tstep])
-    all_cell_total_dist = np.array([np.sum(np.linalg.norm(x[1:] - x[:(num_tsteps - 1)], axis=1)) for x in all_cell_centroids_per_tstep])
-    all_cell_persistence_ratios = all_cell_straight_line_dist_to_end/all_cell_total_dist
-    cluster_centroids_per_tstep = calculate_cluster_centroid_x_per_tstep_given_all_cell_centroids_per_tstep(all_cell_centroids_per_tstep)
-    cluster_displacements_per_tstep = cluster_centroids_per_tstep[1:] - cluster_centroids_per_tstep[:(num_tsteps - 1)]
-    cluster_velocities_per_tstep = cluster_displacements_per_tstep/(T/60.0)
+    all_cell_straight_line_dist_to_end = np.array(
+        [np.linalg.norm(x[num_tsteps] - x[0]) for x in all_cell_centroids_per_tstep]
+    )
+    all_cell_total_dist = np.array(
+        [
+            np.sum(np.linalg.norm(x[1:] - x[: (num_tsteps - 1)], axis=1))
+            for x in all_cell_centroids_per_tstep
+        ]
+    )
+    all_cell_persistence_ratios = (
+        all_cell_straight_line_dist_to_end / all_cell_total_dist
+    )
+    cluster_centroids_per_tstep = calculate_cluster_centroid_x_per_tstep_given_all_cell_centroids_per_tstep(
+        all_cell_centroids_per_tstep
+    )
+    cluster_displacements_per_tstep = (
+        cluster_centroids_per_tstep[1:]
+        - cluster_centroids_per_tstep[: (num_tsteps - 1)]
+    )
+    cluster_velocities_per_tstep = cluster_displacements_per_tstep / (T / 60.0)
     cluster_speeds_per_tstep = np.linalg.norm(cluster_velocities_per_tstep, axis=1)
     cluster_x_speeds_per_tstep = np.abs(cluster_velocities_per_tstep[:, 0])
     average_cluster_speed = np.average(cluster_speeds_per_tstep)
     average_cluster_x_speed = np.average(cluster_x_speeds_per_tstep)
-    
-    straight_line_dist_to_end = np.linalg.norm(cluster_centroids_per_tstep[num_tsteps] - cluster_centroids_per_tstep[0])
-    cluster_distances_per_tstep = np.linalg.norm(cluster_displacements_per_tstep, axis=1)
+
+    straight_line_dist_to_end = np.linalg.norm(
+        cluster_centroids_per_tstep[num_tsteps] - cluster_centroids_per_tstep[0]
+    )
+    cluster_distances_per_tstep = np.linalg.norm(
+        cluster_displacements_per_tstep, axis=1
+    )
     total_dist = np.sum(cluster_distances_per_tstep)
-    cluster_persistence_ratio = straight_line_dist_to_end/total_dist
+    cluster_persistence_ratio = straight_line_dist_to_end / total_dist
 
     et = time.time()
     print("Done. time taken = {} s".format(np.round(et - st, decimals=2)))
-    
-    return average_cluster_speed, average_cluster_x_speed, cluster_persistence_ratio, all_cell_persistence_ratios
 
-def analyze_chemotactic_success_simple(relevant_environment, storefile_path, rpt_number, source_x, source_y,
-                               chemotaxis_score_cutoff_radius):
+    return (
+        average_cluster_speed,
+        average_cluster_x_speed,
+        cluster_persistence_ratio,
+        all_cell_persistence_ratios,
+    )
+
+
+def analyze_chemotactic_success_simple(
+    relevant_environment,
+    storefile_path,
+    rpt_number,
+    source_x,
+    source_y,
+    chemotaxis_score_cutoff_radius,
+):
     num_cells = relevant_environment.num_cells
 
     all_node_coords = np.empty((0, 2), dtype=np.float64)
     for ci in range(num_cells):
         print(("    Analyzing cell {}...".format(ci)))
 
-        node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(ci, storefile_path)
+        node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(
+            ci, storefile_path
+        )
 
         for ni in range(node_coords_per_tstep.shape[1]):
-            all_node_coords = np.append(all_node_coords, node_coords_per_tstep[:, ni, :], axis=0)
+            all_node_coords = np.append(
+                all_node_coords, node_coords_per_tstep[:, ni, :], axis=0
+            )
         # cell_centroids = calculate_cell_centroids_for_all_time(n, storefile_path)*relevant_environment.cells_in_environment[n].L/1e-6
 
         # all_cell_centroids = np.append(all_cell_centroids, cell_centroids, axis=0)
 
-    distance_from_chemoattractant_source_per_timestep = np.linalg.norm(all_node_coords - np.array([source_x, source_y]),
-                                                                       axis=1)
+    distance_from_chemoattractant_source_per_timestep = np.linalg.norm(
+        all_node_coords - np.array([source_x, source_y]), axis=1
+    )
 
     min_distance = np.min(distance_from_chemoattractant_source_per_timestep)
 
@@ -2895,3 +3183,487 @@ def analyze_chemotactic_success_simple(relevant_environment, storefile_path, rpt
     else:
         return 0.0
 
+
+# =================================================================
+@nb.jit(nopython=True)
+def calculate_intercellular_distance_matrix(cell_centroid_coordinates):
+
+    num_cells = cell_centroid_coordinates.shape[0]
+    calculation_complete = np.zeros((num_cells, num_cells), dtype=np.int64)
+    intercellular_distance_matrix = np.zeros((num_cells, num_cells), dtype=np.float64)
+
+    for ci in range(num_cells):
+        this_position = cell_centroid_coordinates[ci]
+        for other_ci in range(num_cells):
+            if ci == other_ci:
+                continue
+            else:
+                if calculation_complete[ci][other_ci] != 1:
+                    other_position = cell_centroid_coordinates[other_ci]
+                    icd = geometry.calculate_dist_between_points_given_vectors(
+                        this_position, other_position
+                    )
+                    intercellular_distance_matrix[ci][other_ci] = icd
+                    intercellular_distance_matrix[other_ci][ci] = icd
+                    calculation_complete[ci][other_ci] = 1
+                    calculation_complete[other_ci][ci] = 1
+
+    return intercellular_distance_matrix
+
+
+@nb.jit(nopython=True)
+def find_snapshot_index(unique_snapshot_timesteps, timestep):
+    for i in range(unique_snapshot_timesteps.shape[0]):
+        if unique_snapshot_timesteps[i] == timestep:
+            return i
+
+
+# @nb.jit(nopython=True)
+# def calculate_velocity_alignments(time_deltas, distance_radii, all_cell_centroids_per_tstep, T, L):
+#    num_drs = distance_radii.shape[0]
+#    num_tds = time_deltas.shape[0]
+#    num_timesteps = all_cell_centroids_per_tstep.shape[1]
+#    num_cells = all_cell_centroids_per_tstep.shape[0]
+#
+#    num_unique_snapshots = 0
+#    unique_snapshot_timesteps = np.zeros(num_timesteps, dtype=np.int64)
+#    num_snapshots_per_td = np.zeros(num_tds, dtype=np.int64)
+#    tds = np.zeros(num_tds, dtype=np.int64)
+#    for xi in range(num_tds):
+#        td = int(np.round(time_deltas[xi]*60.0/T))
+#        tds[xi] = td
+#        num_snapshots = int(num_timesteps/td)
+#        num_snapshots_per_td[xi] = num_snapshots
+#        initial_snapshot = int(td/2)
+#
+#        for yi in range(num_snapshots):
+#            snapshot_timestep = initial_snapshot + yi*td
+#
+#            snapshot_is_unique = True
+#            for zi in range(num_unique_snapshots):
+#                if unique_snapshot_timesteps[zi] == snapshot_timestep:
+#                    snapshot_is_unique = False
+#
+#            if snapshot_is_unique:
+#                unique_snapshot_timesteps[num_unique_snapshots] = snapshot_timestep
+#                num_unique_snapshots += 1
+#
+#    unique_snapshot_timesteps = unique_snapshot_timesteps[:num_unique_snapshots]
+#    velocity_alignments = np.zeros((num_drs, num_tds, num_cells*num_cells*np.max(num_snapshots_per_td)), dtype=np.float64)
+#    num_data_points_per_case = np.zeros((num_drs, num_tds), dtype=np.int64)
+#
+#    for xi in range(num_drs):
+#        for yi in range(num_tds):
+#            num_snapshots = num_snapshots_per_td[yi]
+#            num_va_data = 0
+#            va_data = np.zeros(num_cells*num_cells*num_snapshots, dtype=np.float64)
+#            td = tds[yi]
+#            for si in range(num_snapshots - 1):
+#                et = int(td/2) + (si + 1)*td
+#                cell_centroids_st = all_cell_centroids_per_tstep[:, et - td, :]
+#                cell_centroids_et = all_cell_centroids_per_tstep[:, et, :]
+#                cell_displacements = cell_centroids_et - cell_centroids_st
+#                cell_directions = geometry.normalize_vectors(cell_displacements)
+#
+#                for focus_ci in range(num_cells):
+#                    num_relevant_cells = 0
+#                    relevant_cell_indices = np.zeros(num_cells, dtype=np.int64)
+#                    focus_ci_direction = cell_directions[focus_ci]
+#
+#                    if focus_ci_direction[0] == np.nan or focus_ci_direction[1] == np.nan:
+#                        continue
+#
+#                    for other_ci in range(num_cells):
+#                        if other_ci == focus_ci:
+#                            continue
+#
+#                        other_ci_direction = cell_directions[other_ci]
+#                        if other_ci_direction[0] == np.nan or other_ci_direction[1] == np.nan:
+#                            continue
+#
+#                        relevant_cell_indices[num_relevant_cells] = other_ci
+#                        num_relevant_cells += 1
+#
+#                    for other_ci in relevant_cell_indices[:num_relevant_cells]:
+#                        va_data[num_va_data] = np.dot(cell_directions[other_ci], focus_ci_direction)
+#                        num_va_data += 1
+#
+#            velocity_alignments[xi][yi][:num_va_data] = va_data[:num_va_data]
+#            num_data_points_per_case[xi][yi] = num_va_data
+#
+#
+#    return velocity_alignments, num_data_points_per_case
+
+
+@nb.jit(nopython=True)
+def calculate_velocity_alignments(
+    max_num_closest_neighbours,
+    velocity_alignment_time_deltas,
+    all_cell_centroids_per_tstep,
+    T,
+    L,
+):
+    num_mncs = max_num_closest_neighbours.shape[0]
+    num_tds = velocity_alignment_time_deltas.shape[0]
+    num_timesteps = all_cell_centroids_per_tstep.shape[1]
+    num_cells = all_cell_centroids_per_tstep.shape[0]
+
+    num_unique_snapshots = 0
+    unique_snapshot_timesteps = np.zeros(num_timesteps, dtype=np.int64)
+    num_snapshots_per_td = np.zeros(num_tds, dtype=np.int64)
+    tds = np.zeros(num_tds, dtype=np.int64)
+    for xi in range(num_tds):
+        td = int(np.round(velocity_alignment_time_deltas[xi] * 60.0 / T))
+        tds[xi] = td
+        num_snapshots = int(num_timesteps / td)
+        num_snapshots_per_td[xi] = num_snapshots
+        initial_snapshot = int(td / 2)
+
+        for yi in range(num_snapshots):
+            snapshot_timestep = initial_snapshot + yi * td
+
+            snapshot_is_unique = True
+            for zi in range(num_unique_snapshots):
+                if unique_snapshot_timesteps[zi] == snapshot_timestep:
+                    snapshot_is_unique = False
+
+            if snapshot_is_unique:
+                unique_snapshot_timesteps[num_unique_snapshots] = snapshot_timestep
+                num_unique_snapshots += 1
+
+    unique_snapshot_timesteps = unique_snapshot_timesteps[:num_unique_snapshots]
+    intercellular_distance_matrices = np.zeros(
+        (num_unique_snapshots, num_cells, num_cells), dtype=np.float64
+    )
+    for zi in range(num_unique_snapshots):
+        timestep = unique_snapshot_timesteps[zi]
+        cell_centroids_at_tstep = all_cell_centroids_per_tstep[:, timestep, :]
+        intercellular_distance_matrices[zi] = calculate_intercellular_distance_matrix(
+            cell_centroids_at_tstep
+        )
+
+    velocity_alignments = np.zeros(
+        (
+            num_mncs,
+            num_tds,
+            num_cells
+            * np.max(max_num_closest_neighbours)
+            * np.max(num_snapshots_per_td),
+        ),
+        dtype=np.float64,
+    )
+    num_data_points_per_case = np.zeros((num_mncs, num_tds), dtype=np.int64)
+
+    for xi in range(num_mncs):
+        num_closest_neighbours = max_num_closest_neighbours[xi]
+        for yi in range(num_tds):
+            num_snapshots = num_snapshots_per_td[yi]
+            num_va_data = 0
+            va_data = np.zeros(
+                num_cells * num_closest_neighbours * num_snapshots, dtype=np.float64
+            )
+            td = tds[yi]
+            for si in range(num_snapshots - 1):
+                et = int(td / 2) + (si + 1) * td
+                cell_centroids_st = all_cell_centroids_per_tstep[:, et - td, :]
+                cell_centroids_et = all_cell_centroids_per_tstep[:, et, :]
+                cell_displacements = cell_centroids_et - cell_centroids_st
+                cell_directions = geometry.normalize_vectors(cell_displacements)
+                snapshot_index = find_snapshot_index(unique_snapshot_timesteps, et)
+                relevant_intercellular_distance_matrix = intercellular_distance_matrices[
+                    int(snapshot_index)
+                ]
+
+                for focus_ci in range(num_cells):
+                    num_relevant_cells = 0
+                    focus_ci_direction = cell_directions[focus_ci]
+
+                    if (
+                        focus_ci_direction[0] == np.nan
+                        or focus_ci_direction[1] == np.nan
+                    ):
+                        continue
+
+                    relevant_cell_indices = np.zeros(6, dtype=np.int64)
+                    relevant_intercellular_distances = relevant_intercellular_distance_matrix[
+                        focus_ci
+                    ]
+                    cell_indices_sorted_by_closest = np.argsort(
+                        relevant_intercellular_distances
+                    )
+
+                    for other_ci in cell_indices_sorted_by_closest:
+                        if other_ci == focus_ci:
+                            continue
+
+                        other_ci_direction = cell_directions[other_ci]
+                        if (
+                            other_ci_direction[0] == np.nan
+                            or other_ci_direction[1] == np.nan
+                        ):
+                            continue
+
+                        relevant_cell_indices[num_relevant_cells] = other_ci
+                        num_relevant_cells += 1
+
+                        if num_relevant_cells == num_closest_neighbours:
+                            break
+
+                    for other_ci in relevant_cell_indices[:num_relevant_cells]:
+                        va_data[num_va_data] = np.dot(
+                            cell_directions[other_ci], focus_ci_direction
+                        )
+                        num_va_data += 1
+
+            velocity_alignments[xi][yi][:num_va_data] = va_data[:num_va_data]
+            num_data_points_per_case[xi][yi] = num_va_data
+
+    return velocity_alignments, num_data_points_per_case
+
+
+@nb.jit(nopython=True)
+def determine_intercellular_interactions_between_cells(
+    all_cell_node_positions, all_cell_centroids, cil_cutoff, coa_cutoff
+):
+    num_cells = all_cell_node_positions.shape[0]
+    calculation_tracker = np.zeros((num_cells, num_cells), dtype=np.int64)
+    cil_interaction_matrix = np.zeros((num_cells, num_cells), dtype=np.int64)
+    coa_only_interaction_matrix = np.zeros((num_cells, num_cells), dtype=np.int64)
+
+    cell_bounding_boxes = np.zeros((num_cells, 4), dtype=np.float64)
+    for ci in range(num_cells):
+        x0, x1, y0, y1 = geometry.calculate_polygon_bounding_box(
+            all_cell_node_positions[ci]
+        )
+
+    for ci in range(num_cells):
+        this_cell_centroid = all_cell_centroids[ci]
+        for other_ci in range(num_cells):
+            if ci == other_ci:
+                continue
+            else:
+                if calculation_tracker[ci][other_ci] == 0:
+                    dist_between_centroids = geometry.calculate_dist_between_points_given_vectors(
+                        this_cell_centroid, all_cell_centroids[other_ci]
+                    )
+
+                    if dist_between_centroids < cil_cutoff:
+                        cil_interaction_matrix[ci][other_ci] = 1
+                        cil_interaction_matrix[other_ci][ci] = 1
+                    else:
+                        if dist_between_centroids < coa_cutoff:
+                            coa_interaction_result = 1
+                            for xci in range(num_cells):
+                                if xci == ci or xci == other_ci:
+                                    continue
+                                else:
+                                    x0, x1, y0, y1 = cell_bounding_boxes[xci]
+                                    check_result = geometry.check_if_line_segment_intersects_box(
+                                        this_cell_centroid,
+                                        all_cell_centroids[other_ci],
+                                        x0,
+                                        x1,
+                                        y0,
+                                        y1,
+                                    )
+
+                                    if check_result == 1:
+                                        coa_interaction_result = 0
+                                        break
+
+                            coa_only_interaction_matrix[ci][
+                                other_ci
+                            ] = coa_interaction_result
+                            coa_only_interaction_matrix[other_ci][
+                                ci
+                            ] = coa_interaction_result
+
+                    calculation_tracker[ci][other_ci] = 1
+                    calculation_tracker[other_ci][ci] = 1
+
+    return cil_interaction_matrix, coa_only_interaction_matrix
+
+
+@nb.jit(nopython=True)
+def determine_cil_interactions_between_cells(all_cell_centroids, cil_cutoff):
+    num_cells = all_cell_centroids.shape[0]
+    calculation_tracker = np.zeros((num_cells, num_cells), dtype=np.int64)
+    cil_interaction_matrix = np.zeros((num_cells, num_cells), dtype=np.int64)
+
+    for ci in range(num_cells):
+        this_cell_centroid = all_cell_centroids[ci]
+        for other_ci in range(num_cells):
+            if ci == other_ci:
+                continue
+            else:
+                if calculation_tracker[ci][other_ci] == 0:
+                    dist_between_centroids = geometry.calculate_dist_between_points_given_vectors(
+                        this_cell_centroid, all_cell_centroids[other_ci]
+                    )
+
+                    if dist_between_centroids < cil_cutoff:
+                        cil_interaction_matrix[ci][other_ci] = 1
+                        cil_interaction_matrix[other_ci][ci] = 1
+
+                    calculation_tracker[ci][other_ci] = 1
+                    calculation_tracker[other_ci][ci] = 1
+
+    return cil_interaction_matrix
+
+
+@nb.jit(nopython=True)
+def calculate_frequency_of_cil_interaction_over_simulation(
+    all_cell_centroids_per_tstep, cil_cutoff, T
+):
+    num_timesteps = all_cell_centroids_per_tstep.shape[1]
+    num_cells = all_cell_centroids_per_tstep.shape[0]
+    simulation_length = num_timesteps * T
+
+    interaction_frequency_per_cell = np.zeros(num_cells, dtype=np.float64)
+    cil_interaction_matrices_per_tstep = np.zeros(
+        (num_timesteps, num_cells, num_cells), dtype=np.int64
+    )
+
+    for ti in range(num_timesteps):
+        all_cell_centroids = all_cell_centroids_per_tstep[:, ti, :]
+        cil_interaction_matrices_per_tstep[
+            ti
+        ] = determine_cil_interactions_between_cells(all_cell_centroids, cil_cutoff)
+
+    for ci in range(num_cells):
+        num_contacts = 0
+        contact_tracker = np.zeros(num_cells, dtype=np.int64)
+        for ti in range(num_timesteps):
+            relevant_contact_info = cil_interaction_matrices_per_tstep[ti][ci]
+            for oci in range(num_cells):
+                if oci == ci:
+                    continue
+                else:
+                    if relevant_contact_info[oci] == contact_tracker[oci]:
+                        continue
+                    elif relevant_contact_info[oci] == 1 and contact_tracker[oci] == 0:
+                        num_contacts += 1
+                        contact_tracker[oci] = 1
+                    elif relevant_contact_info[oci] == 0 and contact_tracker[oci] == 1:
+                        contact_tracker[oci] = 0
+
+        interaction_frequency_per_cell[ci] = num_contacts / simulation_length
+
+    return interaction_frequency_per_cell
+
+
+@nb.jit(nopython=True)
+def calculate_num_interactions_per_cell_per_tstep(
+    all_cell_node_positions_per_tstep,
+    all_cell_centroids_per_tstep,
+    cil_cutoff,
+    coa_cutoff,
+    delta_tsteps_between_snapshots,
+):
+    num_timesteps = all_cell_centroids_per_tstep.shape[1]
+    num_cells = all_cell_centroids_per_tstep.shape[0]
+
+    relevant_tsteps = np.arange(0, num_timesteps, delta_tsteps_between_snapshots)
+    num_cil_interactions_per_cell_per_snapshot = np.zeros(
+        (relevant_tsteps.shape[0], num_cells), dtype=np.int64
+    )
+    num_coa_only_interactions_per_cell_per_snapshot = np.zeros(
+        (relevant_tsteps.shape[0], num_cells), dtype=np.int64
+    )
+
+    for xti in range(relevant_tsteps.shape[0]):
+        ti = relevant_tsteps[xti]
+        all_cell_node_positions = all_cell_node_positions_per_tstep[:, ti, :, :]
+        all_cell_centroids = all_cell_centroids_per_tstep[:, ti, :]
+        this_tstep_cil_interaction_matrix, this_tstep_coa_interaction_matrix = determine_intercellular_interactions_between_cells(
+            all_cell_node_positions, all_cell_centroids, cil_cutoff, coa_cutoff
+        )
+
+        for ci in range(num_cells):
+            num_cil_interactions = 0
+            num_coa_only_interactions = 0
+            relevant_cil_interaction_data = this_tstep_cil_interaction_matrix[ci]
+            relevant_coa_interaction_data = this_tstep_coa_interaction_matrix[ci]
+
+            for other_ci in range(num_cells):
+                if other_ci == ci:
+                    continue
+                else:
+                    if relevant_cil_interaction_data[other_ci] == 1:
+                        num_cil_interactions += 1
+                    else:
+                        if relevant_coa_interaction_data[other_ci] == 1:
+                            num_coa_only_interactions += 1
+
+            num_cil_interactions_per_cell_per_snapshot[xti][ci] = num_cil_interactions
+            num_coa_only_interactions_per_cell_per_snapshot[xti][
+                ci
+            ] = num_coa_only_interactions
+
+    num_interactions_per_cell_per_snapshot = (
+        num_cil_interactions_per_cell_per_snapshot
+        + num_coa_only_interactions_per_cell_per_snapshot
+    )
+
+    return (
+        num_interactions_per_cell_per_snapshot,
+        num_cil_interactions_per_cell_per_snapshot,
+        num_coa_only_interactions_per_cell_per_snapshot,
+    )
+
+
+@nb.jit(nopython=True)
+def find_index_of_max_element_in_velocity_alignment_matrix(
+    num_x, num_y, va_matrix, num_va_data_points
+):
+    average_va_matrix = np.zeros((num_x, num_y), dtype=np.float64)
+    for xi in range(num_x):
+        for yi in range(num_y):
+            num_dpoints = num_va_data_points[xi][yi]
+
+            if num_dpoints > 0:
+                average_va_matrix[xi][yi] = (
+                    np.sum(va_matrix[xi][yi][:num_dpoints]) / num_dpoints
+                )
+            else:
+                average_va_matrix[xi][yi] = 0.0
+
+    va_max = 0.0
+    va_max_xi = 0
+    va_max_yi = 0
+
+    for xi in range(num_x):
+        for yi in range(num_y):
+            if average_va_matrix[xi][yi] > va_max:
+                va_max_xi = xi
+                va_max_yi = yi
+
+    return va_max, va_max_xi, va_max_yi
+
+
+@nb.jit(nopython=True)
+def determine_velocity_alignment_max_radii_and_min_times_over_all_repeats(
+    velocity_alignment_radii,
+    velocity_alignment_times,
+    velocity_alignments_per_repeat,
+    num_velocity_alignment_data_points_per_repeat,
+):
+    num_r = velocity_alignment_radii.shape[0]
+    num_t = velocity_alignment_times.shape[0]
+    num_repeats = velocity_alignments_per_repeat.shape[0]
+    max_va_rs = np.zeros(num_repeats, dtype=np.float64)
+    max_va_ts = np.zeros(num_repeats, dtype=np.float64)
+    max_vas = np.zeros(num_repeats, dtype=np.float64)
+
+    for nr in range(num_repeats):
+        va_max, ri, ti = find_index_of_max_element_in_velocity_alignment_matrix(
+            num_r,
+            num_t,
+            velocity_alignments_per_repeat[nr],
+            num_velocity_alignment_data_points_per_repeat[nr],
+        )
+        max_vas[nr] = va_max
+        max_va_rs[nr] = velocity_alignment_radii[ri]
+        max_va_ts[nr] = velocity_alignment_times[ti]
+
+    return max_vas, max_va_rs, max_va_ts

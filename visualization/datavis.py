@@ -283,22 +283,20 @@ def graph_group_centroid_drift(
         show_or_save_fig(fig_clean, (6, 4), save_dir, "group_" + save_name, "clean")
 
     group_velocities = cu.calculate_velocities(relative_group_centroid_per_tstep, T)
-    group_x_speeds = np.abs(group_velocities[:, 0])
-    group_y_speeds = np.abs(group_velocities[:, 0])
+    group_x_velocities = group_velocities[:, 0]
+    group_y_velocities = group_velocities[:, 1]
     group_speeds = np.linalg.norm(group_velocities, axis=1)
 
     add_to_general_data_structure(
         general_data_structure, [("group_speeds", group_speeds)]
     )
     add_to_general_data_structure(
-        general_data_structure, [("average_group_x_speed", np.average(group_x_speeds))]
+        general_data_structure, [("group_x_velocities", group_x_velocities)]
     )
     add_to_general_data_structure(
-        general_data_structure, [("average_group_y_speed", np.average(group_y_speeds))]
+        general_data_structure, [("group_y_velocities", group_y_velocities)]
     )
-    add_to_general_data_structure(
-        general_data_structure, [("fit_group_x_velocity", average_group_x_velocity)]
-    )
+
     add_to_general_data_structure(
         general_data_structure, [("transient_end", timepoints[transient_end_index])]
     )
@@ -420,6 +418,129 @@ def graph_group_centroid_drift(
 # =============================================================================
 
 
+def graph_velocity_alignment_for_all_repeats(
+    max_num_closest_neighbours,
+    time_deltas,
+    velocity_alignment_per_num_neighbours_per_time_delta_per_repeat,
+    num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
+    save_dir=None,
+    save_name=None,
+    fontsize=22,
+):
+    set_fontsize(fontsize)
+    fig, ax = plt.subplots()
+
+    num_ncns = max_num_closest_neighbours.shape[0]
+    num_tds = time_deltas.shape[0]
+    num_repeats = len(velocity_alignment_per_num_neighbours_per_time_delta_per_repeat)
+
+    avg_velocity_alignments_per_num_neighbours_per_time_delta = np.zeros(
+        (num_ncns, num_tds), dtype=np.float64
+    )
+    std_velocity_alignments_per_num_neighbours_per_time_delta = np.zeros(
+        (num_ncns, num_tds), dtype=np.float64
+    )
+
+    for ncni in range(num_ncns):
+        for tdi in range(num_tds):
+            relevant_data = np.zeros(0, dtype=np.float64)
+            for ri in range(num_repeats):
+                nd = num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat[
+                    ri
+                ][
+                    ncni
+                ][
+                    tdi
+                ]
+                np.append(
+                    relevant_data,
+                    velocity_alignment_per_num_neighbours_per_time_delta_per_repeat[ri][
+                        ncni
+                    ][tdi][:nd],
+                )
+            avg_velocity_alignments_per_num_neighbours_per_time_delta[ncni][
+                tdi
+            ] = np.average(relevant_data)
+            std_velocity_alignments_per_num_neighbours_per_time_delta[ncni][
+                tdi
+            ] = np.std(relevant_data)
+
+    for tdi in range(num_tds):
+        ax.errorbar(
+            max_num_closest_neighbours,
+            avg_velocity_alignments_per_num_neighbours_per_time_delta[:][tdi],
+            label="time delta = {} min.".format(time_deltas[tdi]),
+            yerr=std_velocity_alignments_per_num_neighbours_per_time_delta[:][tdi],
+        )
+
+    ax.set_xlabel("max num closest neighbours")
+    ax.set_ylabel("average velocity alignment")
+
+    show_or_save_fig(fig, (12, 8), save_dir, save_name, "")
+
+
+def graph_velocity_alignment_for_repeat(
+    max_num_closest_neighbours,
+    velocity_alignment_time_deltas,
+    velocity_alignments,
+    num_data_points,
+    save_dir=None,
+    save_name=None,
+    fontsize=22,
+):
+    set_fontsize(fontsize)
+    fig, ax = plt.subplots()
+    # fig_std, ax_std = plt.subplots()
+
+    num_ncns = max_num_closest_neighbours.shape[0]
+    num_tds = velocity_alignment_time_deltas.shape[0]
+    avg_velocity_alignments = np.zeros((num_ncns, num_tds), dtype=np.float64)
+    std_velocity_alignments = np.zeros((num_ncns, num_tds), dtype=np.float64)
+
+    for xi in range(num_ncns):
+        for yi in range(num_tds):
+            nd = num_data_points[xi][yi]
+            relevant_data = velocity_alignments[xi][yi][:nd]
+            avg_velocity_alignments[xi][yi] = np.average(relevant_data)
+            std_velocity_alignments[xi][yi] = np.std(relevant_data)
+
+    for yi in range(num_tds):
+        ax.bar(
+            max_num_closest_neighbours,
+            avg_velocity_alignments[:, yi],
+            yerr=std_velocity_alignments[:, yi],
+            label="$\Delta$t = {} min.".format(velocity_alignment_time_deltas[yi]),
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+    ax.legend(loc="best")
+    # ax_avg.imshow(avg_velocity_alignments)
+    # ax_std.imshow(std_velocity_alignments)
+
+    # We want to show all ticks...
+    # ax_avg.set_xticks(np.arange(len(velocity_alignment_radii)))
+    # ax_avg.set_yticks(np.arange(len(velocity_alignment_times)))
+    # ... and label them with the respective list entries
+    # ax_avg.set_xticklabels(velocity_alignment_radii)
+    # ax_avg.set_yticklabels(velocity_alignment_times)
+
+    # We want to show all ticks...
+    # ax_std.set_xticks(np.arange(len(velocity_alignment_radii)))
+    # ax_std.set_yticks(np.arange(len(velocity_alignment_times)))
+    # ... and label them with the respective list entries
+    # ax_std.set_xticklabels(velocity_alignment_radii)
+    # ax_std.set_yticklabels(velocity_alignment_times)
+
+    ax.set_xlabel("max num closest neighbours considered")
+    ax.set_ylabel("velocity alignment")
+
+    # ax_std.set_xlabel("radii (${\mu}m$")
+    # ax_std.set_ylabel("time delta (min.)")
+
+    show_or_save_fig(fig, (12, 8), save_dir, save_name, "")
+    # show_or_save_fig(fig_std, (12, 8), save_dir, save_name, "std")
+
+
 def graph_centroid_related_data(
     skip_dynamics_flags,
     num_cells,
@@ -431,26 +552,40 @@ def graph_centroid_related_data(
     save_dir=None,
     save_name=None,
     max_tstep=None,
-    make_group_centroid_drift_graph=True,
     fontsize=22,
     general_data_structure=None,
+    graphs_to_produce={
+        "velocity alignment": True,
+        "persistence time": True,
+        "general group info": True,
+        "centroid drift": True,
+        "interaction quantification": True,
+    },
 ):
     # assuming that num_timepoints, T is same for all cells
     set_fontsize(fontsize)
     if max_tstep == None:
         max_tstep = num_timepoints
 
-    all_cell_centroids_per_tstep = np.zeros((num_cells, max_tstep, 2), dtype=np.float64)
-
     # ------------------------
 
+    node_coords_per_tstep = hardio.get_node_coords_until_tstep(0, 1, storefile_path)
+
+    all_cell_node_coords_per_tstep = np.zeros(
+        (num_cells, max_tstep, node_coords_per_tstep.shape[1], 2), dtype=np.int64
+    )
+    all_cell_centroids_per_tstep = np.zeros((num_cells, max_tstep, 2), dtype=np.float64)
+
     for ci in range(num_cells):
-        cell_centroids_per_tstep = (
-            cu.calculate_cell_centroids_until_tstep(ci, max_tstep, storefile_path)
-            * cell_Ls[ci]
+        node_coords_per_tstep = hardio.get_node_coords_until_tstep(
+            ci, max_tstep, storefile_path
+        )
+        cell_centroids_per_tstep = cu.calculate_centroids_per_tstep(
+            node_coords_per_tstep
         )
 
         all_cell_centroids_per_tstep[ci, :, :] = cell_centroids_per_tstep
+        all_cell_node_coords_per_tstep[ci, :, :, :] = node_coords_per_tstep
 
     # ------------------------
     add_to_general_data_structure(
@@ -464,19 +599,91 @@ def graph_centroid_related_data(
         group_centroid_per_tstep[tstep] = geometry.calculate_cluster_centroid(
             cell_centroids
         )
-        
-    group_velocity_per_tstep = group_centroid_per_tstep[1:] - group_centroid_per_tstep[:-1]
-    group_direction_per_tstep = group_velocity_per_tstep/np.linalg.norm(group_velocity_per_tstep, axis=1)[:, np.newaxis]
-    all_cell_velocities_per_tstep = np.array([cell_centroids_per_tstep[1:] - cell_centroids_per_tstep[:-1] for cell_centroids_per_tstep in all_cell_centroids_per_tstep])
-    all_cell_directions_per_tstep = np.array([cell_velocities_per_tstep/np.linalg.norm(cell_velocities_per_tstep, axis=1)[:, np.newaxis] for cell_velocities_per_tstep in all_cell_velocities_per_tstep])
-    all_cell_velocity_alignment_per_tstep = [[np.dot(cell_direction, group_direction) for cell_direction in all_cell_directions_per_tstep[:, t]] for t, group_direction in enumerate(group_direction_per_tstep)]
-    
-    add_to_general_data_structure(
-        general_data_structure, [("group_centroid_per_tstep", group_centroid_per_tstep)]
-    )
-    add_to_general_data_structure(
-        general_data_structure, [("all_cell_velocity_alignment_per_tstep", all_cell_velocity_alignment_per_tstep)]
-    )
+
+    if graphs_to_produce["old interaction quantification"]:
+        num_interactions_per_cell_per_snapshot, num_cil_interactions_per_cell_per_snapshot, num_coa_only_interactions_per_cell_per_snapshot = cu.calculate_num_interactions_per_cell_per_tstep(
+            all_cell_node_coords_per_tstep, all_cell_centroids_per_tstep, 44.0, 110.0, 1
+        )
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [
+                (
+                    "num_interactions_per_cell_per_snapshot",
+                    num_interactions_per_cell_per_snapshot,
+                )
+            ],
+        )
+        add_to_general_data_structure(
+            general_data_structure,
+            [
+                (
+                    "num_cil_interactions_per_cell_per_snapshot",
+                    num_cil_interactions_per_cell_per_snapshot,
+                )
+            ],
+        )
+        add_to_general_data_structure(
+            general_data_structure,
+            [
+                (
+                    "num_coa_only_interactions_per_cell_per_snapshot",
+                    num_coa_only_interactions_per_cell_per_snapshot,
+                )
+            ],
+        )
+        # graph_cell_interaction_for_repeat(all_cell_centroids_per_tstep, save_dir=save_dir, save_name="num-interactions", fontsize=fontsize)
+
+    if graphs_to_produce["simple interaction quantification"]:
+        interaction_frequency_per_cell = cu.calculate_frequency_of_cil_interaction_over_simulation(
+            all_cell_centroids_per_tstep, 44.0, T / 60.0
+        )
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [("interaction_frequency_per_cell", interaction_frequency_per_cell)],
+        )
+        # graph_cell_interaction_for_repeat(all_cell_centroids_per_tstep, save_dir=save_dir, save_name="num-interactions", fontsize=fontsize)
+
+    if graphs_to_produce["velocity alignment"]:
+        max_num_closest_neighbours = np.array([4, 6, 8, 10])
+        velocity_alignment_time_deltas = np.array([5.0, 10.0, 20.0, 40.0])
+        velocity_alignments, num_va_data_points = cu.calculate_velocity_alignments(
+            max_num_closest_neighbours,
+            velocity_alignment_time_deltas,
+            all_cell_centroids_per_tstep,
+            T * 60.0,
+            cell_Ls[0],
+        )
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [("group_centroid_per_tstep", group_centroid_per_tstep)],
+        )
+        add_to_general_data_structure(
+            general_data_structure,
+            [("va_max_num_closest_neighbours", max_num_closest_neighbours)],
+        )
+        add_to_general_data_structure(
+            general_data_structure, [("va_time_deltas", velocity_alignment_time_deltas)]
+        )
+        add_to_general_data_structure(
+            general_data_structure, [("velocity_alignments", velocity_alignments)]
+        )
+        add_to_general_data_structure(
+            general_data_structure,
+            [("num_velocity_alignment_data_points", num_va_data_points)],
+        )
+        graph_velocity_alignment_for_repeat(
+            max_num_closest_neighbours,
+            velocity_alignment_time_deltas,
+            velocity_alignments,
+            num_va_data_points,
+            save_dir=save_dir,
+            save_name="velocity_alignments",
+            fontsize=fontsize,
+        )
+
     init_group_centroid_per_tstep = group_centroid_per_tstep[0]
     relative_group_centroid_per_tstep = (
         group_centroid_per_tstep - init_group_centroid_per_tstep
@@ -497,187 +704,198 @@ def graph_centroid_related_data(
             - relative_all_cell_centroids_per_tstep[ci, :-1, :]
         )
 
-    group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
-        group_centroid_displacements
-    )
-    group_persistence_time, group_positive_ts = cu.estimate_persistence_time(
-        T, group_positive_ns, group_positive_das
-    )
-    group_persistence_time = np.round(group_persistence_time, 0)
-
-    add_to_general_data_structure(
-        general_data_structure, [("group_persistence_time", group_persistence_time)]
-    )
-
-    positive_ts_per_cell = []
-    positive_das_per_cell = []
-    all_cell_persistence_times = []
-
-    for ci in range(all_cell_centroid_displacements.shape[0]):
-        this_cell_centroid_displacements = all_cell_centroid_displacements[ci, :, :]
-        this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
-            this_cell_centroid_displacements
+    if graphs_to_produce["persistence time"]:
+        group_positive_ns, group_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
+            group_centroid_displacements
         )
-        this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(
-            T, this_cell_positive_ns, this_cell_positive_das
+        group_persistence_time, group_positive_ts = cu.estimate_persistence_time(
+            T, group_positive_ns, group_positive_das
         )
-        this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
+        group_persistence_time = np.round(group_persistence_time, 0)
 
-        positive_ts_per_cell.append(this_cell_positive_ts)
-        positive_das_per_cell.append(this_cell_positive_das)
-        all_cell_persistence_times.append(this_cell_persistence_time)
+        add_to_general_data_structure(
+            general_data_structure, [("group_persistence_time", group_persistence_time)]
+        )
 
-        if save_dir != None and skip_dynamics_flags[ci] == False:
+        positive_ts_per_cell = []
+        positive_das_per_cell = []
+        all_cell_persistence_times = []
+
+        for ci in range(all_cell_centroid_displacements.shape[0]):
+            this_cell_centroid_displacements = all_cell_centroid_displacements[ci, :, :]
+            this_cell_positive_ns, this_cell_positive_das = cu.calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
+                this_cell_centroid_displacements
+            )
+            this_cell_persistence_time, this_cell_positive_ts = cu.estimate_persistence_time(
+                T, this_cell_positive_ns, this_cell_positive_das
+            )
+            this_cell_persistence_time = np.round(this_cell_persistence_time, 0)
+
+            positive_ts_per_cell.append(this_cell_positive_ts)
+            positive_das_per_cell.append(this_cell_positive_das)
+            all_cell_persistence_times.append(this_cell_persistence_time)
+
+            if save_dir != None and skip_dynamics_flags[ci] == False:
+                fig, ax = plt.subplots()
+
+                graph_title = "persistence time: {} {}".format(
+                    np.round(this_cell_persistence_time, decimals=0), time_unit
+                )
+                ax.set_title(graph_title)
+                ax.plot(
+                    this_cell_positive_ts, this_cell_positive_das, color="g", marker="."
+                )
+                ax.plot(
+                    this_cell_positive_ts,
+                    np.exp(-1 * this_cell_positive_ts / this_cell_persistence_time),
+                    color="r",
+                    marker=".",
+                )
+
+                this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
+                show_or_save_fig(
+                    fig, (12, 8), this_cell_save_dir, "persistence_time_estimation", ""
+                )
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [("all_cell_persistence_times", all_cell_persistence_times)],
+        )
+
+        if save_dir != None:
             fig, ax = plt.subplots()
-
-            graph_title = "persistence time: {} {}".format(
-                np.round(this_cell_persistence_time, decimals=0), time_unit
+            ax.set_title(
+                "persistence time: {}".format(
+                    np.round(group_persistence_time, decimals=0)
+                )
             )
-            ax.set_title(graph_title)
+            ax.plot(group_positive_ts, group_positive_das, color="g", marker=".")
             ax.plot(
-                this_cell_positive_ts, this_cell_positive_das, color="g", marker="."
-            )
-            ax.plot(
-                this_cell_positive_ts,
-                np.exp(-1 * this_cell_positive_ts / this_cell_persistence_time),
+                group_positive_ts,
+                np.exp(-1 * group_positive_ts / group_persistence_time),
                 color="r",
                 marker=".",
             )
 
-            this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
             show_or_save_fig(
-                fig, (12, 8), this_cell_save_dir, "persistence_time_estimation", ""
+                fig, (12, 8), save_dir, "group_persistence_time_estimation", ""
             )
 
-    add_to_general_data_structure(
-        general_data_structure,
-        [("all_cell_persistence_times", all_cell_persistence_times)],
-    )
+    if graphs_to_produce["general group info"]:
+        # ------------------------
 
-    if save_dir != None:
         fig, ax = plt.subplots()
-        ax.set_title(
-            "persistence time: {}".format(np.round(group_persistence_time, decimals=0))
+
+        # ------------------------
+
+        min_x_data_lim = np.min(relative_all_cell_centroids_per_tstep[:, :, 0])
+        max_x_data_lim = np.max(relative_all_cell_centroids_per_tstep[:, :, 0])
+        delta_x = np.abs(min_x_data_lim - max_x_data_lim)
+        max_y_data_lim = 1.2 * np.max(
+            np.abs(relative_all_cell_centroids_per_tstep[:, :, 1])
         )
-        ax.plot(group_positive_ts, group_positive_das, color="g", marker=".")
+        ax.set_xlim(min_x_data_lim - 0.1 * delta_x, max_x_data_lim + 0.1 * delta_x)
+        if 2 * max_y_data_lim < 0.25 * (1.2 * delta_x):
+            max_y_data_lim = 0.5 * 1.2 * delta_x
+        ax.set_ylim(-1 * max_y_data_lim, max_y_data_lim)
+        ax.set_aspect("equal")
+
+        group_net_displacement = (
+            relative_group_centroid_per_tstep[-1] - relative_group_centroid_per_tstep[0]
+        )
+        group_net_displacement_mag = np.linalg.norm(group_net_displacement)
+        group_net_distance = np.sum(
+            np.linalg.norm(
+                relative_group_centroid_per_tstep[1:]
+                - relative_group_centroid_per_tstep[:-1],
+                axis=1,
+            )
+        )
+        group_persistence_ratio = np.round(
+            group_net_displacement_mag / group_net_distance, 4
+        )
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [("group_persistence_ratio", group_persistence_ratio)],
+        )
+
+        cell_persistence_ratios = []
+        for ci in range(num_cells):
+            ccs = relative_all_cell_centroids_per_tstep[ci, :, :]
+            net_displacement = ccs[-1] - ccs[0]
+            net_displacement_mag = np.linalg.norm(net_displacement)
+            net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:-1], axis=-1))
+            persistence_ratio = net_displacement_mag / net_distance
+            cell_persistence_ratios.append(persistence_ratio)
+
+            ax.plot(
+                ccs[:, 0], ccs[:, 1], marker=None, color=colors.color_list20[ci % 20]
+            )
+            # ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
+
+        add_to_general_data_structure(
+            general_data_structure,
+            [("all_cell_persistence_ratios", cell_persistence_ratios)],
+        )
+
+        average_cell_persistence_ratio = np.round(
+            np.average(cell_persistence_ratios), decimals=4
+        )
+        std_cell_persistence_ratio = np.round(
+            np.std(cell_persistence_ratios), decimals=4
+        )
+
         ax.plot(
-            group_positive_ts,
-            np.exp(-1 * group_positive_ts / group_persistence_time),
-            color="r",
-            marker=".",
+            relative_group_centroid_per_tstep[:, 0],
+            relative_group_centroid_per_tstep[:, 1],
+            marker=None,
+            label="group centroid",
+            color="k",
+            linewidth=2,
         )
 
-        show_or_save_fig(
-            fig, (12, 8), save_dir, "group_persistence_time_estimation", ""
+        ax.set_ylabel("$\mu m$")
+        ax.set_xlabel("$\mu m$")
+
+        average_cell_persistence_time = np.round(
+            np.average(all_cell_persistence_times), decimals=2
         )
-
-    # ------------------------
-
-    fig, ax = plt.subplots()
-
-    # ------------------------
-
-    min_x_data_lim = np.min(relative_all_cell_centroids_per_tstep[:, :, 0])
-    max_x_data_lim = np.max(relative_all_cell_centroids_per_tstep[:, :, 0])
-    delta_x = np.abs(min_x_data_lim - max_x_data_lim)
-    max_y_data_lim = 1.2 * np.max(
-        np.abs(relative_all_cell_centroids_per_tstep[:, :, 1])
-    )
-    ax.set_xlim(min_x_data_lim - 0.1 * delta_x, max_x_data_lim + 0.1 * delta_x)
-    if 2 * max_y_data_lim < 0.25 * (1.2 * delta_x):
-        max_y_data_lim = 0.5 * 1.2 * delta_x
-    ax.set_ylim(-1 * max_y_data_lim, max_y_data_lim)
-    ax.set_aspect("equal")
-
-    group_net_displacement = (
-        relative_group_centroid_per_tstep[-1] - relative_group_centroid_per_tstep[0]
-    )
-    group_net_displacement_mag = np.linalg.norm(group_net_displacement)
-    group_net_distance = np.sum(
-        np.linalg.norm(
-            relative_group_centroid_per_tstep[1:]
-            - relative_group_centroid_per_tstep[:-1],
-            axis=1,
+        std_cell_persistence_time = np.round(
+            np.std(all_cell_persistence_times), decimals=2
         )
-    )
-    group_persistence_ratio = np.round(
-        group_net_displacement_mag / group_net_distance, 4
-    )
-
-    add_to_general_data_structure(
-        general_data_structure, [("group_persistence_ratio", group_persistence_ratio)]
-    )
-
-    cell_persistence_ratios = []
-    for ci in range(num_cells):
-        ccs = relative_all_cell_centroids_per_tstep[ci, :, :]
-        net_displacement = ccs[-1] - ccs[0]
-        net_displacement_mag = np.linalg.norm(net_displacement)
-        net_distance = np.sum(np.linalg.norm(ccs[1:] - ccs[:-1], axis=-1))
-        persistence_ratio = net_displacement_mag / net_distance
-        cell_persistence_ratios.append(persistence_ratio)
-
-        ax.plot(ccs[:, 0], ccs[:, 1], marker=None, color=colors.color_list20[ci % 20])
-        # ax.plot(ccs[:,0], ccs[:,1], marker=None, color=colors.color_list20[ci%20], label='cell {}, pers.={}'.format(ci, persistence))
-
-    add_to_general_data_structure(
-        general_data_structure,
-        [("all_cell_persistence_ratios", cell_persistence_ratios)],
-    )
-
-    average_cell_persistence_ratio = np.round(
-        np.average(cell_persistence_ratios), decimals=4
-    )
-    std_cell_persistence_ratio = np.round(np.std(cell_persistence_ratios), decimals=4)
-
-    ax.plot(
-        relative_group_centroid_per_tstep[:, 0],
-        relative_group_centroid_per_tstep[:, 1],
-        marker=None,
-        label="group centroid",
-        color="k",
-        linewidth=2,
-    )
-
-    ax.set_ylabel("$\mu m$")
-    ax.set_xlabel("$\mu m$")
-
-    average_cell_persistence_time = np.round(
-        np.average(all_cell_persistence_times), decimals=2
-    )
-    std_cell_persistence_time = np.round(np.std(all_cell_persistence_times), decimals=2)
-    ax.set_title(
-        "group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(
-            group_persistence_ratio,
-            average_cell_persistence_ratio,
-            std_cell_persistence_ratio,
-            group_persistence_time,
-            time_unit,
-            average_cell_persistence_time,
-            time_unit,
-            std_cell_persistence_time,
-            time_unit,
+        ax.set_title(
+            "group pers_ratio = {} \n avg. cell pers_ratio = {} (std = {}) \n group pers_time = {} {},  avg. cell pers_time = {} {} (std = {} {})".format(
+                group_persistence_ratio,
+                average_cell_persistence_ratio,
+                std_cell_persistence_ratio,
+                group_persistence_time,
+                time_unit,
+                average_cell_persistence_time,
+                time_unit,
+                std_cell_persistence_time,
+                time_unit,
+            )
         )
-    )
-    if save_dir != None:
-        write_lines_to_file(
-            os.path.join(save_dir, "persistence_data.txt"),
-            [
-                "group peristence ratio: {}\n".format(group_persistence_ratio),
-                "(avg, std) cell persistence ratio: {}, {}\n".format(
-                    average_cell_persistence_ratio, std_cell_persistence_ratio
-                ),
-                "(avg, std) cell persistence time: {}, {}".format(
-                    average_cell_persistence_time, std_cell_persistence_time
-                ),
-            ],
-        )
+        if save_dir != None:
+            write_lines_to_file(
+                os.path.join(save_dir, "persistence_data.txt"),
+                [
+                    "group peristence ratio: {}\n".format(group_persistence_ratio),
+                    "(avg, std) cell persistence ratio: {}, {}\n".format(
+                        average_cell_persistence_ratio, std_cell_persistence_ratio
+                    ),
+                    "(avg, std) cell persistence time: {}, {}".format(
+                        average_cell_persistence_time, std_cell_persistence_time
+                    ),
+                ],
+            )
 
-    # ------------------------
+        # ------------------------
 
-    show_or_save_fig(fig, (12, 10), save_dir, save_name, "")
+        show_or_save_fig(fig, (12, 10), save_dir, save_name, "")
 
-    if make_group_centroid_drift_graph == True:
+    if graphs_to_produce["centroid drift"]:
         general_data_structure = graph_group_centroid_drift(
             T,
             time_unit,
@@ -1197,8 +1415,8 @@ def present_collated_single_cell_motion_data(
         fig_box, (8, 8), experiment_dir, "collated_single_cell_data_speed_box", ""
     )
 
-
 # =============================================================================
+
 
 def present_collated_cell_motion_data(
     time_unit,
@@ -1207,9 +1425,14 @@ def present_collated_cell_motion_data(
     all_cell_persistence_times_per_repeat,
     all_cell_speeds_per_repeat,
     all_cell_protrusion_lifetimes_and_directions_per_repeat,
+    all_cell_protrusion_group_directions_per_repeat,
     group_centroid_per_timestep_per_repeat,
     group_persistence_ratio_per_repeat,
     group_persistence_time_per_repeat,
+    max_num_closest_neighbours,
+    time_deltas,
+    velocity_alignment_per_num_neighbours_per_time_delta_per_repeat,
+    num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
     experiment_dir,
     total_time_in_hours,
     fontsize=22,
@@ -1222,8 +1445,12 @@ def present_collated_cell_motion_data(
     min_y_data_lim = 0.0
 
     all_protrusion_lifetimes_and_average_directions = np.zeros((0, 2), dtype=np.float64)
+    all_protrusion_group_directions = np.zeros(0, dtype=np.float64)
 
+    fig_all_cell_time, ax_all_cell_time = plt.subplots()
     fig_time, ax_time = plt.subplots()
+    avg_cell_centroids_over_all_repeats_per_timestep = np.average(np.average(all_cell_centroids_per_repeat, axis=0), axis=0)
+    avg_cell_centroids_over_all_repeats_per_timestep = avg_cell_centroids_over_all_repeats_per_timestep - avg_cell_centroids_over_all_repeats_per_timestep[0]
     for rpti, all_cell_centroids in enumerate(all_cell_centroids_per_repeat):
         for ci, ccs in enumerate(all_cell_centroids):
             relative_ccs = ccs - ccs[0]
@@ -1250,19 +1477,28 @@ def present_collated_cell_motion_data(
                 axis=0,
             )
 
-#            print("Plotting centroids for cell {}...".format(ci))
-#            ax_time.plot(
-#                relative_ccs[:, 0],
-#                relative_ccs[:, 1],
-#                marker=None,
-#                color=colors.color_list300[ci % 300],
-#                alpha=0.5,
-#            )
+            all_protrusion_group_directions = np.append(
+                all_protrusion_group_directions,
+                np.array(all_cell_protrusion_group_directions_per_repeat[rpti][ci]),
+                axis=0,
+            )
 
+    #            print("Plotting centroids for cell {}...".format(ci))
+    #            ax_time.plot(
+    #                relative_ccs[:, 0],
+    #                relative_ccs[:, 1],
+    #                marker=None,
+    #                color=colors.color_list300[ci % 300],
+    #                alpha=0.5,
+    #            )
+
+    group_front_edge_x = np.max(all_cell_centroids_per_repeat[0, :, 0, 0])
+    group_centroid_initial_coordinate = group_centroid_per_timestep_per_repeat[0][0]
+    graph_origin = np.array([group_front_edge_x, group_centroid_initial_coordinate[1]])
     for rpt_number in range(len(group_centroid_per_timestep_per_repeat)):
         group_centroid_per_timestep = group_centroid_per_timestep_per_repeat[rpt_number]
         relative_group_centroid_per_timestep = (
-            group_centroid_per_timestep - group_centroid_per_timestep[0]
+            group_centroid_per_timestep - graph_origin
         )
         print("Plotting group centroid for rpt {}...".format(rpt_number))
         ax_time.plot(
@@ -1272,14 +1508,13 @@ def present_collated_cell_motion_data(
             color=colors.color_list300[rpt_number % 300],
             linewidth=2,
         )
+    ax_all_cell_time.plot(avg_cell_centroids_over_all_repeats_per_timestep[:, 0], avg_cell_centroids_over_all_repeats_per_timestep[:, 1], marker=None, color='k', linewidth=2)
 
     if type(chemoattraction_source_coords) != type(None):
-        chemoattraction_source_coords = (
-            chemoattraction_source_coords - group_centroid_per_timestep_per_repeat[0][0]
-        )
-        max_x_data_lim = np.max(
-            [np.abs(chemoattraction_source_coords[0]), max_x_data_lim]
-        )
+        chemoattraction_source_coords = chemoattraction_source_coords - graph_origin
+        #        max_x_data_lim = np.max(
+        #            [np.abs(chemoattraction_source_coords[0]), max_x_data_lim]
+        #        )
         ax_time.plot(
             [chemoattraction_source_coords[0]],
             [chemoattraction_source_coords[1]],
@@ -1321,43 +1556,33 @@ def present_collated_cell_motion_data(
 
     ax_time.set_ylabel("$\mu m$")
     ax_time.set_xlabel("$\mu m$")
-
-    if type(chemoattraction_source_coords) == type(None):
-        y_lim = 1.1 * np.max([np.abs(min_y_data_lim), np.abs(max_y_data_lim)])
-    else:
-        y_lim = 1.1 * np.max(
-            [
-                np.abs(min_y_data_lim),
-                np.abs(max_y_data_lim),
-                np.abs(chemoattraction_source_coords[1]),
-            ]
+    
+    ax_all_cell_time.set_title(
+        "Experiment over {} hours".format(
+            total_time_in_hours,
         )
+    )
 
-    if max_x_data_lim > 0.0:
-        max_x_data_lim = 1.1 * max_x_data_lim
-    else:
-        max_x_data_lim = -1 * 1.1 * np.abs(max_x_data_lim)
+    ax_all_cell_time.set_ylabel("$\mu m$")
+    ax_all_cell_time.set_xlabel("$\mu m$")
 
-    if min_x_data_lim > 0.0:
-        min_x_data_lim = 1.1 * min_x_data_lim
-    else:
-        min_x_data_lim = -1 * 1.1 * np.abs(min_x_data_lim)
+    ax_time.set_xlim(-725, 725)
 
-    #ax_time.set_xlim(min_x_data_lim, max_x_data_lim)
-    ax_time.set_xlim(-700, 700)
-
-    if y_lim < 0.2 * (max_x_data_lim - min_x_data_lim):
-        y_lim = 0.2 * (max_x_data_lim - min_x_data_lim)
-
-    #ax_time.set_ylim(-1 * y_lim, y_lim)
-    ax_time.set_ylim(-700, 700)
+    ax_time.set_ylim(-725, 725)
     ax_time.set_aspect("equal")
 
     ax_time.grid(which="both")
+    
+    ax_all_cell_time.set_xlim(-725, 725)
+
+    ax_all_cell_time.set_ylim(-725, 725)
+    ax_all_cell_time.set_aspect("equal")
+
+    ax_all_cell_time.grid(which="both")
 
     fig_box, ax_box = plt.subplots()
 
-    all_cell_average_speeds = np.ravel(all_cell_speeds_per_repeat)
+    # all_cell_average_speeds = np.ravel(all_cell_speeds_per_repeat)
     #    print "plotting cell speed violin..."
     #    violin = ax_box.violinplot(all_cell_average_speeds, showmedians=True, points=all_cell_average_speeds.shape[0])
 
@@ -1365,26 +1590,103 @@ def present_collated_cell_motion_data(
     ax_box.set_ylabel("$|V_N|$ ($\mu m$/min.)")
     ax_box.xaxis.set_ticks([])
     ax_box.xaxis.set_ticks_position("none")
-    
+
+    simulation_time_in_minutes = total_time_in_hours * 60.0
+
     print("plotting protrusion directions radially...")
     graph_protrusion_directions_radially(
         all_protrusion_lifetimes_and_average_directions,
         12,
-        total_time_in_hours * 60.0,
-        cutoff_time_in_minutes=0.0,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=0.0,
+        max_lifetime_in_minutes=2 * simulation_time_in_minutes,
         save_dir=experiment_dir,
         save_name="all_cells_protrusion_directions",
     )
-    
+
     print("plotting protrusion directions radially...")
     graph_protrusion_directions_radially(
         all_protrusion_lifetimes_and_average_directions,
         12,
-        total_time_in_hours * 60.0,
-        cutoff_time_in_minutes=40.0,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=0.0,
+        max_lifetime_in_minutes=20.0,
         save_dir=experiment_dir,
         save_name="all_cells_protrusion_directions",
     )
+
+    print("plotting protrusion directions radially...")
+    graph_protrusion_directions_radially(
+        all_protrusion_lifetimes_and_average_directions,
+        12,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=20.0,
+        max_lifetime_in_minutes=40.0,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_directions",
+    )
+
+    print("plotting protrusion directions radially...")
+    graph_protrusion_directions_radially(
+        all_protrusion_lifetimes_and_average_directions,
+        12,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=40.0,
+        max_lifetime_in_minutes=80.0,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_directions",
+    )
+
+    print("plotting protrusion directions radially...")
+    graph_protrusion_directions_radially(
+        all_protrusion_lifetimes_and_average_directions,
+        12,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=80.0,
+        max_lifetime_in_minutes=120.0,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_directions",
+    )
+
+    print("plotting protrusion directions radially...")
+    graph_protrusion_directions_radially(
+        all_protrusion_lifetimes_and_average_directions,
+        12,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=120.0,
+        max_lifetime_in_minutes=160.0,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_directions",
+    )
+
+    print("plotting protrusion directions radially...")
+    graph_protrusion_directions_radially(
+        all_protrusion_lifetimes_and_average_directions,
+        12,
+        simulation_time_in_minutes,
+        min_lifetime_in_minutes=160.0,
+        max_lifetime_in_minutes=2 * simulation_time_in_minutes,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_directions",
+    )
+
+    # ============================
+    print("plotting protrusion group directions radially...")
+    num_repeats = all_cell_centroids_per_repeat.shape[0]
+    num_cells = all_cell_centroids_per_repeat.shape[1]
+    num_timesteps = all_cell_centroids_per_repeat.shape[2]
+    graph_protrusion_group_directions_radially(
+        num_repeats,
+        num_cells,
+        num_timesteps,
+        all_protrusion_group_directions,
+        12,
+        total_time_in_hours * 60.0,
+        save_dir=experiment_dir,
+        save_name="all_cells_protrusion_grouped_directions",
+    )
+
+    # ============================
 
     print("plotting protrusion lifetimes radially...")
     graph_protrusion_lifetimes_radially(
@@ -1395,8 +1697,20 @@ def present_collated_cell_motion_data(
         save_name="all_cells_protrusion_life_dir",
     )
 
+    print("plotting velocity alignment data...")
+    graph_velocity_alignment_for_all_repeats(
+        max_num_closest_neighbours,
+        time_deltas,
+        velocity_alignment_per_num_neighbours_per_time_delta_per_repeat,
+        num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
+        save_dir=experiment_dir,
+        save_name="all_repeats_velocity_alignment",
+        fontsize=22,
+    )
+
     print("showing/saving figures...")
     show_or_save_fig(fig_time, (12, 6), experiment_dir, "collated_cell_data", "")
+    show_or_save_fig(fig_all_cell_time, (12, 6), experiment_dir, "collated_all_cell_average_data", "")
     show_or_save_fig(
         fig_box, (8, 8), experiment_dir, "collated_cell_data_speed_box", ""
     )
@@ -1411,7 +1725,7 @@ def present_collated_group_centroid_drift_data(
     min_x_centroid_per_tstep_per_repeat,
     max_x_centroid_per_tstep_per_repeat,
     group_x_centroid_per_tstep_per_repeat,
-    fit_group_x_velocity_per_repeat,
+    group_x_velocities_per_tstep_per_repeat,
     save_dir,
     total_time_in_hours,
     fontsize=22,
@@ -1563,16 +1877,17 @@ def present_collated_group_centroid_drift_data(
         ax_full_normalized.grid(which="both")
         ax_full.grid(which="both")
 
-    if plot_speedbox:
-        violin = ax_box.violinplot(
-            fit_group_x_velocity_per_repeat,
-            showmedians=True,
-            points=len(fit_group_x_velocity_per_repeat),
-        )
-        ax_box.yaxis.grid(True)
-        ax_box.set_ylabel("avg. $V_c$ ($\mu m$/min.)")
-        ax_box.xaxis.set_ticks([])
-        ax_box.xaxis.set_ticks_position("none")
+    #    group_x_velocities = np.array(group_x_velocities_per_tstep_per_repeat).ravel()
+    #    if plot_speedbox:
+    #        violin = ax_box.violinplot(
+    #            group_x_velocities,
+    #            showmedians=True,
+    #            points=group_x_velocities.shape[0],
+    #        )
+    #        ax_box.yaxis.grid(True)
+    #        ax_box.set_ylabel("avg. $V_c$ ($\mu m$/min.)")
+    #        ax_box.xaxis.set_ticks([])
+    #        ax_box.xaxis.set_ticks_position("none")
 
     #    for fig, base_name, fig_size in zip([fig_simple_normalized, fig_simple, fig_full_normalized, fig_full, fig_box], ["collated_group_centroid_drift_simple_normalized", "collated_group_centroid_drift_simple", "collated_group_centroid_drift_full_normalized", "collated_group_centroid_drift_full", "collated_group_speed_box"], [(4, 4), (4, 4), (4, 4), (4, 4), (4, 4)]):
     #        if fig != None:
@@ -1614,7 +1929,9 @@ def generate_theta_bins(num_bins):
 
     return bin_bounds, bin_mids, delta
 
+
 # =============================================================================
+
 
 def graph_protrusion_bias_vectors(
     protrusion_lifetime_and_average_directions_per_cell,
@@ -1630,13 +1947,17 @@ def graph_protrusion_bias_vectors(
     set_fontsize(fontsize)
 
     bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
-    binned_direction_data_per_cell = [[[] for x in range(num_polar_graph_bins)] for y in range(num_cells)]
-    
-    for ci, protrusion_lifetime_and_direction_data in enumerate(protrusion_lifetime_and_average_directions_per_cell):
+    binned_direction_data_per_cell = [
+        [[] for x in range(num_polar_graph_bins)] for y in range(num_cells)
+    ]
+
+    for ci, protrusion_lifetime_and_direction_data in enumerate(
+        protrusion_lifetime_and_average_directions_per_cell
+    ):
         for protrusion_result in protrusion_lifetime_and_direction_data:
             lifetime, direction = protrusion_result
             lifetime = lifetime
-    
+
             binned = False
             for n in range(num_polar_graph_bins - 1):
                 a, b = bin_bounds[n]
@@ -1644,16 +1965,18 @@ def graph_protrusion_bias_vectors(
                     binned = True
                     binned_direction_data_per_cell[ci][n].append(lifetime)
                     break
-    
+
             if binned == False:
                 binned_direction_data_per_cell[ci][-1].append(lifetime)
-                
+
     protrusion_bias_vectors_per_cell = []
     for binned_direction_data in binned_direction_data_per_cell:
         bin_bias_vectors = []
         for (bin_midpoint, bin_data) in zip(bin_midpoints, binned_direction_data):
             bin_sum = np.sum(bin_data)
-            bin_bias_vectors.append([bin_sum*np.cos(bin_midpoint), bin_sum*np.sin(bin_midpoint)])
+            bin_bias_vectors.append(
+                [bin_sum * np.cos(bin_midpoint), bin_sum * np.sin(bin_midpoint)]
+            )
         protrusion_bias_vectors_per_cell.append(np.average(bin_bias_vectors, axis=0))
 
     fig, ax = plt.subplots()
@@ -1662,7 +1985,7 @@ def graph_protrusion_bias_vectors(
     ax.set_xlim([-max_lim, max_lim])
     ax.set_ylim([-max_lim, max_lim])
     for ci, bv in enumerate(protrusion_bias_vectors_per_cell):
-        ax.plot([0.0, bv[0]], [0.0, bv[1]], color=colors.color_list300[int(ci%300)])
+        ax.plot([0.0, bv[0]], [0.0, bv[1]], color=colors.color_list300[int(ci % 300)])
 
     show_or_save_fig(
         fig,
@@ -1673,7 +1996,8 @@ def graph_protrusion_bias_vectors(
         figtype="png",
         bbox_inches=None,
     )
-    
+
+
 # =============================================================================
 
 
@@ -1681,7 +2005,8 @@ def graph_protrusion_directions_radially(
     protrusion_lifetime_and_direction_data,
     num_polar_graph_bins,
     total_simulation_time_in_minutes,
-    cutoff_time_in_minutes=40.0,
+    min_lifetime_in_minutes=0.0,
+    max_lifetime_in_minutes=40.0,
     save_dir=None,
     save_name=None,
     fontsize=40,
@@ -1692,28 +2017,35 @@ def graph_protrusion_directions_radially(
 
     bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
     binned_direction_data = [[] for x in range(num_polar_graph_bins)]
+    total_num_protrusions = len(protrusion_lifetime_and_direction_data)
     for protrusion_result in protrusion_lifetime_and_direction_data:
         lifetime, direction = protrusion_result
         binned = False
-        
+
         for n in range(num_polar_graph_bins - 1):
             a, b = bin_bounds[n]
             if a <= direction < b:
                 binned = True
-                if lifetime > cutoff_time_in_minutes:
+                if min_lifetime_in_minutes < lifetime < max_lifetime_in_minutes:
                     binned_direction_data[n].append(1)
                 break
 
-        if binned == False and lifetime > cutoff_time_in_minutes:
+        if (
+            binned == False
+            and min_lifetime_in_minutes < lifetime < max_lifetime_in_minutes
+        ):
             binned_direction_data[-1].append(1)
 
     fig = plt.figure(figsize=(10, 10))
 
     ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
-    
-    summed_bin_direction_data = [np.sum(x) for x in binned_direction_data]
 
-    bars = ax.bar(bin_midpoints, summed_bin_direction_data, width=bin_size, bottom=0.0)
+    summed_bin_direction_data = np.array([np.sum(x) for x in binned_direction_data])
+    normalized_bin_direction_data = summed_bin_direction_data / total_num_protrusions
+
+    bars = ax.bar(
+        bin_midpoints, normalized_bin_direction_data, width=bin_size, bottom=0.0
+    )
 
     for bar in bars:
         bar.set_facecolor("green")
@@ -1722,23 +2054,27 @@ def graph_protrusion_directions_radially(
     for bi in range(num_polar_graph_bins):
         ax.text(
             bin_midpoints[bi],
-            summed_bin_direction_data[bi],
+            normalized_bin_direction_data[bi],
             "{}".format(len(binned_direction_data[bi])),
             fontdict={"size": 0.5 * fontsize},
         )
 
-    max_y = np.max(summed_bin_direction_data)
+    max_y = np.max(normalized_bin_direction_data)
 
     ax.yaxis.get_major_locator().base.set_params(nbins=5)
     # label_position=ax.get_rlabel_position()
     # ax.text(np.pi, ax.get_rmax()/2., 't (min.)', rotation=0.0,ha='center',va='center')
 
+    if max_lifetime_in_minutes >= total_simulation_time_in_minutes:
+        max_lifetime_in_minutes = "INF"
     show_or_save_fig(
         fig,
         (14, 12),
         save_dir,
         save_name,
-        "CT={}_B={}".format(cutoff_time_in_minutes, num_polar_graph_bins),
+        "MINT={}_MAXT={}_B={}".format(
+            min_lifetime_in_minutes, max_lifetime_in_minutes, num_polar_graph_bins
+        ),
         figtype="png",
         bbox_inches=None,
     )
@@ -1748,10 +2084,102 @@ def graph_protrusion_directions_radially(
         (14, 12),
         save_dir,
         save_name,
-        "no_labels_CT={}_B={}".format(cutoff_time_in_minutes, num_polar_graph_bins),
+        "no_labels_MINT={}_MAXT={}_B={}".format(
+            min_lifetime_in_minutes, max_lifetime_in_minutes, num_polar_graph_bins
+        ),
         figtype="png",
         bbox_inches=None,
     )
+
+
+def graph_protrusion_group_directions_radially(
+    num_repeats,
+    num_cells,
+    num_timesteps,
+    protrusion_group_direction_data,
+    num_polar_graph_bins,
+    total_simulation_time_in_minutes,
+    save_dir=None,
+    save_name=None,
+    fontsize=40,
+    general_data_structure=None,
+):
+    num_polar_graph_bins = 16
+    set_fontsize(fontsize)
+
+    bin_bounds, bin_midpoints, bin_size = generate_theta_bins(num_polar_graph_bins)
+    binned_direction_data = [[] for x in range(num_polar_graph_bins)]
+    for direction in protrusion_group_direction_data:
+        binned = False
+
+        for n in range(num_polar_graph_bins - 1):
+            a, b = bin_bounds[n]
+            if a <= direction < b:
+                binned = True
+                binned_direction_data[n].append(1)
+                break
+
+        if binned == False:
+            binned_direction_data[-1].append(1)
+
+    fig = plt.figure(figsize=(10, 10))
+
+    ax = fig.add_subplot(111, polar=True)
+
+    summed_bin_direction_data = np.array([np.sum(x) for x in binned_direction_data])
+    total_sum = np.sum(summed_bin_direction_data)
+    normalized_summed_bin_direction_data = summed_bin_direction_data / total_sum
+
+    bars = ax.bar(
+        bin_midpoints, normalized_summed_bin_direction_data, width=bin_size, bottom=0.0
+    )
+
+    for bar in bars:
+        bar.set_facecolor("green")
+        bar.set_alpha(0.25)
+
+    #    for bi in range(num_polar_graph_bins):
+    #        ax.text(
+    #            bin_midpoints[bi],
+    #            0.9*summed_bin_direction_data[bi],
+    #            "{}".format(summed_bin_direction_data[bi], decimals=2),
+    #            fontdict={"size": 0.5 * fontsize},
+    #        )
+
+    # tick locations
+    thetaticks = np.arange(0, 360, 90)
+
+    # set ticklabels location at 1.3 times the axes' radius
+    ax.set_thetagrids(thetaticks)
+    ax.tick_params(pad=50)
+
+    #    ax.yaxis.get_major_locator().base.set_params(nbins=5)
+    #    label_position = ax.get_rlabel_position()
+    #    ax.text(np.pi, ax.get_rmax()/2., 't (min.)', rotation=0.0,ha='center',va='center')
+
+    ax.set_ylim(bottom=0.0)
+
+    ax.grid(axis="x", which="minor")
+    show_or_save_fig(
+        fig,
+        (14, 12),
+        save_dir,
+        save_name,
+        "B={}".format(num_polar_graph_bins),
+        figtype="eps",
+        bbox_inches=None,
+    )
+    ax.set_yticklabels([])
+    show_or_save_fig(
+        fig,
+        (14, 12),
+        save_dir,
+        save_name,
+        "no_labels_B={}".format(num_polar_graph_bins),
+        figtype="eps",
+        bbox_inches=None,
+    )
+
 
 # =============================================================================
 
@@ -4211,7 +4639,15 @@ def graph_intercellular_distance_after_first_collision(
 
     mean = np.average(cell_ics_at_tpoint_of_interest)
     std = np.std(cell_ics_at_tpoint_of_interest)
-    rects1 = ax.bar(np.arange(1), mean, width, color="r", yerr=std)
+    rects1 = ax.bar(
+        np.arange(1),
+        mean,
+        width,
+        color="r",
+        yerr=std,
+        capsize=10,
+        error_kw={"elinewidth": 2.0, "capthick": 2.0},
+    )
 
     ax.set_ylabel("centroid-to-centroid separation\n30 min. after collision")
     ax.set_xticks(np.arange(1) + width / 2)
@@ -4224,20 +4660,49 @@ def graph_intercellular_distance_after_first_collision(
 
     show_or_save_fig(fig, (6, 6), save_dir, "ics-at-30-min", "")
 
+
 def generate_x_axis_titles_and_labels_for_varying_magnitudes(test_variants):
     x_labels = ["M={}".format(m) for m in test_variants]
-    
+
     return ("chemotaxis magnitude ($M$)", x_labels)
 
-def generate_x_axis_titles_and_labels_for_varying_parameters(test_variants, hide_scheme=True, hide_randomization_period_mean=False, hide_randomization_period_std=False, hide_randomization_magnitude=False, hide_randomization_node_percentage=True, hide_coa=False, hide_cil=False, hide_chemoattractant_magnitude_at_source=False):
-    randomization_labels = ["scheme", "$T_R$", "SD($T_R$)", "R", "RVP"]
+
+def generate_x_axis_titles_and_labels_for_varying_parameters(
+    test_variants,
+    hide_scheme=True,
+    hide_randomization_period_mean=False,
+    hide_randomization_period_std=False,
+    hide_randomization_magnitude=False,
+    hide_randomization_node_percentage=True,
+    hide_coa=False,
+    hide_cil=False,
+    hide_chemoattractant_magnitude_at_source=False,
+):
+    randomization_labels = ["scheme", "$T_R$", "SD($T_R$)", "$R$", "RVP"]
     other_labels = ["COA", "CIL", "M"]
     possible_data_labels = randomization_labels + other_labels
     possible_data_units = ["", " min.", "", "", "", "", "", ""]
-    data_label_to_tag_dict = dict([(dl, tag) for dl, tag in zip(possible_data_labels, ["randomization_scheme", "randomization_time_mean", "randomization_time_variance_factor", "randomization_magnitude", "randomization_node_percentage", "coa_factor", "cil_factor", "chm"])])
-    
+    data_label_to_tag_dict = dict(
+        [
+            (dl, tag)
+            for dl, tag in zip(
+                possible_data_labels,
+                [
+                    "randomization_scheme",
+                    "randomization_time_mean",
+                    "randomization_time_variance_factor",
+                    "randomization_magnitude",
+                    "randomization_node_percentage",
+                    "coa_factor",
+                    "cil_factor",
+                    "chm",
+                ],
+            )
+        ]
+    )
+
     test_variants = [dict(tv) for tv in test_variants]
-    
+
     data_labels_are_constant = []
     for data_label in possible_data_labels:
         data = []
@@ -4248,69 +4713,133 @@ def generate_x_axis_titles_and_labels_for_varying_parameters(test_variants, hide
             except:
                 pass
             data.append(x)
-            
+
         data_0 = data[0]
         constant = np.all([(d == data_0) for d in data])
         data_labels_are_constant.append(constant)
-    
-    data_labels_are_hidden = [hide_scheme, hide_randomization_period_mean, hide_randomization_period_std, hide_randomization_magnitude, hide_randomization_node_percentage, hide_coa, hide_cil, hide_chemoattractant_magnitude_at_source]
-    
+
+    data_labels_are_hidden = [
+        hide_scheme,
+        hide_randomization_period_mean,
+        hide_randomization_period_std,
+        hide_randomization_magnitude,
+        hide_randomization_node_percentage,
+        hide_coa,
+        hide_cil,
+        hide_chemoattractant_magnitude_at_source,
+    ]
+
     x_axis_title_components = []
     x_labels_components = [[] for x in range(len(test_variants))]
-    randomization_exists = [test_variants[x]["randomization_scheme"] != None for x in range(len(test_variants))]
+    randomization_exists = [
+        test_variants[x]["randomization_scheme"] != None
+        for x in range(len(test_variants))
+    ]
     no_variants_with_randomization = not np.all(randomization_exists)
-    
-    for dl, dl_unit, constant, hidden in zip(possible_data_labels, possible_data_units, data_labels_are_constant, data_labels_are_hidden):
+
+    for dl, dl_unit, constant, hidden in zip(
+        possible_data_labels,
+        possible_data_units,
+        data_labels_are_constant,
+        data_labels_are_hidden,
+    ):
         if (dl == "scheme") and no_variants_with_randomization:
-            x_axis_title_components.append("$-$rand")
+            pass
+            # x_axis_title_components.append("$-$rand")
         elif constant and not hidden:
             data = None
             try:
                 data = test_variants[0][data_label_to_tag_dict[dl]]
             except:
                 pass
-            
+
             if data != None:
-                x_axis_title_components.append("{}={}{}".format(dl, data, dl_unit))
-        else:
-            if not hidden:
-                for vi in range(len(test_variants)):
-                    if not no_variants_with_randomization and dl in randomization_labels and not randomization_exists[vi]:
-                        if dl == "$T_R$":
-                            x_labels_components[vi].append("$-$rand")
-                        else:
-                            continue
+                pass
+                #x_axis_title_components.append("{}={}{}".format(dl, data, dl_unit))
+        elif not hidden:
+            for vi in range(len(test_variants)):
+                if (
+                    not no_variants_with_randomization
+                    and dl in randomization_labels
+                    and not randomization_exists[vi]
+                ):
+                    if dl == "$T_R$":
+                        pass
+                        # x_labels_components[vi].append("$-$rand")
                     else:
-                        try:
-                            data = test_variants[vi][data_label_to_tag_dict[dl]]
-                            x_labels_components[vi].append("{}={}".format(dl, data))
-                        except:
-                            pass
-    
-    x_axis_title = "(" + ", ".join(x_axis_title_components) + ")"
-    x_labels = ["\n".join(xl_comps) if len(xl_comps) != 0 else "" for xl_comps in x_labels_components]
-    
+                        continue
+                else:
+                    try:
+                        data = test_variants[vi][data_label_to_tag_dict[dl]]
+                        if dl in ["COA", "CIL"]:
+                            if data == 0.0:
+                                x_labels_components[vi].append("{}{}".format(dl, "-"))
+                            elif data == 1.0:
+                                x_labels_components[vi].append("{}{}".format(dl, "+"))
+                            else:
+                                x_labels_components[vi].append("{}={}".format(dl, data))
+                        else:
+                            x_labels_components[vi].append("{}".format(data))
+                            x_axis_title_components.append("{}".format(dl))
+                    except:
+                        pass
+
+    # x_axis_title = "(" + ", ".join(x_axis_title_components) + ")"
+    if len(x_axis_title_components) > 0:
+        x_axis_title = x_axis_title_components[0]
+    else:
+        x_axis_title = None
+
+    x_labels = [
+        "\n".join(xl_comps) if len(xl_comps) != 0 else ""
+        for xl_comps in x_labels_components
+    ]
+
     return x_axis_title, x_labels
 
-  
-def generate_x_axis_titles_and_labels_for_varying_randomization_parameters(test_variants, hide_scheme=True, hide_node_percentage=True, hide_magnitude=False):
-    possible_data_labels = ["scheme", "T", "SD(T)", "R", "NP"]
-    data_label_to_tag_dict = dict([(dl, tag) for dl, tag in zip(possible_data_labels, ["randomization_scheme", "randomization_time_mean", "randomization_time_variance_factor", "randomization_magnitude", "randomization_node_percentage"])])
-    
+
+def generate_x_axis_titles_and_labels_for_varying_randomization_parameters(
+    test_variants, hide_scheme=True, hide_node_percentage=True, hide_magnitude=False
+):
+    possible_data_labels = ["scheme", "T", "SD(T)", "$R$", "NP"]
+    data_label_to_tag_dict = dict(
+        [
+            (dl, tag)
+            for dl, tag in zip(
+                possible_data_labels,
+                [
+                    "randomization_scheme",
+                    "randomization_time_mean",
+                    "randomization_time_variance_factor",
+                    "randomization_magnitude",
+                    "randomization_node_percentage",
+                ],
+            )
+        ]
+    )
+
     test_variants = [dict(tv) for tv in test_variants]
-    
+
     data_labels_are_constant = []
     for data_label in possible_data_labels:
         data = [tv[data_label_to_tag_dict[data_label]] for tv in test_variants]
         data_0 = data[0]
         constant = np.all([(d == data_0) for d in data])
         data_labels_are_constant.append(constant)
-    
-    data_labels_are_hidden = [hide_scheme, False, False, hide_magnitude, hide_node_percentage]
-    
+
+    data_labels_are_hidden = [
+        hide_scheme,
+        False,
+        False,
+        hide_magnitude,
+        hide_node_percentage,
+    ]
+
     x_axis_title_components = []
     x_labels_components = [[] for x in range(len(test_variants))]
-    for dl, constant, hidden in zip(possible_data_labels, data_labels_are_constant, data_labels_are_hidden):
+    for dl, constant, hidden in zip(
+        possible_data_labels, data_labels_are_constant, data_labels_are_hidden
+    ):
         if constant and not hidden:
             data = test_variants[0][data_label_to_tag_dict[dl]]
             x_axis_title_components.append("{}={}".format(dl, data))
@@ -4319,11 +4848,15 @@ def generate_x_axis_titles_and_labels_for_varying_randomization_parameters(test_
                 for vi in range(len(test_variants)):
                     data = test_variants[vi][data_label_to_tag_dict[dl]]
                     x_labels_components[vi].append("{}={}".format(dl, data))
-    
+
     x_axis_title = "randomization parameters\n" + ", ".join(x_axis_title_components)
-    x_labels = ["\n".join(xl_comps) if len(xl_comps) != 0 else "" for xl_comps in x_labels_components]
-    
+    x_labels = [
+        "\n".join(xl_comps) if len(xl_comps) != 0 else ""
+        for xl_comps in x_labels_components
+    ]
+
     return x_axis_title, x_labels
+
 
 def graph_simple_chemotaxis_efficiency_data(
     test_variants,
@@ -4339,19 +4872,21 @@ def graph_simple_chemotaxis_efficiency_data(
 ):
     set_fontsize(fontsize)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -4365,55 +4900,111 @@ def graph_simple_chemotaxis_efficiency_data(
 
         successes_per_variant, nr, nc, bw, bh = setup_data
 
-        requested_color = colors.color_list20[group_index]
-        
+        if nc > 2:
+            color_index = int(np.sqrt(nc))
+        else:
+            color_index = nc - 1
+        requested_color = colors.color_list20[color_index]
+
         variant_indices = np.arange(len(successes_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
-            label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], successes_per_variant, bar_width, label=label, color=requested_color)
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
 
-    ax.set_ylabel("success:fail ratio")
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            successes_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
-    
+    ax.set_ylabel("S", rotation=0, labelpad=25)
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
     else:
         ax.set_xticklabels(x_labels)
-        
-    ax.set_xlabel(x_axis_title)
+        # ax.legend(loc="upper center", ncol=len(num_cells), fontsize=fontsize, bbox_to_anchor=(0.5, 1.5))
+        ax.set_xlabel(x_axis_title)
 
+    # ax.set_xlabel(x_axis_title)
+
+    y_ticks = np.round(np.arange(0.0, 1.05, 0.2), decimals=1)
     ax.set_ylim([0.0, 1.05])
-    ax.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-    ax.set_yticklabels([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-    
-    ax.grid(b=True, which="major", axis="y")
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels(y_ticks)
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    if len(num_cells) > 1 and len(test_variants) > 1:
+        ax.legend(
+            loc="upper center",
+            ncol=int(len(num_cells) / 2),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.25),
+        )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}simple_chemotaxis_efficiency_target_-{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
 def graph_chemotaxis_efficiency_data(
     test_variants,
     test_slope,
@@ -4427,21 +5018,25 @@ def graph_chemotaxis_efficiency_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
 
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -4457,27 +5052,58 @@ def graph_chemotaxis_efficiency_data(
         successes_per_variant, successes_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(successes_per_variant))
-            
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], successes_per_variant, bar_width, label=label, color=requested_color)
 
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            successes_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
     ax.set_ylabel("success score")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
     ax.set_xlabel(x_axis_title)
@@ -4485,25 +5111,31 @@ def graph_chemotaxis_efficiency_data(
     ax.set_ylim([0.0, 1.05])
     ax.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
     ax.set_yticklabels([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-    
-    ax.grid(b=True, which="major", axis="y")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_efficiency_target_-{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
 def graph_chemotaxis_group_persistence_time_data(
     test_variants,
     test_slope,
@@ -4517,21 +5149,26 @@ def graph_chemotaxis_group_persistence_time_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
+        per_variant_space = 0.75 * per_variant_space / 5
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -4547,50 +5184,92 @@ def graph_chemotaxis_group_persistence_time_data(
         gpt_per_variant, gpt_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(gpt_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
-            label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], gpt_per_variant, bar_width, label=label, color=requested_color, yerr=gpt_std_per_variant)
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
 
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            gpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=gpt_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
-    ax.set_ylabel("group persistence time (min.)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+    ax.set_ylabel("$\mathrm{T_p}$\n(min.)")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
 
     ax.set_ylim(bottom=0.0)
-    
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
     else:
         ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
+        ax.legend(
+            loc="upper center",
+            ncol=len(num_cells),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.5),
+        )
+        ax.set_xlabel(x_axis_title)
+    # ax.set_title(x_axis_title)
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_group_persistence_time_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
+
 
 def graph_chemotaxis_cell_persistence_time_data(
     test_variants,
@@ -4605,21 +5284,25 @@ def graph_chemotaxis_cell_persistence_time_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -4635,50 +5318,89 @@ def graph_chemotaxis_cell_persistence_time_data(
         cpt_per_variant, cpt_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(cpt_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], cpt_per_variant, bar_width, label=label, color=requested_color, yerr=cpt_std_per_variant)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=cpt_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
     ax.set_ylabel("cell persistence times (min.)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
 
     ax.set_ylim(bottom=0.0)
-    
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
     ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_cell_persistence_times_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
 def graph_chemotaxis_protrusion_lifetime_data(
     test_variants,
     test_slope,
@@ -4692,21 +5414,25 @@ def graph_chemotaxis_protrusion_lifetime_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -4722,50 +5448,85 @@ def graph_chemotaxis_protrusion_lifetime_data(
         plt_per_variant, plt_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(plt_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], plt_per_variant, bar_width, label=label, color=requested_color, yerr=plt_std_per_variant)
 
-    ax.set_ylabel("protrusion lifetimes (min.)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            plt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=plt_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    ax.set_ylabel("$\mathrm{T_{pr}}$\n(min.)", rotation=0, labelpad=0)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
     else:
         ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
+        ax.set_xlabel(x_axis_title)
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_protrusion_lifetime_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
 def graph_chemotaxis_protrusion_lifetime_data_new(
     test_variants,
     test_slope,
@@ -4779,36 +5540,75 @@ def graph_chemotaxis_protrusion_lifetime_data_new(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     bar_width = 0.6
-    
-    ax.bar([0, 1], [chemotaxis_protrusion_lifetime_per_variant_per_num_cells[0][0], chemotaxis_protrusion_lifetime_per_variant_per_num_cells[1][0]], bar_width, label="nc={}".format(num_cells[0]), color='0.5', yerr=[chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[0][0], chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[1][0]])
-    
-    ax.bar([2, 3], [chemotaxis_protrusion_lifetime_per_variant_per_num_cells[0][1], chemotaxis_protrusion_lifetime_per_variant_per_num_cells[1][1]], bar_width, label="nc={}".format(num_cells[1]), color='0.0', yerr=[chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[0][1], chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[1][1]])
+
+    ax.bar(
+        [0, 1],
+        [
+            chemotaxis_protrusion_lifetime_per_variant_per_num_cells[0][0],
+            chemotaxis_protrusion_lifetime_per_variant_per_num_cells[1][0],
+        ],
+        bar_width,
+        label="nc={}".format(num_cells[0]),
+        color="0.5",
+        yerr=[
+            chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[0][0],
+            chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[1][0],
+        ],
+        capsize=10,
+        error_kw={"elinewidth": 2.0, "capthick": 2.0},
+    )
+
+    ax.bar(
+        [2, 3],
+        [
+            chemotaxis_protrusion_lifetime_per_variant_per_num_cells[0][1],
+            chemotaxis_protrusion_lifetime_per_variant_per_num_cells[1][1],
+        ],
+        bar_width,
+        label="nc={}".format(num_cells[1]),
+        color="0.0",
+        yerr=[
+            chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[0][1],
+            chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells[1][1],
+        ],
+        capsize=10,
+        error_kw={"elinewidth": 2.0, "capthick": 2.0},
+    )
 
     ax.set_ylabel("protrusion lifetimes (min.)")
     ax.set_xticks([0, 1, 2, 3])
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     ax.set_xticklabels(["-\n(M=0.0)", "+\n(M=7.5)", "-\n(M=0.0)", "+\n(M=7.5)"])
     ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_protrusion_lifetime_new_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
@@ -4816,236 +5616,638 @@ def graph_chemotaxis_protrusion_lifetime_data_new(
         "",
     )
         
-def graph_chemotaxis_group_x_speed_data(
+def graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants(
     test_variants,
     test_slope,
-    group_x_speed_per_variant_per_num_cells,
-    group_x_speed_std_per_variant_per_num_cells,
-    num_experiment_repeats,
     num_cells,
+    cell_speed_per_variant,
+    cell_speed_std_per_variant,
+    cell_x_velocity_per_variant,
+    cell_x_velocity_std_per_variant,
+    cell_speeds_fp_per_variant,
+    cell_x_velocities_fp_per_variant,
+    num_experiment_repeats,
     box_width,
     box_height,
     save_dir=None,
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
-    per_variant_space = 1.0
-    
-    if len(test_variants) == 1:
-        between_variant_space = 0.0
-    else:
-        between_variant_space = 0.4
-        
-    num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    fig_difference, ax_difference = plt.subplots()
+    fig_bar, ax_bar = plt.subplots()
+    fig_bar_difference, ax_bar_difference = plt.subplots()
 
-    for group_index, setup_data in enumerate(
-        zip(
-            group_x_speed_per_variant_per_num_cells,
-            group_x_speed_std_per_variant_per_num_cells,
-            num_experiment_repeats,
-            num_cells,
-            box_width,
-            box_height,
-        )
-    ):
-
-        gxs_per_variant, gxs_std_per_variant, nr, nc, bw, bh = setup_data
-
-        requested_color = colors.color_list20[group_index]
-        
-        variant_indices = np.arange(len(gxs_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
-        if len(test_variants) == 1:
-            label = None
-        else:
-            label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], gxs_per_variant, bar_width, label=label, color=requested_color, yerr=gxs_std_per_variant)
-
-    ax.set_ylabel("group x speed ($\mu$m/min.)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
-
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
-    ax.set_ylim(bottom=0.0)
-    
-    if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
-    else:
-        ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
-
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
-
-    info_tag_dash  = ""
-    if info_tag != "":
-        info_tag_dash = "-"
-    x = datetime.datetime.now()
-    show_or_save_fig(
-        fig,
-        (20, 10),
-        save_dir,
-        "{}{}chemotaxis_group_x_speed_{}-{}-{}-{}-{}-{}".format(
-            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
-        ),
-        "",
+    # ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
+    xticks = np.array([x for x in range(len(test_variants) + 1)])
+    bar_xticks = np.array([2*(x + 2) for x in range(len(test_variants) + 1)])
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
     )
-        
-def graph_chemotaxis_group_speed_data(
-    test_variants,
-    test_slope,
-    group_speed_per_variant_per_num_cells,
-    group_speed_std_per_variant_per_num_cells,
-    num_experiment_repeats,
-    num_cells,
-    box_width,
-    box_height,
-    save_dir=None,
-    fontsize=22,
-    info_tag="",
-):
-    set_fontsize(fontsize)
-    fig, ax = plt.subplots()
+    bar_x_labels = ["$N_c = 1$"] + x_labels
     
-    per_variant_space = 1.0
-    
-    if len(test_variants) == 1:
-        between_variant_space = 0.0
-    else:
-        between_variant_space = 0.4
-        
-    num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
-
-    for group_index, setup_data in enumerate(
-        zip(
-            group_speed_per_variant_per_num_cells,
-            group_speed_std_per_variant_per_num_cells,
-            num_experiment_repeats,
-            num_cells,
-            box_width,
-            box_height,
-        )
-    ):
-
-        gs_per_variant, gs_std_per_variant, nr, nc, bw, bh = setup_data
-
-        requested_color = colors.color_list20[group_index]
-        
-        variant_indices = np.arange(len(gs_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
-        if len(test_variants) == 1:
-            label = None
-        else:
-            label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], gs_per_variant, bar_width, label=label, color=requested_color, yerr=gs_std_per_variant)
-
-    ax.set_ylabel("group speed ($\mu$m/min.)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
-
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
-    ax.set_ylim(bottom=0.0)
-    
-    if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
-    else:
-        ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
-
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
-
-    info_tag_dash  = ""
-    if info_tag != "":
-        info_tag_dash = "-"
-    x = datetime.datetime.now()
-    show_or_save_fig(
-        fig,
-        (20, 10),
-        save_dir,
-        "{}{}chemotaxis_group_speed_{}-{}-{}-{}-{}-{}".format(
-            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
-        ),
-        "",
-    )
-        
-def graph_chemotaxis_speed_data_new(
-    test_variants,
-    test_slope,
-    group_speed_per_num_cells,
-    group_speed_std_per_num_cells,
-    group_speed_x_per_num_cells,
-    group_speed_x_std_per_num_cells,
-    num_experiment_repeats,
-    num_cells,
-    box_width,
-    box_height,
-    save_dir=None,
-    fontsize=22,
-    info_tag="",
-):
-    set_fontsize(fontsize)
-    fig, ax = plt.subplots()
-    
-    #ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
-    xticks = [x for x in range(len(num_cells))]
-    ax.errorbar(xticks, group_speed_per_num_cells, yerr=group_speed_std_per_num_cells, label="group speed", markersize=10, linewidth=3, marker='o', capsize=10, capthick=3)
-    #ax.plot(num_cells, group_speed_x_per_num_cells, marker=".", label="group speed (x-direction)")
-    ax.errorbar(xticks, group_speed_x_per_num_cells, yerr=group_speed_x_std_per_num_cells, label="group speed (x-direction)", markersize=10, linewidth=3, marker='o', capsize=10, capthick=3)
-
-    ax.set_ylabel("speed ($\mu$m/min.)")
     ax.set_xticks(xticks)
-    ax.set_xticklabels(num_cells)
-    ax.set_xlabel("cluster size")
+    ax.set_xticklabels(bar_x_labels)
+    ax_difference.set_xticks(xticks)
+    ax_difference.set_xticklabels(bar_x_labels[1:])
     
-    ax.set_ylim(bottom=0.0)
+    single_cell_x_velocity_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_x_velocities_over_all_repeats.npy"
+    single_cell_speed_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_speeds_over_all_repeats.npy"
     
-    #ax.grid(b=True, which="major", axis="y")
+    cell_x_velocities_per_variant = np.array([np.load(single_cell_x_velocity_fp)] + [np.load(fp) for fp in cell_x_velocities_fp_per_variant])
+    cell_speeds_per_variant = np.array([np.load(single_cell_speed_fp)] + [np.load(fp) for fp in cell_speeds_fp_per_variant])
+    
+    destring = lambda x: float(x)
+    destring_vectorized = np.vectorize(destring)
+    cell_x_velocity_per_variant = destring_vectorized(cell_x_velocity_per_variant)
+    cell_x_velocity_std_per_variant = destring_vectorized(cell_x_velocity_std_per_variant)
+    cell_speed_per_variant = destring_vectorized(cell_speed_per_variant)
+    cell_speed_std_per_variant = destring_vectorized(cell_speed_std_per_variant)
+    
+    ax.errorbar(
+        xticks - 0.1,
+        [np.average(x) for x in cell_x_velocities_per_variant],
+        yerr=[np.std(x) for x in cell_x_velocities_per_variant],
+        label="$\mathrm{v}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax.errorbar(
+        xticks + 0.1,
+        [np.average(x) for x in cell_speeds_per_variant],
+        yerr=[np.std(x) for x in cell_speeds_per_variant],
+        label="$\mid \mathrm{v} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax_difference.errorbar(
+        (xticks - 0.1)[:-1],
+        [np.average(x - np.average(cell_x_velocities_per_variant[0])) for x in cell_x_velocities_per_variant[1:]],
+        yerr=[np.std(x - np.average(cell_x_velocities_per_variant[0])) for x in cell_x_velocities_per_variant[1:]],
+        label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax_difference.errorbar(
+        (xticks + 0.1)[:-1],
+        [np.average(x - np.average(cell_speeds_per_variant[0])) for x in cell_speeds_per_variant[1:]],
+        yerr=[np.std(x - np.average(cell_speeds_per_variant[0])) for x in cell_speeds_per_variant[1:]],
+        label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+#    bp1 = ax_box.boxplot([x for x in cell_x_velocities_per_variant], positions=(box_xticks - 0.5), showfliers=False)
+#    bp2 = ax_box.boxplot([x for x in cell_speeds_per_variant], positions=(box_xticks + 0.5), showfliers=False)
+    ax_bar.bar(bar_xticks - 0.5, [np.average(x) for x in cell_x_velocities_per_variant], yerr=[np.std(x) for x in cell_x_velocities_per_variant], color='r', label="$v_x$")
+    ax_bar.bar(bar_xticks + 0.5, [np.average(x) for x in cell_speeds_per_variant], yerr=[np.std(x) for x in cell_speeds_per_variant], color='b', label="$\mid v \mid$")
+    
+    ax_bar_difference.bar((bar_xticks - 0.5)[:-1], [np.average(x - np.average(cell_x_velocities_per_variant[0]) ) for x in cell_x_velocities_per_variant[1:]], yerr=[np.std(x) - np.std(cell_x_velocities_per_variant[0] - np.average(cell_x_velocities_per_variant[0]) ) for x in cell_x_velocities_per_variant[1:]], color='r', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$")
+    ax_bar_difference.bar((bar_xticks + 0.5)[:-1], [np.average(x - np.average(cell_speeds_per_variant[0])) for x in cell_speeds_per_variant[1:]], yerr=[np.std(x - np.average(cell_speeds_per_variant[0])) for x in cell_speeds_per_variant[1:]], color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $")
+                
+    ax_bar.set_xticks(bar_xticks)
+    ax_bar.set_xticklabels(bar_x_labels)
+    ax_bar.set_title("cell")
+    
+    ax_bar_difference.set_xticks(bar_xticks[:-1])
+    ax_bar_difference.set_xticklabels(bar_x_labels[1:])
+    ax_bar_difference.set_title("cell (difference)")
+    
+    ax.set_ylabel("($\mu$m/min.)")
+    ax.set_xlabel(x_axis_title)
+    
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    # ax.set_ylim(bottom=0.0)
+
+    ##ax.grid(b=True, which="major", axis="y")
     ax.legend(loc="best")
+    ax_difference.legend(loc="best")
+    #ax_bar.legend(loc="best")
+    #ax_box.legend([bp1["medians"][0], bp2["medians"][0]], ['$v_x$', '$\mid v \mid$'], loc='best')
 
     current_time = datetime.datetime.now()
 
-    info_tag_dash  = ""
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
-    
+
     show_or_save_fig(
         fig,
         (11, 8),
         save_dir,
-        "{}{}chemotaxis_group_speed_new_{}-{}-{}-{}-{}-{}".format(
-            info_tag, info_tag_dash, current_time.year, current_time.month, current_time.day, current_time.hour, current_time.minute, current_time.second
+        "{}{}graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
         ),
         "",
     )
         
-    with open(os.path.join(save_dir, "{}{}chemotaxis_group_speed_new_text_output_{}-{}-{}-{}-{}-{}.txt".format(
-            info_tag, info_tag_dash, current_time.year, current_time.month, current_time.day, current_time.hour, current_time.minute, current_time.second
-        )), 'w') as f:
-        f.write("(number of cells, group speed): {}".format([e for e in zip(num_cells, [np.round(e, 2) for e in group_speed_per_num_cells])]) + "\n")
-        f.write("(number of cells, group x-speed): {}".format([e for e in zip(num_cells, [np.round(e, 2) for e in group_speed_x_per_num_cells])]) + "\n")
+    show_or_save_fig(
+        fig_difference,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_cell_velocity_difference_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
         
+    show_or_save_fig(
+        fig_bar,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+        
+    show_or_save_fig(
+        fig_bar_difference,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_cell_velocity_difference_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    with open(
+        os.path.join(
+            save_dir,
+            "{}{}graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants_text_output_{}-{}-{}-{}-{}-{}.txt".format(
+                info_tag,
+                info_tag_dash,
+                current_time.year,
+                current_time.month,
+                current_time.day,
+                current_time.hour,
+                current_time.minute,
+                current_time.second,
+            ),
+        ),
+        "w",
+    ) as f:
+        f.write(
+            "(variant, cell speed): {}".format(
+                [
+                    e
+                    for e in zip(
+                        test_variants, [np.round(e, 2) for e in cell_x_velocity_per_variant]
+                    )
+                ]
+            )
+            + "\n"
+        )
+
+def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
+    test_variants,
+    test_slope,
+    num_cells,
+    group_speed_per_variant,
+    group_speed_std_per_variant,
+    group_x_velocity_per_variant,
+    group_x_velocity_std_per_variant,
+    group_speeds_fp_per_variant,
+    group_x_velocities_fp_per_variant,
+    num_experiment_repeats,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+    fig_difference, ax_difference = plt.subplots()
+    fig_bar, ax_bar = plt.subplots()
+    fig_bar_difference, ax_bar_difference = plt.subplots()
+
+    # ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
+    xticks = np.array([x for x in range(len(test_variants) + 1)])
+    bar_xticks = np.array([2*(x + 2) for x in range(len(test_variants) + 1)])
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+    bar_x_labels = ["$N_c = 1$"] + x_labels
+    
+    single_group_x_velocity_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_x_velocities_over_all_repeats.npy"
+    single_group_speed_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_speeds_over_all_repeats.npy"
+    
+    group_x_velocities_per_variant = np.array([np.load(single_group_x_velocity_fp)] + [np.load(fp) for fp in group_x_velocities_fp_per_variant])
+    group_speeds_per_variant = np.array([np.load(single_group_speed_fp)] + [np.load(fp) for fp in group_speeds_fp_per_variant])
+    
+    destring = lambda x: float(x)
+    destring_vectorized = np.vectorize(destring)
+    group_x_velocity_per_variant = destring_vectorized(group_x_velocity_per_variant)
+    group_x_velocity_std_per_variant = destring_vectorized(group_x_velocity_std_per_variant)
+    group_speed_per_variant = destring_vectorized(group_speed_per_variant)
+    group_speed_std_per_variant = destring_vectorized(group_speed_std_per_variant)
+    
+    ax.errorbar(
+        xticks - 0.1,
+        [np.average(x) for x in group_x_velocities_per_variant],
+        yerr=[np.std(x) for x in group_x_velocities_per_variant],
+        label="$\mathrm{v}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax.errorbar(
+        xticks + 0.1,
+        [np.average(x) for x in group_speeds_per_variant],
+        yerr=[np.std(x) for x in group_speeds_per_variant],
+        label="$\mid \mathrm{v} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax_difference.errorbar(
+        (xticks - 0.1)[:-1],
+        [np.average(x - np.average(group_x_velocities_per_variant[0])) for x in group_x_velocities_per_variant[1:]],
+        yerr=[np.std(x - np.average(group_x_velocities_per_variant[0])) for x in group_x_velocities_per_variant[1:]],
+        label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax_difference.errorbar(
+        (xticks + 0.1)[:-1],
+        [np.average(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]],
+        yerr=[np.std(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]],
+        label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+#    bp1 = ax_box.boxplot([x for x in group_x_velocities_per_variant], positions=(box_xticks - 0.5), showfliers=False)
+#    bp2 = ax_box.boxplot([x for x in group_speeds_per_variant], positions=(box_xticks + 0.5), showfliers=False)
+    ax_bar.bar(bar_xticks - 0.5, [np.average(x) for x in group_x_velocities_per_variant], yerr=[np.std(x) for x in group_x_velocities_per_variant], color='r', label="$v_x$")
+    ax_bar.bar(bar_xticks + 0.5, [np.average(x) for x in group_speeds_per_variant], yerr=[np.std(x) for x in group_speeds_per_variant], color='b', label="$\mid v \mid$")
+    
+    ax_bar_difference.bar((bar_xticks - 0.5)[:-1], [np.average(x - np.average(group_x_velocities_per_variant[0]) ) for x in group_x_velocities_per_variant[1:]], yerr=[np.std(x) - np.std(group_x_velocities_per_variant[0] - np.average(group_x_velocities_per_variant[0]) ) for x in group_x_velocities_per_variant[1:]], color='r', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$")
+    ax_bar_difference.bar((bar_xticks + 0.5)[:-1], [np.average(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]], yerr=[np.std(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]], color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $")
+    
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(bar_x_labels)
+    ax_difference.set_xticks(xticks)
+    ax_difference.set_xticklabels(bar_x_labels[1:])
+    
+    ax.set_xlabel(x_axis_title)
+    ax_difference.set_xlabel(x_axis_title)
+    
+    ax.set_ylabel("($\mu$m/min.)")
+    ax_difference.set_ylabel("($\mu$m/min.)")
+    
+    ax_bar.set_xticks(bar_xticks)
+    ax_bar.set_xticklabels(bar_x_labels)
+    ax_bar.set_title("group")
+    
+    ax_bar_difference.set_xticks(bar_xticks[:-1])
+    ax_bar_difference.set_xticklabels(bar_x_labels[1:])
+    ax_bar_difference.set_title("group (difference)")
+    
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    # ax.set_ylim(bottom=0.0)
+
+    ##ax.grid(b=True, which="major", axis="y")
+    ax.legend(loc="best")
+    ax_difference.legend(loc="best")
+    #ax_bar.legend(loc="best")
+    #ax_box.legend([bp1["medians"][0], bp2["medians"][0]], ['$v_x$', '$\mid v \mid$'], loc='best')
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+        
+    show_or_save_fig(
+        fig_difference,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+        
+    show_or_save_fig(
+        fig_bar,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+        
+    show_or_save_fig(
+        fig_bar_difference,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    with open(
+        os.path.join(
+            save_dir,
+            "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_text_output_{}-{}-{}-{}-{}-{}.txt".format(
+                info_tag,
+                info_tag_dash,
+                current_time.year,
+                current_time.month,
+                current_time.day,
+                current_time.hour,
+                current_time.minute,
+                current_time.second,
+            ),
+        ),
+        "w",
+    ) as f:
+        f.write(
+            "(variant, group speed): {}".format(
+                [
+                    e
+                    for e in zip(
+                        test_variants, [np.round(e, 2) for e in group_x_velocity_per_variant]
+                    )
+                ]
+            )
+            + "\n"
+        )
+
+def graph_chemotaxis_group_velocity_data_changing_num_cells(
+	test_variants,
+	test_slope,
+	num_cells,
+    group_speed_per_num_cells,
+    group_speed_std_per_num_cells,
+    group_x_velocity_per_num_cells,
+    group_x_velocity_std_per_num_cells,
+    group_speeds_fp_per_num_cells,
+    group_x_velocities_fp_per_num_cells,
+    num_experiment_repeats,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+    fig_bar, ax_bar = plt.subplots()
+
+    # ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
+    xticks = np.array([x for x in range(len(num_cells))])
+    bar_xticks = np.array([2*(x + 2) for x in range(len(num_cells) + 1)])
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+	
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(x_labels)
+    
+    group_x_velocities_per_num_cells = np.array([np.load(fp) for fp in group_x_velocities_fp_per_num_cells])
+    group_speeds_per_num_cells = np.array([np.load(fp) for fp in group_speeds_fp_per_num_cells])
+    
+    destring = lambda x: float(x)
+    destring_vectorized = np.vectorize(destring)
+    group_x_velocity_per_num_cells = destring_vectorized(group_x_velocity_per_num_cells)
+    group_x_velocity_std_per_num_cells = destring_vectorized(group_x_velocity_std_per_num_cells)
+    group_speed_per_num_cells = destring_vectorized(group_speed_per_num_cells)
+    group_speed_std_per_num_cells = destring_vectorized(group_speed_std_per_num_cells)
+    
+    ax.errorbar(
+        xticks,
+        group_x_velocity_per_num_cells,
+        yerr=group_x_velocity_std_per_num_cells,
+        label="$\mathrm{v}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+    ax.errorbar(
+        xticks,
+        group_speed_per_num_cells,
+        yerr=group_speed_std_per_num_cells,
+        label="$\mid \mathrm{v} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+    
+#    bp1 = ax_box.boxplot([x for x in group_x_velocities_per_num_cells], positions=(box_xticks - 0.5), showfliers=False)
+#    bp2 = ax_box.boxplot([x for x in group_speeds_per_num_cells], positions=(box_xticks + 0.5), showfliers=False)
+    ax_bar.bar(bar_xticks - 0.5, [np.average(x) for x in group_x_velocities_per_num_cells], yerr=[np.std(x) for x in group_x_velocities_per_num_cells], color='r', label="$v_x$")
+    ax_bar.bar(bar_xticks + 0.5, [np.average(x) for x in group_speeds_per_num_cells], yerr=[np.std(x) for x in group_speeds_per_num_cells], color='b', label="$\mid v \mid$")
+                
+    ax_bar.set_xticks(bar_xticks)
+    ax_bar.set_xticklabels(x_labels)
+    ax_bar.set_title("group")
+    
+    ax.set_ylabel("($\mu$m/min.)")
+    ax.set_xlabel(x_axis_title)
+    
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    # ax.set_ylim(bottom=0.0)
+
+    ##ax.grid(b=True, which="major", axis="y")
+    ax.legend(loc="best")
+    #ax_bar.legend(loc="best")
+    #ax_box.legend([bp1["medians"][0], bp2["medians"][0]], ['$v_x$', '$\mid v \mid$'], loc='best')
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_num_cells_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+        
+    show_or_save_fig(
+        fig_bar,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_num_cells_bars_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    with open(
+        os.path.join(
+            save_dir,
+            "{}{}graph_chemotaxis_group_velocity_data_changing_num_cells_text_output_{}-{}-{}-{}-{}-{}.txt".format(
+                info_tag,
+                info_tag_dash,
+                current_time.year,
+                current_time.month,
+                current_time.day,
+                current_time.hour,
+                current_time.minute,
+                current_time.second,
+            ),
+        ),
+        "w",
+    ) as f:
+        f.write(
+            "(variant, group speed): {}".format(
+                [
+                    e
+                    for e in zip(
+                        test_variants, [np.round(e, 2) for e in group_x_velocity_per_num_cells]
+                    )
+                ]
+            )
+            + "\n"
+        )
+
 def graph_chemotaxis_group_persistence_ratio_data(
     test_variants,
     test_slope,
@@ -5059,21 +6261,26 @@ def graph_chemotaxis_group_persistence_ratio_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
+        per_variant_space = 0.75 * per_variant_space / 5
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -5089,50 +6296,94 @@ def graph_chemotaxis_group_persistence_ratio_data(
         gpr_per_variant, gpr_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(gpr_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
-            label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], gpr_per_variant, bar_width, label=label, color=requested_color, yerr=gpr_std_per_variant)
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
 
-    ax.set_ylabel("group persistence ratio")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            gpr_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=gpr_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    ax.set_ylabel("$\mathrm{R_p}$", rotation=0, labelpad=50)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
     else:
         ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
+        ax.legend(
+            loc="upper center",
+            ncol=len(num_cells),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.5),
+        )
+        ax.set_xlabel(x_axis_title)
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.set_title(x_axis_title)
 
-    info_tag_dash  = ""
+    # ax.grid(b=True, which="major", axis="y")
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_group_persistence_ratio_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
 def graph_chemotaxis_cell_persistence_ratio_data(
     test_variants,
     test_slope,
@@ -5146,21 +6397,25 @@ def graph_chemotaxis_cell_persistence_ratio_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -5176,55 +6431,94 @@ def graph_chemotaxis_cell_persistence_ratio_data(
         cpr_per_variant, cpr_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(cpr_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], cpr_per_variant, bar_width, label=label, color=requested_color, yerr=cpr_std_per_variant)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cpr_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=cpr_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
     ax.set_ylabel("cell persistence ratio")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
     ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_cell_persistence_ratio_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
-def graph_chemotaxis_velocity_alignment_data(
+
+
+def graph_chemotaxis_cil_interaction_frequency_data(
     test_variants,
     test_slope,
-    velocity_alignment_per_variant_per_num_cells,
-    velocity_alignment_std_per_variant_per_num_cells,
+    avg_interaction_frequency_per_variant_per_num_cells,
+    std_interaction_frequency_per_variant_per_num_cells,
     num_experiment_repeats,
     num_cells,
     box_width,
@@ -5233,26 +6527,30 @@ def graph_chemotaxis_velocity_alignment_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
-            velocity_alignment_per_variant_per_num_cells,
-            velocity_alignment_std_per_variant_per_num_cells,
+            avg_interaction_frequency_per_variant_per_num_cells,
+            std_interaction_frequency_per_variant_per_num_cells,
             num_experiment_repeats,
             num_cells,
             box_width,
@@ -5260,53 +6558,430 @@ def graph_chemotaxis_velocity_alignment_data(
         )
     ):
 
-        va_per_variant, va_std_per_variant, nr, nc, bw, bh = setup_data
+        if_per_variant, if_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
-        variant_indices = np.arange(len(va_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        variant_indices = np.arange(len(if_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], va_per_variant, bar_width, label=label, color=requested_color, yerr=va_std_per_variant)
 
-    ax.set_ylabel("velocity alignment")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            if_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=if_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    ax.set_ylabel("$\omega_I$\n(hr.${}^{-1}$)", rotation=0, labelpad=50)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
-    ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
+    ax.set_xlabel("$\mathrm{N_c}$")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_interaction_frequency_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+
+def graph_chemotaxis_velocity_alignment_data(
+    test_variants,
+    test_slope,
+    max_num_closest_neighbours,
+    time_deltas,
+    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    num_mncns = max_num_closest_neighbours.shape[0]
+    num_tds = time_deltas.shape[0]
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, axs = plt.subplots(num_mncns, num_tds, sharex=True, sharey=True)
+    fig.subplots_adjust(
+        left=0.15, right=0.9, bottom=0.2, top=0.9, wspace=0.3, hspace=0.3
+    )
+
+    global_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    global_ax.tick_params(
+        labelcolor="none", top="off", bottom="off", left="off", right="off"
+    )
+    # global_ax.set_ylabel("$a$", rotation=0, labelpad=20)
+    # global_ax.set_xlabel("$\mathrm{N_c}$")
+
+    for xi in range(num_mncns):
+        for yi in range(num_tds):
+            ax = axs[xi][yi]
+            per_variant_space = 1.0
+
+            if len(test_variants) == 1:
+                between_variant_space = 0.0
+            else:
+                between_variant_space = 0.4
+
+            num_cell_groups_per_variant = len(num_cells)
+            within_variant_total_bar_space = 0.75 * per_variant_space
+            bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+            between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+                num_cell_groups_per_variant + 1
+            )
+            within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+            for group_index, setup_data in enumerate(
+                zip(
+                    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                    num_experiment_repeats,
+                    num_cells,
+                    box_width,
+                    box_height,
+                )
+            ):
+
+                avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, nr, nc, bw, bh = (
+                    setup_data
+                )
+
+                requested_color = colors.color_list20[(group_index + 1)]
+
+                variant_indices = np.arange(len(test_variants))
+
+                this_group_initial_offset = (
+                    0.5 * between_variant_space
+                    + within_variant_initial_offset
+                    + (bar_width + between_bar_space) * group_index
+                )
+
+                if len(test_variants) == 1:
+                    label = None
+                else:
+                    label = "nc={}, nr={}".format(nc, nr)
+
+                avg_va_data = [
+                    va_data[xi][yi]
+                    for va_data in avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                ]
+                std_va_data = [
+                    va_data[xi][yi]
+                    for va_data in std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                ]
+                ax.bar(
+                    [
+                        this_group_initial_offset
+                        + (per_variant_space + between_variant_space) * j
+                        for j in variant_indices
+                    ],
+                    avg_va_data,
+                    bar_width,
+                    label=label,
+                    color=requested_color,
+                    yerr=std_va_data,
+                    capsize=10,
+                    error_kw={"elinewidth": 2.0, "capthick": 2.0},
+                )
+
+            # ax.set_ylabel("velocity alignment")
+            ax.set_xticks(
+                [
+                    0.5 * between_variant_space
+                    + 0.5 * per_variant_space
+                    + i * (per_variant_space + between_variant_space)
+                    for i in range(len(test_variants))
+                ]
+            )
+
+            x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+                test_variants
+            )
+
+            ax.set_ylim(bottom=0.0, top=1.1)
+
+            if len(test_variants) == 1:
+                ax.set_xticks(
+                    [
+                        0.5 * between_variant_space
+                        + within_variant_initial_offset
+                        + (bar_width + between_bar_space) * i
+                        for i in range(len(num_cells[1:]))
+                    ]
+                )
+                ax.set_xticklabels(["{}".format(nc) for nc in num_cells[1:]])
+            else:
+                ax.set_xticklabels(x_labels)
+
+            if xi == yi == 0:
+                global_ax.set_xlabel(x_axis_title, labelpad=30)
+            ax.set_title(
+                "$\mathrm{N_{VA}}$="
+                + "{}, ".format(max_num_closest_neighbours[xi])
+                + "$\mathrm{T_{VA}}$="
+                + "{} min.".format(time_deltas[yi])
+            )
+            ax.set_ylabel("a", rotation=0, labelpad=20)
+            if xi != 0:
+                ax.set_xlabel("$\mathrm{N_c}$")
+
+            # ax.grid(b=True, which="major", axis="y")
+
+    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_velocity_alignment_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
     )
-        
+
+
+def graph_specific_chemotaxis_velocity_alignment_data(
+    test_variants,
+    test_slope,
+    focus_num_closest_neighbours,
+    focus_time_delta,
+    max_num_closest_neighbours,
+    time_deltas,
+    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    num_mncns = max_num_closest_neighbours.shape[0]
+    num_tds = time_deltas.shape[0]
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(left=0.15, right=0.9, bottom=0.2, top=0.9, wspace=0.3, hspace=0.3)
+
+    # global_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    # global_ax.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    # global_ax.set_ylabel("$a$", rotation=0, labelpad=20)
+    # global_ax.set_xlabel("$\mathrm{N_c}$")
+
+    for xi in range(num_mncns):
+        for yi in range(num_tds):
+            if (
+                max_num_closest_neighbours[xi] == focus_num_closest_neighbours
+                and time_deltas[yi] == focus_time_delta
+            ):
+                per_variant_space = 1.0
+
+                if len(test_variants) == 1:
+                    between_variant_space = 0.0
+                else:
+                    between_variant_space = 0.4
+
+                num_cell_groups_per_variant = len(num_cells)
+                within_variant_total_bar_space = 0.75 * per_variant_space
+                bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+                between_bar_space = (
+                    per_variant_space - within_variant_total_bar_space
+                ) / (num_cell_groups_per_variant + 1)
+                within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+                for group_index, setup_data in enumerate(
+                    zip(
+                        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                        num_experiment_repeats,
+                        num_cells,
+                        box_width,
+                        box_height,
+                    )
+                ):
+
+                    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, nr, nc, bw, bh = (
+                        setup_data
+                    )
+
+                    if nc > 2:
+                        color_index = int(np.sqrt(nc))
+                    else:
+                        color_index = nc - 1
+
+                    requested_color = colors.color_list20[color_index]
+
+                    variant_indices = np.arange(len(test_variants))
+
+                    this_group_initial_offset = (
+                        0.5 * between_variant_space
+                        + within_variant_initial_offset
+                        + (bar_width + between_bar_space) * group_index
+                    )
+
+                    if len(test_variants) == 1:
+                        label = None
+                    else:
+                        label = "nc={}, nr={}".format(nc, nr)
+
+                    avg_va_data = [
+                        va_data[xi][yi]
+                        for va_data in avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                    ]
+                    std_va_data = [
+                        va_data[xi][yi]
+                        for va_data in std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                    ]
+                    ax.bar(
+                        [
+                            this_group_initial_offset
+                            + (per_variant_space + between_variant_space) * j
+                            for j in variant_indices
+                        ],
+                        avg_va_data,
+                        bar_width,
+                        label=label,
+                        color=requested_color,
+                        yerr=std_va_data,
+                        capsize=10,
+                        error_kw={"elinewidth": 2.0, "capthick": 2.0},
+                    )
+
+                # ax.set_ylabel("velocity alignment")
+                ax.set_xticks(
+                    [
+                        0.5 * between_variant_space
+                        + 0.5 * per_variant_space
+                        + i * (per_variant_space + between_variant_space)
+                        for i in range(len(test_variants))
+                    ]
+                )
+
+                x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+                    test_variants
+                )
+
+                ax.set_ylim(bottom=0.0, top=1.1)
+
+                if len(test_variants) == 1:
+                    ax.set_xticks(
+                        [
+                            0.5 * between_variant_space
+                            + within_variant_initial_offset
+                            + (bar_width + between_bar_space) * (i + 1)
+                            for i in range(len(num_cells[1:]))
+                        ]
+                    )
+                    ax.set_xticklabels(["{}".format(nc) for nc in num_cells[1:]])
+                else:
+                    ax.set_xticklabels(x_labels)
+
+                ax.set_xlabel(x_axis_title, labelpad=30)
+                ax.set_title(
+                    "$\mathrm{N_{VA}}$="
+                    + "{}, ".format(max_num_closest_neighbours[xi])
+                    + "$\mathrm{T_{VA}}$="
+                    + "{} min.".format(time_deltas[yi])
+                )
+                ax.set_ylabel("$\mathrm{R_v}$", rotation=0, labelpad=20)
+                if xi != 0:
+                    ax.set_xlabel("$\mathrm{N_c}$")
+
+            # ax.grid(b=True, which="major", axis="y")
+
+    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_velocity_alignment_specific_MNCN={}-TD={}-{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            focus_num_closest_neighbours,
+            int(focus_time_delta * 10),
+            x.year,
+            x.month,
+            x.day,
+            x.hour,
+            x.minute,
+            x.second,
+        ),
+        "",
+    )
+
+
 def graph_chemotaxis_protrusion_production_data(
     test_variants,
     test_slope,
@@ -5320,21 +6995,25 @@ def graph_chemotaxis_protrusion_production_data(
     fontsize=22,
     info_tag="",
 ):
-    set_fontsize(fontsize)
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
-    
+
     per_variant_space = 1.0
-    
+
     if len(test_variants) == 1:
         between_variant_space = 0.0
     else:
         between_variant_space = 0.4
-        
+
     num_cell_groups_per_variant = len(num_cells)
-    within_variant_total_bar_space = 0.75*per_variant_space
-    bar_width = within_variant_total_bar_space/num_cell_groups_per_variant
-    between_bar_space = (per_variant_space - within_variant_total_bar_space)/(num_cell_groups_per_variant + 1)
-    within_variant_initial_offset = between_bar_space + 0.5*bar_width
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
 
     for group_index, setup_data in enumerate(
         zip(
@@ -5350,46 +7029,309 @@ def graph_chemotaxis_protrusion_production_data(
         pp_per_variant, pp_std_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
-        
+
         variant_indices = np.arange(len(pp_per_variant))
-        
-        this_group_initial_offset = 0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*group_index
-        
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
         if len(test_variants) == 1:
             label = None
         else:
             label = "nc={}, nr={}".format(nc, nr)
-            
-        ax.bar([this_group_initial_offset + (per_variant_space + between_variant_space)*j for j in variant_indices], pp_per_variant, bar_width, label=label, color=requested_color, yerr=pp_std_per_variant)
 
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            pp_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=pp_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
 
     ax.set_ylabel("protrusion production (per cell*hour)")
-    ax.set_xticks([0.5*between_variant_space + 0.5*per_variant_space + i*(per_variant_space + between_variant_space) for i in range(len(test_variants))])
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
 
-    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(test_variants)
-    
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
     ax.set_ylim(bottom=0.0)
-    
+
     if len(test_variants) == 1:
-        ax.set_xticks([0.5*between_variant_space + within_variant_initial_offset + (bar_width + between_bar_space)*i for i in range(num_cell_groups_per_variant)])
-        ax.set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
     ax.set_xlabel(x_axis_title)
-    
-    ax.grid(b=True, which="major", axis="y")
 
-    ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+    # ax.grid(b=True, which="major", axis="y")
 
-    info_tag_dash  = ""
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
     x = datetime.datetime.now()
     show_or_save_fig(
         fig,
-        (20, 10),
+        (12, 8),
         save_dir,
         "{}{}chemotaxis_protrusion_production_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+
+def graph_chemotaxis_interaction_quantification_data(
+    test_variants,
+    test_slope,
+    avg_num_interactions_per_variant_per_num_cells,
+    std_num_interactions_per_variant_per_num_cells,
+    avg_num_cil_interactions_per_variant_per_num_cells,
+    std_num_cil_interactions_per_variant_per_num_cells,
+    avg_num_coa_only_interactions_per_variant_per_num_cells,
+    std_num_coa_only_interactions_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, sharey=True)
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            avg_num_interactions_per_variant_per_num_cells,
+            std_num_interactions_per_variant_per_num_cells,
+            avg_num_cil_interactions_per_variant_per_num_cells,
+            std_num_cil_interactions_per_variant_per_num_cells,
+            avg_num_coa_only_interactions_per_variant_per_num_cells,
+            std_num_coa_only_interactions_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        iq_per_variant, iq_std_per_variant, cil_iq_per_variant, cil_iq_std_per_variant, coa_iq_per_variant, coa_iq_std_per_variant, nr, nc, bw, bh = (
+            setup_data
+        )
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(iq_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        axes[0].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=iq_std_per_variant,
+        )
+
+        axes[1].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cil_iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=cil_iq_std_per_variant,
+        )
+
+        axes[2].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            coa_iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=coa_iq_std_per_variant,
+        )
+
+    axes[0].set_ylabel("total")
+    axes[1].set_ylabel("CIL")
+    axes[2].set_ylabel("COA only")
+
+    axes[0].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+    axes[1].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+    axes[2].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    axes[0].set_ylim(bottom=0.0)
+    axes[1].set_ylim(bottom=0.0)
+    axes[2].set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        axes[0].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[1].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[2].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[0].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        axes[1].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        axes[2].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+    else:
+        axes[0].set_xticklabels(x_labels)
+        axes[1].set_xticklabels(x_labels)
+        axes[2].set_xticklabels(x_labels)
+
+    axes[0].set_yticks([0, 2, 4, 9, 16])
+    axes[1].set_yticks([0, 2, 4, 9, 16])
+    axes[2].set_yticks([0, 2, 4, 9, 16])
+
+    axes[0].set_xlabel(x_axis_title)
+    axes[1].set_xlabel(x_axis_title)
+    axes[2].set_xlabel(x_axis_title)
+
+    axes[0].grid(b=True, which="major", axis="y")
+    axes[1].grid(b=True, which="major", axis="y")
+    axes[2].grid(b=True, which="major", axis="y")
+
+    axes[0].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+    axes[1].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+    axes[2].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_interaction_quantification_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",

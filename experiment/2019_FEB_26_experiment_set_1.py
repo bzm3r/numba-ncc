@@ -55,7 +55,7 @@ parameter_dict = dict(
         ("coa_intersection_exponent", 2.0),
         ("strain_calculation_type", 0),
         ("max_coa_signal", -1.0),
-        ("max_chemoattractant_signal", 0.0)
+        ("max_chemoattractant_signal", 0.0),
     ]
 )
 
@@ -134,80 +134,95 @@ if __name__ == "__main__":
             ("randomization_scheme", "m"),
         ]
     )
-    standard_rps = [("randomization_scheme", "m"),
+    standard_rps = [
+        ("randomization_scheme", "m"),
         ("randomization_time_mean", 40.0),
         ("randomization_time_variance_factor", 0.1),
         ("randomization_magnitude", 10.0),
-        ("randomization_node_percentage", 0.25)]
+        ("randomization_node_percentage", 0.25),
+    ]
     parameter_dict.update(standard_rps)
-    
+
     a, b = 0, 1
-    test_chemotaxis_magnitudes = [0.0, 5.0, 7.5, 10.0][a:b]
+    test_chemotaxis_magnitudes = [7.5]  # [0.0, 5.0, 7.5, 10.0][a:b]
     c, d = 1, 2
     test_randomization_parameters = [
-            [("randomization_scheme", "m"),
-        ("randomization_time_mean", 40.0),
-        ("randomization_time_variance_factor", 0.1),
-        ("randomization_magnitude", 5.0),
-        ("randomization_node_percentage", 0.25)],
-            [("randomization_scheme", "m"),
-        ("randomization_time_mean", 40.0),
-        ("randomization_time_variance_factor", 0.1),
-        ("randomization_magnitude", 10.0),
-        ("randomization_node_percentage", 0.25)],
-             [("randomization_scheme", "m"),
-        ("randomization_time_mean", 40.0),
-        ("randomization_time_variance_factor", 0.1),
-        ("randomization_magnitude", 20.0),
-        ("randomization_node_percentage", 0.25)],
-              [("randomization_scheme", "m"),
-        ("randomization_time_mean", 160.0),
-        ("randomization_time_variance_factor", 0.1),
-        ("randomization_magnitude", 5.0),
-        ("randomization_node_percentage", 0.25)],
-              [("randomization_scheme", None)],
-            ][c:d]
-    
-#    [
-#            [("randomization_scheme", "m"),
-#        ("randomization_time_mean", 10.0),
-#        ("randomization_time_variance_factor", 0.1),
-#        ("randomization_magnitude", 20.0),
-#        ("randomization_node_percentage", 0.25)],
-#             [("randomization_scheme", "m"),
-#        ("randomization_time_mean", 10.0),
-#        ("randomization_time_variance_factor", 0.1),
-#        ("randomization_magnitude", 10.0),
-#        ("randomization_node_percentage", 0.25)],
-#             [("randomization_scheme", "m"),
-#        ("randomization_time_mean", 40.0),
-#        ("randomization_time_variance_factor", 0.1),
-#        ("randomization_magnitude", 10.0),
-#        ("randomization_node_percentage", 0.25)],
-#              [("randomization_scheme", "m"),
-#        ("randomization_time_mean", 80.0),
-#        ("randomization_time_variance_factor", 0.1),
-#        ("randomization_magnitude", 10.0),
-#        ("randomization_node_percentage", 0.25)],
-#             [("randomization_scheme", "m"),
-#        ("randomization_time_mean", 160.0),
-#        ("randomization_time_variance_factor", 0.1),
-#        ("randomization_magnitude", 10.0),
-#        ("randomization_node_percentage", 0.25)],
-#              [("randomization_scheme", None)],
-#        ][c:d]
-        
-                    
-    x, y = 0, 1
+        [
+            ("randomization_scheme", "m"),
+            ("randomization_time_mean", 40.0),
+            ("randomization_time_variance_factor", 0.1),
+            ("randomization_magnitude", 5.0),
+            ("randomization_node_percentage", 0.25),
+        ],
+        [
+            ("randomization_scheme", "m"),
+            ("randomization_time_mean", 40.0),
+            ("randomization_time_variance_factor", 0.1),
+            ("randomization_magnitude", 10.0),
+            ("randomization_node_percentage", 0.25),
+        ],
+        [
+            ("randomization_scheme", "m"),
+            ("randomization_time_mean", 40.0),
+            ("randomization_time_variance_factor", 0.1),
+            ("randomization_magnitude", 20.0),
+            ("randomization_node_percentage", 0.25),
+        ],
+        [
+            ("randomization_scheme", "m"),
+            ("randomization_time_mean", 160.0),
+            ("randomization_time_variance_factor", 0.1),
+            ("randomization_magnitude", 5.0),
+            ("randomization_node_percentage", 0.25),
+        ],
+        [("randomization_scheme", None)],
+    ][c:d]
+    e, f = 0, 1
+    test_num_cells_responsive_to_chemoattractant = [-1][e:f]
+
+    #    [
+    #            [("randomization_scheme", "m"),
+    #        ("randomization_time_mean", 10.0),
+    #        ("randomization_time_variance_factor", 0.1),
+    #        ("randomization_magnitude", 20.0),
+    #        ("randomization_node_percentage", 0.25)],
+    #             [("randomization_scheme", "m"),
+    #        ("randomization_time_mean", 10.0),
+    #        ("randomization_time_variance_factor", 0.1),
+    #        ("randomization_magnitude", 10.0),
+    #        ("randomization_node_percentage", 0.25)],
+    #             [("randomization_scheme", "m"),
+    #        ("randomization_time_mean", 40.0),
+    #        ("randomization_time_variance_factor", 0.1),
+    #        ("randomization_magnitude", 10.0),
+    #        ("randomization_node_percentage", 0.25)],
+    #              [("randomization_scheme", "m"),
+    #        ("randomization_time_mean", 80.0),
+    #        ("randomization_time_variance_factor", 0.1),
+    #        ("randomization_magnitude", 10.0),
+    #        ("randomization_node_percentage", 0.25)],
+    #             [("randomization_scheme", "m"),
+    #        ("randomization_time_mean", 160.0),
+    #        ("randomization_time_variance_factor", 0.1),
+    #        ("randomization_magnitude", 10.0),
+    #        ("randomization_node_percentage", 0.25)],
+    #              [("randomization_scheme", None)],
+    #        ][c:d]
+
+    x, y = 4, 5
     test_cell_group_sizes = [1, 2, 4, 9, 16, 25, 36, 49][x:y]
     test_cell_group_widths = [1, 2, 2, 3, 4, 5, 6, 7][x:y]
     test_cell_group_heights = [1, 1, 2, 3, 4, 5, 6, 7][x:y]
-    num_experiment_repeats = [20, 20, 20, 20, 20, 20, 20, 20][x:y]
-    intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
+    num_experiment_repeats = [50, 20, 20, 20, 20, 20, 20, 20][x:y]
+    cil_knockdown = [(0.75, 1.0), (0.5, 1.0), (0.25, 1.0), (0.0, 1.0)]
+    cil_knockdown.reverse()
+    intercellular_interaction_knockdown_cases = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)]
+    #intercellular_interaction_knockdown_cases = cil_knockdown + [(1.0, 1.0), (1.0, 0.75), (1.0, 0.5), (1.0, 0.25), (1.0, 0.0)]
+    #intercellular_interaction_knockdown_cases = 
     test_variants = []
     info_tag = ""
 
-#        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
+    #        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
 
     ets.chemotaxis_no_corridor_tests(
         date_str,
@@ -227,16 +242,45 @@ if __name__ == "__main__":
         test_x_offset_in_corridor=x_offset_in_corrdior,
         test_chemotaxis_magnitudes=test_chemotaxis_magnitudes,
         test_randomization_parameters=test_randomization_parameters,
+        test_num_cells_responsive_to_chemoattractant=test_num_cells_responsive_to_chemoattractant,
         test_chemotaxis_slope=slope,
         num_experiment_repeats=num_experiment_repeats,
         timesteps_between_generation_of_intermediate_visuals=None,
-        produce_graphs=True,
+        produce_graphs={
+            "cell specific": True,
+            "all cell speeds": True,
+            "group area/cell separation": True,
+            "centroid related data": {
+                "velocity alignment": True,
+                "persistence time": True,
+                "general group info": True,
+                "centroid drift": True,
+                "old interaction quantification": True,
+                "simple interaction quantification": True,
+            },
+            "protrusion existence": True,
+            "protrusion bias": True,
+        },
         produce_animation=False,
         full_print=False,
         delete_and_rerun_experiments_without_stored_env=True,
-        run_experiments=True,
-        remake_graphs=False,
-        remake_animation=True,
+        run_experiments=False,
+        remake_graphs={
+            "cell specific": False,
+            "all cell speeds": False,
+            "group area/cell separation": False,
+            "centroid related data": {
+                "velocity alignment": False,
+                "persistence time": False,
+                "general group info": False,
+                "centroid drift": False,
+                "old interaction quantification": False,
+                "simple interaction quantification": False,
+            },
+            "protrusion existence": False,
+            "protrusion bias": False,
+        },
+        remake_animation=False,
         redo_chemotaxis_analysis=False,
         do_final_analysis=False,
         remake_final_analysis_graphs=False,
@@ -249,13 +293,13 @@ if __name__ == "__main__":
         box_widths=test_cell_group_widths,
         box_heights=test_cell_group_heights,
         info_tag=info_tag,
-        show_protrusion_existence=True,
+        show_protrusion_existence=False,
     )
-    
+
 #    ets.two_cells_cil_test(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=3., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[2], default_cil=default_cil, num_experiment_repeats=3, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, no_corridor=True)
 
-    # ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, default_coas=[coa for coa in [coa_dict[1], coa_dict[2], coa_dict[4], coa_dict[9], coa_dict[16]][M:N]], default_cil=default_cil, chemotaxis_target_radius=160.0, \  #   box_y_placement_factor=0.5,  #   num_cells=[1, 2,  #   4, 9,  #   16][M:N],  #   box_widths=[1, 2, 2,  #   3, 4][M:N],  #   box_heights=[1, 1,  #   2, 3, 4][M:N])
+# ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, default_coas=[coa for coa in [coa_dict[1], coa_dict[2], coa_dict[4], coa_dict[9], coa_dict[16]][M:N]], default_cil=default_cil, chemotaxis_target_radius=160.0, \  #   box_y_placement_factor=0.5,  #   num_cells=[1, 2,  #   4, 9,  #   16][M:N],  #   box_widths=[1, 2, 2,  #   3, 4][M:N],  #   box_heights=[1, 1,  #   2, 3, 4][M:N])
 
-    # ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=False, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coas=[coa_dict[16]], default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[16], box_widths=[4], box_heights=[4])  #  # test_chemotaxis_magnitudes = [2.5]  #  # ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10.0, timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coas=[coa_dict[1], coa_dict[4], coa_dict[9], coa_dict[16]], default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[1, 4, 9, 16],  #   box_widths=[1, 2, 3, 4], box_heights=[1, 2, 3, 4])
+# ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=False, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coas=[coa_dict[16]], default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[16], box_widths=[4], box_heights=[4])  #  # test_chemotaxis_magnitudes = [2.5]  #  # ets.chemotaxis_threshold_test_magnitudes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10.0, timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitudes=test_chemotaxis_magnitudes, test_chemotaxis_slope=slope, num_experiment_repeats=10, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=False, default_coas=[coa_dict[1], coa_dict[4], coa_dict[9], coa_dict[16]], default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[1, 4, 9, 16],  #   box_widths=[1, 2, 3, 4], box_heights=[1, 2, 3, 4])
 
-    # import time  # st = time.time()  #  # ets.chemotaxis_test_group_sizes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitude=test_chemotaxis_magnitude, test_chemotaxis_slope=slope, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, default_coa_dict=coa_dict, default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[4])  # et = time.time()  # print("time taken: {}s".format(np.round(et - st, decimals=2)))
+# import time  # st = time.time()  #  # ets.chemotaxis_test_group_sizes(date_str, experiment_number, sub_experiment_number, copy.deepcopy(parameter_dict), no_randomization=False, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, test_x_offset_in_corridor=x_offset_in_corrdior, test_chemotaxis_magnitude=test_chemotaxis_magnitude, test_chemotaxis_slope=slope, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, run_experiments=True, remake_graphs=False, remake_animation=True, default_coa_dict=coa_dict, default_cil=default_cil, chemotaxis_target_radius=160.0, box_y_placement_factor=0.5, num_cells=[4])  # et = time.time()  # print("time taken: {}s".format(np.round(et - st, decimals=2)))

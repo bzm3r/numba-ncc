@@ -190,6 +190,7 @@ class Cell:
         verbose,
         parameters_dict,
         init_rho_gtpase_conditions=None,
+        responsive_to_chemoattractant=True,
     ):
 
         self.verbose = verbose
@@ -322,6 +323,11 @@ class Cell:
         self.enable_chemoattractant_shielding_effect = parameters_dict[
             "enable_chemoattractant_shielding_effect"
         ]
+        if not responsive_to_chemoattractant:
+            self.responsive_to_chemoattractant = 0
+        else:
+            self.responsive_to_chemoattractant = 1
+            
         self.kgtp_rac_baseline = parameters_dict["kgtp_rac_baseline"] * self.T
         self.kgtp_rac_autoact_baseline = (
             parameters_dict["kgtp_rac_autoact_baseline"] * self.T

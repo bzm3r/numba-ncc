@@ -824,18 +824,31 @@ def update_pd_with_randomization_info(
 
 
 def stringify_randomization_info(parameter_dict):
-    randomization_scheme, t, tv = (parameter_dict["randomization_scheme"], parameter_dict["randomization_time_mean"], parameter_dict["randomization_time_variance_factor"])
+    randomization_scheme, t, tv = (
+        parameter_dict["randomization_scheme"],
+        parameter_dict["randomization_time_mean"],
+        parameter_dict["randomization_time_variance_factor"],
+    )
     if randomization_scheme == "m":
-        mag, np = ( parameter_dict["randomization_magnitude"], parameter_dict["randomization_node_percentage"])
-        return "-rand-{}-(t={}-tv={}-mag={}-np={})".format(randomization_scheme, t, tv, mag, np)
+        mag, np = (
+            parameter_dict["randomization_magnitude"],
+            parameter_dict["randomization_node_percentage"],
+        )
+        return "-rand-{}-(t={}-tv={}-mag={}-np={})".format(
+            randomization_scheme, t, tv, mag, np
+        )
     elif randomization_scheme == "w":
-        mag, np = ( parameter_dict["randomization_magnitude"], parameter_dict["randomization_node_percentage"])
-        
+        mag, np = (
+            parameter_dict["randomization_magnitude"],
+            parameter_dict["randomization_node_percentage"],
+        )
+
         return "-rand-{}-(t={}-tv={})".format(t, tv)
     elif randomization_scheme == None:
         return "-no-rand"
     else:
         raise Exception("Unrecognized randomization scheme.")
+
 
 # ===========================================================================
 
@@ -1514,14 +1527,13 @@ def two_cells_cil_test(
     global_scale = 4
 
     cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
-    
-    experiment_name = "two_cells_cil_test_COA={}_CIL={}_S={}".format(
-            sub_experiment_number,
 
-            np.round(default_coa, decimals=3),
-            np.round(default_cil, decimals=3),
-            seed,
-        ) + stringify_randomization_info(parameter_dict)
+    experiment_name = "two_cells_cil_test_COA={}_CIL={}_S={}".format(
+        sub_experiment_number,
+        np.round(default_coa, decimals=3),
+        np.round(default_cil, decimals=3),
+        seed,
+    ) + stringify_randomization_info(parameter_dict)
 
     experiment_dir = eu.get_template_experiment_directory_path(
         base_output_dir, date_str, experiment_number, experiment_name
@@ -1539,13 +1551,13 @@ def two_cells_cil_test(
     plate_width, plate_height = 5 * cell_diameter * 1.2, 5 * cell_diameter * 1.2
 
     # define_group_boxes_and_corridors(corridor_definition, plate_width, plate_height, num_boxes, num_cells_in_boxes, box_heights, box_widths, x_space_between_boxes, x_placement_option, y_placement_option, physical_bdry_polygon_extra=10, origin_x_offset=10, origin_y_offset=10, box_x_offsets=[], box_y_offsets=[], make_only_migratory_corridor=False, migratory_corridor_size=[None, None], migratory_bdry_x_offset=None, migratory_bdry_y_offset=None)
-    
-    migratory_corridor_size=[None, None]
-    migratory_bdry_x_offset=None
+
+    migratory_corridor_size = [None, None]
+    migratory_bdry_x_offset = None
     if not no_corridor:
-        migratory_corridor_size=[100 * cell_diameter, cell_diameter],
-        migratory_bdry_x_offset=-1 * 50 * cell_diameter
-        
+        migratory_corridor_size = ([100 * cell_diameter, cell_diameter],)
+        migratory_bdry_x_offset = -1 * 50 * cell_diameter
+
     boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
         corridor_definition,
         plate_width,
@@ -1652,18 +1664,19 @@ def two_cells_cil_test(
 
     global_scale = 2
 
-
     animation_settings = setup_animation_settings(
-            timestep_length,
-            global_scale,
-            plate_height*2,
-            plate_width*2,
-            show_rac_random_spikes=False,
-            space_physical_bdry_polygon=space_physical_bdry_polygon,
-            space_migratory_bdry_polygon=space_migratory_bdry_polygon,
-            string_together_pictures_into_animation=True,
-            rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 180,
-            translation_x=0, translation_y=plate_height)
+        timestep_length,
+        global_scale,
+        plate_height * 2,
+        plate_width * 2,
+        show_rac_random_spikes=False,
+        space_physical_bdry_polygon=space_physical_bdry_polygon,
+        space_migratory_bdry_polygon=space_migratory_bdry_polygon,
+        string_together_pictures_into_animation=True,
+        rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 180,
+        translation_x=0,
+        translation_y=plate_height,
+    )
 
     produce_intermediate_visuals = produce_intermediate_visuals_array(
         num_timesteps, timesteps_between_generation_of_intermediate_visuals
@@ -2564,6 +2577,51 @@ def make_chemoattractant_gradient_function(
 
 
 # ============================================================================
+@nb.jit(nopython=True)
+def test(
+    num_interactions_per_cell_per_snapshot_per_repeat,
+    num_cil_interactions_per_cell_per_snapshot_per_repeat,
+    num_coa_only_interactions_per_cell_per_snapshot_per_repeat,
+):
+    array_size = (
+        num_interactions_per_cell_per_snapshot_per_repeat.shape[0]
+        * num_interactions_per_cell_per_snapshot_per_repeat.shape[1]
+        * num_interactions_per_cell_per_snapshot_per_repeat.shape[2]
+    )
+
+    num_interactions = np.zeros(array_size, dtype=np.int64)
+    num_cil_interactions = np.zeros(array_size, dtype=np.int64)
+    num_coa_only_interactions = np.zeros(array_size, dtype=np.int64)
+
+    num_repeats = num_interactions_per_cell_per_snapshot_per_repeat.shape[0]
+    num_snapshots = num_interactions_per_cell_per_snapshot_per_repeat.shape[1]
+    num_cells = num_interactions_per_cell_per_snapshot_per_repeat.shape[2]
+
+    current_index = 0
+    for ri in range(num_repeats):
+        num_interactions_per_cell_per_snapshot = num_interactions_per_cell_per_snapshot_per_repeat[
+            ri
+        ]
+        num_cil_interactions_per_cell_per_snapshot = num_cil_interactions_per_cell_per_snapshot_per_repeat[
+            ri
+        ]
+        num_coa_only_interactions_per_cell_per_snapshot = num_coa_only_interactions_per_cell_per_snapshot_per_repeat[
+            ri
+        ]
+        for si in range(num_snapshots):
+            new_index = current_index + num_cells
+            num_interactions[
+                current_index:new_index
+            ] = num_interactions_per_cell_per_snapshot[si]
+            num_cil_interactions[
+                current_index:new_index
+            ] = num_cil_interactions_per_cell_per_snapshot[si]
+            num_coa_only_interactions[
+                current_index:new_index
+            ] = num_coa_only_interactions_per_cell_per_snapshot[si]
+            current_index = new_index
+
+    return num_interactions, num_cil_interactions, num_coa_only_interactions
 
 
 def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
@@ -2572,18 +2630,26 @@ def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
     all_cell_persistence_times_per_repeat = []
     all_cell_speeds_per_repeat = []
     all_cell_protrusion_lifetimes_and_directions_per_repeat = []
+    all_cell_protrusion_group_directions_per_repeat = []
     group_centroid_per_timestep_per_repeat = []
     group_centroid_x_per_timestep_per_repeat = []
     min_x_centroid_per_timestep_per_repeat = []
     max_x_centroid_per_timestep_per_repeat = []
     group_speed_per_timestep_per_repeat = []
-    fit_group_x_velocity_per_repeat = []
     group_persistence_ratio_per_repeat = []
     group_persistence_time_per_repeat = []
     cell_separations_per_repeat = []
     transient_end_times_per_repeat = []
     areal_strains_per_cell_per_repeat = []
-    all_cell_velocity_alignment_per_repeat = []
+    velocity_alignments_per_num_neighbours_per_time_delta_per_repeat = []
+    num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat = []
+    num_interactions_per_cell_per_snapshot_per_repeat = []
+    num_cil_interactions_per_cell_per_snapshot_per_repeat = []
+    num_coa_only_interactions_per_cell_per_snapshot_per_repeat = []
+    interaction_frequency_per_cell_per_repeat = []
+    group_x_velocities_per_timestep_per_repeat = []
+    max_num_neighbours = None
+    time_deltas = None
 
     for rpt_number in range(num_experiment_repeats):
         environment_name = "RPT={}".format(rpt_number)
@@ -2599,6 +2665,10 @@ def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
                 "Unable to load data_dict at path: {}".format(data_dict_pickle_path)
             )
 
+        if rpt_number == 0:
+            max_num_neighbours = data_dict["va_max_num_closest_neighbours"]
+            time_deltas = data_dict["va_time_deltas"]
+
         all_cell_centroids_per_tstep = data_dict["all_cell_centroids_per_tstep"]
         all_cell_centroids_per_repeat.append(all_cell_centroids_per_tstep)
         all_cell_persistence_ratios_per_repeat.append(
@@ -2610,6 +2680,9 @@ def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
         all_cell_speeds_per_repeat.append(data_dict["all_cell_speeds"])
         all_cell_protrusion_lifetimes_and_directions_per_repeat.append(
             data_dict["all_cell_protrusion_lifetimes_and_directions"]
+        )
+        all_cell_protrusion_group_directions_per_repeat.append(
+            data_dict["all_cell_protrusion_group_directions"]
         )
         # centroids_persistences_speeds_protrusionlifetimes_per_repeat.append(centroids_persistences_speeds_protrusionlifetimes)
         group_centroid_per_timestep = data_dict["group_centroid_per_tstep"]
@@ -2624,34 +2697,67 @@ def collate_final_analysis_data(num_experiment_repeats, experiment_dir):
             np.max(all_cell_centroids_per_tstep[:, :, 0], axis=0)
         )
         group_speed_per_timestep_per_repeat.append(data_dict["group_speeds"])
-        fit_group_x_velocity_per_repeat.append(data_dict["fit_group_x_velocity"])
+        x_velocities = data_dict["group_x_velocities"]
+        group_x_velocities_per_timestep_per_repeat.append(x_velocities)
 
         group_persistence_ratio_per_repeat.append(data_dict["group_persistence_ratio"])
 
         group_persistence_time_per_repeat.append(data_dict["group_persistence_time"])
         cell_separations_per_repeat.append(data_dict["cell_separation_mean"])
         transient_end_times_per_repeat.append(data_dict["transient_end"])
-        all_cell_velocity_alignment_per_repeat.append(data_dict["all_cell_velocity_alignment_per_tstep"])
+
+        velocity_alignments_per_num_neighbours_per_time_delta_per_repeat.append(
+            data_dict["velocity_alignments"]
+        )
+        num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat.append(
+            data_dict["num_velocity_alignment_data_points"]
+        )
+
+        num_interactions_per_cell_per_snapshot_per_repeat.append(
+            data_dict["num_interactions_per_cell_per_snapshot"]
+        )
+        num_cil_interactions_per_cell_per_snapshot_per_repeat.append(
+            data_dict["num_cil_interactions_per_cell_per_snapshot"]
+        )
+        num_coa_only_interactions_per_cell_per_snapshot_per_repeat.append(
+            data_dict["num_coa_only_interactions_per_cell_per_snapshot"]
+        )
+        interaction_frequency_per_cell_per_repeat.append(
+            data_dict["interaction_frequency_per_cell"]
+        )
         # areal_strains_per_cell_per_repeat.append(data_dict["all_cell_areal_strains"])
 
+    num_interactions, num_cil_interactions, num_coa_only_interactions = test(
+        np.array(num_interactions_per_cell_per_snapshot_per_repeat),
+        np.array(num_cil_interactions_per_cell_per_snapshot_per_repeat),
+        np.array(num_coa_only_interactions_per_cell_per_snapshot_per_repeat),
+    )
     return (
         all_cell_centroids_per_repeat,
         all_cell_persistence_ratios_per_repeat,
         all_cell_persistence_times_per_repeat,
         all_cell_speeds_per_repeat,
         all_cell_protrusion_lifetimes_and_directions_per_repeat,
+        all_cell_protrusion_group_directions_per_repeat,
         group_centroid_per_timestep_per_repeat,
         group_centroid_x_per_timestep_per_repeat,
         min_x_centroid_per_timestep_per_repeat,
         max_x_centroid_per_timestep_per_repeat,
         group_speed_per_timestep_per_repeat,
-        fit_group_x_velocity_per_repeat,
+        np.array(group_x_velocities_per_timestep_per_repeat),
         group_persistence_ratio_per_repeat,
         group_persistence_time_per_repeat,
         cell_separations_per_repeat,
         transient_end_times_per_repeat,
         areal_strains_per_cell_per_repeat,
-        all_cell_velocity_alignment_per_repeat,
+        max_num_neighbours,
+        time_deltas,
+        velocity_alignments_per_num_neighbours_per_time_delta_per_repeat,
+        num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
+        num_interactions,
+        num_cil_interactions,
+        num_coa_only_interactions,
+        interaction_frequency_per_cell_per_repeat,
     )
 
 
@@ -3294,6 +3400,7 @@ def no_corridor_chemoattraction_test(
     sub_experiment_number,
     parameter_dict,
     chemoattractant_source_definition,
+    num_cells_responsive_to_chemoattractant=-1,
     uniform_initial_polarization=False,
     no_randomization=False,
     base_output_dir="B:\\numba-ncc\\output\\",
@@ -3392,10 +3499,15 @@ def no_corridor_chemoattraction_test(
                 parameter_dict["enable_chemoattractant_shielding_effect"],
             ),
             seed,
-        ) + stringify_randomization_info(parameter_dict)
-            
+        ) + stringify_randomization_info(
+            parameter_dict
+        )
+
     if uniform_initial_polarization:
         experiment_name += "-UIP"
+    if not(num_cells_responsive_to_chemoattractant >= num_cells or num_cells_responsive_to_chemoattractant < 0):
+        experiment_name += "-NRESP={}".format(num_cells_responsive_to_chemoattractant)
+        
     experiment_dir = eu.get_template_experiment_directory_path(
         base_output_dir, date_str, experiment_number, experiment_name
     )
@@ -3490,6 +3602,8 @@ def no_corridor_chemoattraction_test(
                 chemoattractant_source_definition["source_y"],
             ]
         )
+        if chemoattractant_source_definition["max_value"] == 0.0:
+            show_chemoattractant = False
         print("chemoattractant source location: ", chemoattractant_source_location)
 
     chemoattractant_gradient_fn = make_chemoattractant_gradient_function(
@@ -3519,6 +3633,7 @@ def no_corridor_chemoattraction_test(
         cell_group_dict = {
             "cell_group_name": bi,
             "num_cells": num_cells_in_boxes[bi],
+            "num_cells_responsive_to_chemoattractant": num_cells_responsive_to_chemoattractant,
             "cell_group_bounding_box": np.array(
                 [
                     this_box_x_offset,
@@ -3663,10 +3778,10 @@ def no_corridor_chemoattraction_test(
 
     drift_args = None
     if do_final_analysis:
-        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat, all_cell_velocity_alignment_per_repeat = collate_final_analysis_data(
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, all_cell_protrusion_group_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, group_x_velocities_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat, max_num_closest_neighbours, time_deltas, velocity_alignments_per_num_neighbours_per_time_delta_per_repeat, num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat, num_interactions, num_cil_interactions, num_coa_only_interactions, interaction_frequency_per_cell_per_repeat = collate_final_analysis_data(
             num_experiment_repeats, experiment_dir
         )
-        
+
         print("initial group centroid: ", group_centroid_per_timestep_per_repeat[0])
 
         time_unit = "min."
@@ -3674,7 +3789,7 @@ def no_corridor_chemoattraction_test(
             chemoattraction_source_coords = None
         else:
             chemoattraction_source_coords = chemoattractant_source_location
-            
+
         if remake_final_analysis_graphs or run_experiments:
             datavis.present_collated_cell_motion_data(
                 time_unit,
@@ -3683,9 +3798,14 @@ def no_corridor_chemoattraction_test(
                 np.array(all_cell_persistence_times_per_repeat),
                 np.array(all_cell_speeds_per_repeat),
                 all_cell_protrusion_lifetimes_and_directions_per_repeat,
+                all_cell_protrusion_group_directions_per_repeat,
                 np.array(group_centroid_per_timestep_per_repeat),
                 np.array(group_persistence_ratio_per_repeat),
                 np.array(group_persistence_time_per_repeat),
+                max_num_closest_neighbours,
+                time_deltas,
+                velocity_alignments_per_num_neighbours_per_time_delta_per_repeat,
+                num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
                 experiment_dir,
                 total_time_in_hours,
                 chemoattraction_source_coords=chemoattraction_source_coords,
@@ -3697,11 +3817,11 @@ def no_corridor_chemoattraction_test(
             min_x_centroid_per_timestep_per_repeat,
             max_x_centroid_per_timestep_per_repeat,
             group_centroid_x_per_timestep_per_repeat,
-            fit_group_x_velocity_per_repeat,
+            group_x_velocities_per_timestep_per_repeat,
             experiment_dir,
             total_time_in_hours,
         )
-        
+
         if remake_final_analysis_graphs or run_experiments:
             datavis.present_collated_group_centroid_drift_data(*drift_args)
 
@@ -4046,34 +4166,93 @@ def corridor_migration_symmetric_test(
 
 # =============================================================================
 
+
 def setup_initial_rgtpase_bias(uniform_initial_polarization):
     if uniform_initial_polarization == False:
-        return {
-            "default": ["unbiased random", np.array([0, 2 * np.pi]), 0.3]
-        }
-    else: 
-        return {
-            "default": ["unbiased uniform", np.array([0, 2 * np.pi]), 0.3]
-        }
+        return {"default": ["unbiased random", np.array([0, 2 * np.pi]), 0.3]}
+    else:
+        return {"default": ["unbiased uniform", np.array([0, 2 * np.pi]), 0.3]}
+
 
 def determine_chemotaxis_success_info_save_path(experiment_dir):
     chemotaxis_data_fp = os.path.join(
-                experiment_dir, "chemotaxis_success_per_repeat.np"
-            )
+        experiment_dir, "chemotaxis_success_per_repeat.npz"
+    )
 
     return chemotaxis_data_fp
 
-def load_chemotaxis_analysis_data(chemotaxis_data_fp, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours):
-    avg_simple_chemotaxis_success, avg_group_persistence_time, std_group_persistence_time, avg_cell_persistence_time, std_cell_persistence_time, avg_protrusion_lifetime, std_protrusion_lifetime, avg_group_x_speed, std_group_x_speed, avg_group_speed, std_group_speed, group_persistence_ratio, std_group_persistence_ratio, avg_cell_persistence_ratio, std_cell_persistence_ratio, avg_protrusion_production, std_protrusion_production, avg_velocity_alignment, std_velocity_alignment = np.load(
-        chemotaxis_data_fp
-    )
-    
-    return avg_simple_chemotaxis_success, avg_group_persistence_time, std_group_persistence_time, avg_cell_persistence_time, std_cell_persistence_time, avg_protrusion_lifetime, std_protrusion_lifetime, avg_group_x_speed, std_group_x_speed, avg_group_speed, std_group_speed, group_persistence_ratio, std_group_persistence_ratio, avg_cell_persistence_ratio, std_cell_persistence_ratio, avg_protrusion_production, std_protrusion_production, avg_velocity_alignment, std_velocity_alignment
 
-def graph_protrusion_lifetime_directions_for_chemotaxis_analysis(experiment_dir, num_repeats, all_cell_protrusion_lifetimes_and_directions_per_repeat, total_time_in_hours, chemotaxis_success_per_repeat):
-    
+def load_chemotaxis_analysis_data(
+    chemotaxis_data_fp,
+    produce_graphs,
+    produce_animation,
+    environment_wide_variable_defns,
+    total_time_in_hours,
+):
+    data = np.load(chemotaxis_data_fp)
+
+    avg_simple_chemotaxis_success, avg_group_persistence_time, std_group_persistence_time, avg_cell_persistence_time, std_cell_persistence_time, avg_protrusion_lifetime, std_protrusion_lifetime, avg_cell_x_velocity, std_cell_x_velocity, cell_x_velocities_fp, avg_cell_speed, std_cell_speed, cell_speeds_fp, avg_group_x_velocity, std_group_x_velocity, group_x_velocities_fp, avg_group_speed, std_group_speed, group_speeds_fp, group_persistence_ratio, std_group_persistence_ratio, avg_cell_persistence_ratio, std_cell_persistence_ratio, avg_protrusion_production, std_protrusion_production, avg_num_interactions, std_num_interactions, avg_num_cil_interactions, std_num_cil_interactions, avg_num_coa_only_interactions, std_num_coa_only_interactions, avg_interaction_frequency, std_interaction_frequency = data[
+        "general_data"
+    ]
+
+    max_num_closest_neighbours = data["max_num_closest_neighbours"]
+    time_deltas = data["time_deltas"]
+    avg_va_data = data["avg_va_data"]
+    std_va_data = data["std_va_data"]
+
+    return (
+        avg_simple_chemotaxis_success,
+        avg_group_persistence_time,
+        std_group_persistence_time,
+        avg_cell_persistence_time,
+        std_cell_persistence_time,
+        avg_protrusion_lifetime,
+        std_protrusion_lifetime,
+        avg_cell_x_velocity,
+        std_cell_x_velocity,
+        cell_x_velocities_fp,
+        avg_cell_speed,
+        std_cell_speed,
+        cell_speeds_fp,
+        avg_group_x_velocity,
+        std_group_x_velocity,
+        group_x_velocities_fp,
+        avg_group_speed,
+        std_group_speed,
+        group_speeds_fp,
+        group_persistence_ratio,
+        std_group_persistence_ratio,
+        avg_cell_persistence_ratio,
+        std_cell_persistence_ratio,
+        avg_protrusion_production,
+        std_protrusion_production,
+        avg_num_interactions,
+        std_num_interactions,
+        avg_num_cil_interactions,
+        std_num_cil_interactions,
+        avg_num_coa_only_interactions,
+        std_num_coa_only_interactions,
+        avg_interaction_frequency,
+        std_interaction_frequency,
+        avg_va_data,
+        std_va_data,
+        max_num_closest_neighbours,
+        time_deltas,
+    )
+
+
+def graph_protrusion_lifetime_directions_for_chemotaxis_analysis(
+    experiment_dir,
+    num_repeats,
+    all_cell_protrusion_lifetimes_and_directions_per_repeat,
+    total_time_in_hours,
+    chemotaxis_success_per_repeat,
+):
+
     protrusion_lifetimes_and_directions = []
-    for protrusion_lifetime_dirn_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
+    for (
+        protrusion_lifetime_dirn_per_cell
+    ) in all_cell_protrusion_lifetimes_and_directions_per_repeat:
         for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
             for l, d in protrusion_lifetime_dirn:
                 protrusion_lifetimes_and_directions.append((l, d))
@@ -4085,24 +4264,18 @@ def graph_protrusion_lifetime_directions_for_chemotaxis_analysis(experiment_dir,
         save_dir=experiment_dir,
         save_name="all_cells_protrusion_life_dir",
     )
-    
+
     success_protrusion_lifetimes_and_directions = []
     fail_protrusion_lifetimes_and_directions = []
     for i, protrusion_lifetime_dirn_per_cell in enumerate(
         all_cell_protrusion_lifetimes_and_directions_per_repeat
     ):
         if chemotaxis_success_per_repeat[i] == 1:
-            for (
-                protrusion_lifetime_dirn
-            ) in protrusion_lifetime_dirn_per_cell:
+            for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                 for l, d in protrusion_lifetime_dirn:
-                    success_protrusion_lifetimes_and_directions.append(
-                        (l, d)
-                    )
+                    success_protrusion_lifetimes_and_directions.append((l, d))
         else:
-            for (
-                protrusion_lifetime_dirn
-            ) in protrusion_lifetime_dirn_per_cell:
+            for protrusion_lifetime_dirn in protrusion_lifetime_dirn_per_cell:
                 for l, d in protrusion_lifetime_dirn:
                     fail_protrusion_lifetimes_and_directions.append((l, d))
 
@@ -4125,10 +4298,24 @@ def graph_protrusion_lifetime_directions_for_chemotaxis_analysis(experiment_dir,
             num_repeats - np.sum(chemotaxis_success_per_repeat)
         ),
     )
-    
-def execute_chemotaxis_analysis(experiment_dir, chemotaxis_data_fp, num_repeats, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, source_x, source_y, chemotaxis_target_radius):
-    all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, fit_group_x_velocity_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat, all_cell_velocity_alignments_per_repeat = collate_final_analysis_data(num_repeats, experiment_dir)
-        
+
+
+def execute_chemotaxis_analysis(
+    experiment_dir,
+    chemotaxis_data_fp,
+    num_repeats,
+    produce_graphs,
+    produce_animation,
+    environment_wide_variable_defns,
+    total_time_in_hours,
+    source_x,
+    source_y,
+    chemotaxis_target_radius,
+):
+    all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, all_cell_protrusion_group_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, group_x_velocities_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat, max_num_closest_neighbours, time_deltas, velocity_alignment_data_per_num_neighbours_per_time_delta_per_repeat, num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat, num_interactions, num_cil_interactions, num_coa_only_interactions, interaction_frequency_per_cell_per_repeat = collate_final_analysis_data(
+        num_repeats, experiment_dir
+    )
+
     experiment_name_format_string = "RPT={}"
 
     simple_chemotaxis_success_per_repeat = []
@@ -4145,7 +4332,7 @@ def execute_chemotaxis_analysis(experiment_dir, chemotaxis_data_fp, num_repeats,
             produce_animation,
             environment_wide_variable_defns,
         )
-        
+
         simple_success = cu.analyze_chemotactic_success_simple(
             relevant_environment,
             storefile_path,
@@ -4156,79 +4343,305 @@ def execute_chemotaxis_analysis(experiment_dir, chemotaxis_data_fp, num_repeats,
         )
 
         simple_chemotaxis_success_per_repeat.append(simple_success)
-        
-    graph_protrusion_lifetime_directions_for_chemotaxis_analysis(experiment_dir, num_repeats, all_cell_protrusion_lifetimes_and_directions_per_repeat, total_time_in_hours, simple_chemotaxis_success_per_repeat)
-    
+
+    graph_protrusion_lifetime_directions_for_chemotaxis_analysis(
+        experiment_dir,
+        num_repeats,
+        all_cell_protrusion_lifetimes_and_directions_per_repeat,
+        total_time_in_hours,
+        simple_chemotaxis_success_per_repeat,
+    )
+
     avg_simple_chemotaxis_success = np.average(simple_chemotaxis_success_per_repeat)
-    
+
     avg_group_persistence_time = np.average(group_persistence_time_per_repeat)
-    
+
     std_group_persistence_time = np.std(group_persistence_time_per_repeat)
-    
-    all_cell_persistence_times_per_repeat = np.array([x for x in np.array(all_cell_persistence_times_per_repeat).flatten() if not np.isnan(x)])
-    
+
+    all_cell_persistence_times_per_repeat = np.array(
+        [
+            x
+            for x in np.array(all_cell_persistence_times_per_repeat).flatten()
+            if not np.isnan(x)
+        ]
+    )
+
     avg_cell_persistence_time = np.average(all_cell_persistence_times_per_repeat)
-    
+
     std_cell_persistence_time = np.std(all_cell_persistence_times_per_repeat)
-    
+
     all_plts = np.empty((0,), dtype=np.float64)
-    for plts_and_directions_per_cell in all_cell_protrusion_lifetimes_and_directions_per_repeat:
+    for (
+        plts_and_directions_per_cell
+    ) in all_cell_protrusion_lifetimes_and_directions_per_repeat:
         for plts_and_directions in plts_and_directions_per_cell:
             plts_and_directions = np.array(plts_and_directions)
             all_plts = np.append(all_plts, plts_and_directions[:, 0])
-            
+
     num_plts = all_plts.shape[0]
-    top_25_percent_plts = min(50, int(0.25* all_plts.shape[0]))
-    relevant_plts = np.sort(all_plts)[(num_plts - top_25_percent_plts):]
+    top_25_percent_plts = int(0.25 * all_plts.shape[0])
+    relevant_plts = np.sort(all_plts)[(num_plts - top_25_percent_plts) :]
     avg_protrusion_lifetime = np.average(relevant_plts)
-    
+
     std_protrusion_lifetime = np.std(relevant_plts)
-    
+
     group_persistence_ratio = np.average(group_persistence_ratio_per_repeat)
     std_group_persistence_ratio = np.std(group_persistence_ratio_per_repeat)
+
+    T = total_time_in_hours*60.0/all_cell_centroids_per_repeat[0][0].shape[0]
     
-    group_speed_per_repeat = np.average(group_speed_per_timestep_per_repeat, axis=1)
-    avg_group_speed = np.average(group_speed_per_repeat)
-    std_group_speed = np.std(group_speed_per_repeat)
+    group_velocities_per_timestep_per_repeat = np.array([cu.calculate_velocities(group_centroids_per_timestep, T) for group_centroids_per_timestep in group_centroid_per_timestep_per_repeat])
+    group_velocities_for_all_timesteps_all_repeats = np.zeros((0, 2), dtype=np.float64)
     
-    group_x_speed_per_repeat = np.abs(fit_group_x_velocity_per_repeat)
-    avg_group_x_speed = np.average(group_x_speed_per_repeat)
-    std_group_x_speed = np.std(group_x_speed_per_repeat)
+    for group_velocities_per_timestep in group_velocities_per_timestep_per_repeat:
+        group_velocities_for_all_timesteps_all_repeats = np.append(group_velocities_for_all_timesteps_all_repeats, group_velocities_per_timestep, axis=0)
+        
+    avg_group_x_velocity = np.average(group_velocities_for_all_timesteps_all_repeats[:,0])
+    std_group_x_velocity = np.std(group_velocities_for_all_timesteps_all_repeats[:, 0])
+    group_x_velocities_fp = os.path.join(experiment_dir, "group_x_velocities_for_all_timesteps_all_repeats")
+    np.save(group_x_velocities_fp, group_velocities_for_all_timesteps_all_repeats[:, 0])
+    group_x_velocities_fp += ".npy"
     
-    all_cell_persistence_ratios = np.array(all_cell_persistence_ratios_per_repeat).flatten()
+    group_speeds_for_all_timesteps_all_repeats = np.linalg.norm(group_velocities_for_all_timesteps_all_repeats, axis=1)
+    
+    avg_group_speed = np.average(group_speeds_for_all_timesteps_all_repeats)
+    std_group_speed = np.std(group_speeds_for_all_timesteps_all_repeats)
+    group_speeds_fp = os.path.join(experiment_dir, "group_speeds_for_all_timesteps_all_repeats")
+    np.save(group_speeds_fp, group_speeds_for_all_timesteps_all_repeats)
+    group_speeds_fp += ".npy"
+    
+    all_cell_velocities_per_repeat = np.array([[cu.calculate_velocities(cell_centroids, T) for cell_centroids in all_cell_centroids] for all_cell_centroids in all_cell_centroids_per_repeat])
+    all_cell_velocities_over_all_repeats = np.zeros((0, 2), dtype=np.float64)
+    
+    for all_cell_velocities in all_cell_velocities_per_repeat:
+        for cell_velocities in all_cell_velocities:
+            all_cell_velocities_over_all_repeats = np.append(all_cell_velocities_over_all_repeats, cell_velocities, axis=0)
+            
+    avg_cell_x_velocity = np.average(all_cell_velocities_over_all_repeats[:,0])
+    std_cell_x_velocity = np.std(all_cell_velocities_over_all_repeats[:, 0])
+    
+    cell_x_velocities_fp = os.path.join(experiment_dir, "all_cell_x_velocities_over_all_repeats")
+    np.save(cell_x_velocities_fp, all_cell_velocities_over_all_repeats[:,0])
+    cell_x_velocities_fp += ".npy"
+    
+    all_cell_speeds_over_all_repeats = np.linalg.norm(all_cell_velocities_over_all_repeats, axis=1)
+    avg_cell_speed = np.average(all_cell_speeds_over_all_repeats)
+    std_cell_speed = np.std(all_cell_speeds_over_all_repeats)
+    cell_speeds_fp = os.path.join(experiment_dir, "all_cell_speeds_over_all_repeats")
+    np.save(cell_speeds_fp, all_cell_speeds_over_all_repeats)
+    cell_speeds_fp += ".npy"
+
+    all_cell_persistence_ratios = np.array(
+        all_cell_persistence_ratios_per_repeat
+    ).flatten()
     avg_cell_persistence_ratio = np.average(all_cell_persistence_ratios)
     std_cell_persistence_ratio = np.std(all_cell_persistence_ratios)
-    
+
     num_cells = len(all_cell_protrusion_lifetimes_and_directions_per_repeat[0])
-    protrusion_production_per_repeat = [np.sum([len(y) for y in x])/(total_time_in_hours*num_cells) for x in all_cell_protrusion_lifetimes_and_directions_per_repeat]
+    protrusion_production_per_repeat = [
+        np.sum([len(y) for y in x]) / (total_time_in_hours * num_cells)
+        for x in all_cell_protrusion_lifetimes_and_directions_per_repeat
+    ]
     avg_protrusion_production = np.average(protrusion_production_per_repeat)
     std_protrusion_production = np.std(protrusion_production_per_repeat)
-    
-    all_cell_velocity_alignments_per_repeat = np.array(all_cell_velocity_alignments_per_repeat)
-    avg_velocity_alignment_per_repeat = np.average(all_cell_velocity_alignments_per_repeat.ravel())
-    std_velocity_alignment_per_repeat = np.std(all_cell_velocity_alignments_per_repeat.ravel())
-    
-    with open(chemotaxis_data_fp, "wb") as f:
-        np.save(f, np.array([avg_simple_chemotaxis_success, avg_group_persistence_time, std_group_persistence_time, avg_cell_persistence_time, std_cell_persistence_time, avg_protrusion_lifetime, std_protrusion_lifetime, avg_group_x_speed, std_group_x_speed, avg_group_speed, std_group_speed, group_persistence_ratio, std_group_persistence_ratio, avg_cell_persistence_ratio, std_cell_persistence_ratio, avg_protrusion_production, std_protrusion_production, avg_velocity_alignment_per_repeat, std_velocity_alignment_per_repeat]))
 
-    return avg_simple_chemotaxis_success, avg_group_persistence_time, std_group_persistence_time, avg_cell_persistence_time, std_cell_persistence_time, avg_protrusion_lifetime, std_protrusion_lifetime, avg_group_x_speed, std_group_x_speed, avg_group_speed, std_group_speed, group_persistence_ratio, std_group_persistence_ratio, avg_cell_persistence_ratio, std_cell_persistence_ratio, avg_protrusion_production, std_protrusion_production, avg_velocity_alignment_per_repeat, std_velocity_alignment_per_repeat
-        
-def get_chemotaxis_analysis_data_for_variant(redo_chemotaxis_analysis, experiment_dir, num_repeats, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, source_x, source_y, chemotaxis_target_radius):
-    
-    chemotaxis_data_fp  = determine_chemotaxis_success_info_save_path(experiment_dir)
-    
+    num_num_neighbour_variations = max_num_closest_neighbours.shape[0]
+    num_time_delta_variations = time_deltas.shape[0]
+    avg_velocity_alignment_data_per_num_neighbours_per_time_delta = np.zeros(
+        (num_num_neighbour_variations, num_time_delta_variations), dtype=np.float64
+    )
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta = np.zeros(
+        (num_num_neighbour_variations, num_time_delta_variations), dtype=np.float64
+    )
+
+    for nni in range(num_num_neighbour_variations):
+        for ntdi in range(num_time_delta_variations):
+            relevant_data = np.zeros(0, dtype=np.float64)
+            for nri in range(num_repeats):
+                nd = num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat[
+                    nri
+                ][
+                    nni
+                ][
+                    ntdi
+                ]
+                relevant_data = np.append(
+                    relevant_data,
+                    velocity_alignment_data_per_num_neighbours_per_time_delta_per_repeat[
+                        nri
+                    ][
+                        nni
+                    ][
+                        ntdi
+                    ][
+                        :nd
+                    ],
+                )
+            avg_velocity_alignment_data_per_num_neighbours_per_time_delta[nni][
+                ntdi
+            ] = np.average(relevant_data)
+            std_velocity_alignment_data_per_num_neighbours_per_time_delta[nni][
+                ntdi
+            ] = np.var(relevant_data)
+
+    avg_num_interactions = np.average(num_interactions)
+    std_num_interactions = np.std(num_interactions)
+
+    avg_num_cil_interactions = np.average(num_cil_interactions)
+    std_num_cil_interactions = np.std(num_cil_interactions)
+
+    avg_num_coa_only_interactions = np.average(num_coa_only_interactions)
+    std_num_coa_only_interactions = np.std(num_coa_only_interactions)
+
+    interaction_frequencies = np.array(
+        interaction_frequency_per_cell_per_repeat
+    ).ravel()
+    avg_interaction_frequency = np.average(interaction_frequencies)
+    std_interaction_frequency = np.std(interaction_frequencies)
+
+    with open(chemotaxis_data_fp, "wb") as f:
+        np.savez(
+            f,
+            general_data=np.array(
+                [
+                    avg_simple_chemotaxis_success,
+                    avg_group_persistence_time,
+                    std_group_persistence_time,
+                    avg_cell_persistence_time,
+                    std_cell_persistence_time,
+                    avg_protrusion_lifetime,
+                    std_protrusion_lifetime,
+                    avg_cell_x_velocity,
+                    std_cell_x_velocity,
+                    cell_x_velocities_fp,
+                    avg_cell_speed,
+                    std_cell_speed,
+                    cell_speeds_fp,
+                    avg_group_x_velocity,
+                    std_group_x_velocity,
+                    group_x_velocities_fp,
+                    avg_group_speed,
+                    std_group_speed,
+                    group_speeds_fp,
+                    group_persistence_ratio,
+                    std_group_persistence_ratio,
+                    avg_cell_persistence_ratio,
+                    std_cell_persistence_ratio,
+                    avg_protrusion_production,
+                    std_protrusion_production,
+                    avg_num_interactions,
+                    std_num_interactions,
+                    avg_num_cil_interactions,
+                    std_num_cil_interactions,
+                    avg_num_coa_only_interactions,
+                    std_num_coa_only_interactions,
+                    avg_interaction_frequency,
+                    std_interaction_frequency,
+                ]
+            ),
+            max_num_closest_neighbours=max_num_closest_neighbours,
+            time_deltas=time_deltas,
+            avg_va_data=avg_velocity_alignment_data_per_num_neighbours_per_time_delta,
+            std_va_data=std_velocity_alignment_data_per_num_neighbours_per_time_delta,
+        )
+
+    return (
+        avg_simple_chemotaxis_success,
+        avg_group_persistence_time,
+        std_group_persistence_time,
+        avg_cell_persistence_time,
+        std_cell_persistence_time,
+        avg_protrusion_lifetime,
+        std_protrusion_lifetime,
+        avg_cell_x_velocity,
+        std_cell_x_velocity,
+        cell_x_velocities_fp,
+        avg_cell_speed,
+        std_cell_speed,
+        cell_speeds_fp,
+        avg_group_x_velocity,
+        std_group_x_velocity,
+        group_x_velocities_fp,
+        avg_group_speed,
+        std_group_speed,
+        group_speeds_fp,
+        group_persistence_ratio,
+        std_group_persistence_ratio,
+        avg_cell_persistence_ratio,
+        std_cell_persistence_ratio,
+        avg_protrusion_production,
+        std_protrusion_production,
+        avg_num_interactions,
+        std_num_interactions,
+        avg_num_cil_interactions,
+        std_num_cil_interactions,
+        avg_num_coa_only_interactions,
+        std_num_coa_only_interactions,
+        avg_interaction_frequency,
+        std_interaction_frequency,
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta,
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta,
+        max_num_closest_neighbours,
+        time_deltas,
+    )
+
+
+def get_chemotaxis_analysis_data_for_variant(
+    redo_chemotaxis_analysis,
+    experiment_dir,
+    num_repeats,
+    produce_graphs,
+    produce_animation,
+    environment_wide_variable_defns,
+    total_time_in_hours,
+    source_x,
+    source_y,
+    chemotaxis_target_radius,
+):
+
+    chemotaxis_data_fp = determine_chemotaxis_success_info_save_path(experiment_dir)
+
     data_load_requested = redo_chemotaxis_analysis == False
     stored_data_exists = os.path.exists(chemotaxis_data_fp)
-    
+
     if data_load_requested and (not stored_data_exists):
-        return execute_chemotaxis_analysis(experiment_dir, chemotaxis_data_fp, num_repeats, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, source_x, source_y, chemotaxis_target_radius)
+        return execute_chemotaxis_analysis(
+            experiment_dir,
+            chemotaxis_data_fp,
+            num_repeats,
+            produce_graphs,
+            produce_animation,
+            environment_wide_variable_defns,
+            total_time_in_hours,
+            source_x,
+            source_y,
+            chemotaxis_target_radius,
+        )
     elif data_load_requested and stored_data_exists:
-        return load_chemotaxis_analysis_data(chemotaxis_data_fp, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours)
+        return load_chemotaxis_analysis_data(
+            chemotaxis_data_fp,
+            produce_graphs,
+            produce_animation,
+            environment_wide_variable_defns,
+            total_time_in_hours,
+        )
     else:
         if os.path.exists(chemotaxis_data_fp):
             os.remove(chemotaxis_data_fp)
-        return execute_chemotaxis_analysis(experiment_dir, chemotaxis_data_fp, num_repeats, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, source_x, source_y, chemotaxis_target_radius)
-            
+        return execute_chemotaxis_analysis(
+            experiment_dir,
+            chemotaxis_data_fp,
+            num_repeats,
+            produce_graphs,
+            produce_animation,
+            environment_wide_variable_defns,
+            total_time_in_hours,
+            source_x,
+            source_y,
+            chemotaxis_target_radius,
+        )
+
+
 def chemotaxis_no_corridor_tests(
     date_str,
     experiment_number,
@@ -4248,14 +4661,39 @@ def chemotaxis_no_corridor_tests(
     test_chemotaxis_magnitudes=[],
     test_randomization_parameters=[],
     test_chemotaxis_slope=0.0016,
+    test_num_cells_responsive_to_chemoattractant=[],
     num_experiment_repeats=10,
     timesteps_between_generation_of_intermediate_visuals=None,
     produce_animation=True,
-    produce_graphs=True,
+    produce_graphs={
+        "cell specific": True,
+        "all cell speeds": True,
+        "group area/cell separation": True,
+        "centroid related data": {
+            "velocity alignment": True,
+            "persistence time": True,
+            "general group info": True,
+            "centroid drift": True,
+        },
+        "protrusion existence": True,
+        "protrusion bias": True,
+    },
     full_print=True,
     delete_and_rerun_experiments_without_stored_env=True,
     run_experiments=True,
-    remake_graphs=False,
+    remake_graphs={
+        "cell specific": False,
+        "all cell speeds": False,
+        "group area/cell separation": False,
+        "centroid related data": {
+            "velocity alignment": False,
+            "persistence time": False,
+            "general group info": False,
+            "centroid drift": False,
+        },
+        "protrusion existence": False,
+        "protrusion bias": False,
+    },
     remake_animation=False,
     redo_chemotaxis_analysis=True,
     do_final_analysis=True,
@@ -4277,21 +4715,31 @@ def chemotaxis_no_corridor_tests(
     num_cases = len(num_cells)
     if type(num_experiment_repeats) == int:
         num_experiment_repeats = [num_experiment_repeats] * num_cases
-    
+
     experiment_set_directory = eu.get_experiment_set_directory_path(
         base_output_dir, date_str, experiment_number
     )
-               
-    biased_rgtpase_distrib_defn_dict = setup_initial_rgtpase_bias(uniform_initial_polarization)
-    
+
+    biased_rgtpase_distrib_defn_dict = setup_initial_rgtpase_bias(
+        uniform_initial_polarization
+    )
+
     test_variants = []
-    for randomization_parameters in test_randomization_parameters:
-        for chm in test_chemotaxis_magnitudes:
-            for coa_factor, cil_factor in intercellular_interaction_knockdown_cases:
-                tv = dict(copy.deepcopy(randomization_parameters))
-                tv.update([("chm", chm), ("coa_factor", coa_factor), ("cil_factor", cil_factor)])
-                test_variants.append(tv)
-    
+    for num_cells_responsive_to_chemoattractant in test_num_cells_responsive_to_chemoattractant:
+        for randomization_parameters in test_randomization_parameters:
+            for chm in test_chemotaxis_magnitudes:
+                for coa_factor, cil_factor in intercellular_interaction_knockdown_cases:
+                    tv = dict(copy.deepcopy(randomization_parameters))
+                    tv.update(
+                        [
+                            ("num_cells_responsive_to_chemoattractant", num_cells_responsive_to_chemoattractant),
+                            ("chm", chm),
+                            ("coa_factor", coa_factor),
+                            ("cil_factor", cil_factor),
+                        ]
+                    )
+                    test_variants.append(tv)
+
     simple_chemotaxis_success_per_variant_per_num_cells = []
     group_persistence_time_per_variant_per_num_cells = []
     group_persistence_time_std_per_variant_per_num_cells = []
@@ -4299,20 +4747,79 @@ def chemotaxis_no_corridor_tests(
     cell_persistence_time_std_per_variant_per_num_cells = []
     protrusion_lifetime_per_variant_per_num_cells = []
     protrusion_lifetime_std_per_variant_per_num_cells = []
-    group_x_speed_per_variant_per_num_cells = []
-    group_x_speed_std_per_variant_per_num_cells = []
+    cell_x_velocity_per_variant_per_num_cells = []
+    cell_x_velocity_std_per_variant_per_num_cells = []
+    cell_x_velocities_per_variant_per_num_cells = []
+    cell_speed_per_variant_per_num_cells = []
+    cell_speed_std_per_variant_per_num_cells = []
+    cell_speeds_per_variant_per_num_cells = []
+    group_x_velocity_per_variant_per_num_cells = []
+    group_x_velocity_std_per_variant_per_num_cells = []
+    group_x_velocities_per_variant_per_num_cells = []
     group_speed_per_variant_per_num_cells = []
     group_speed_std_per_variant_per_num_cells = []
+    group_speeds_per_variant_per_num_cells = []
     group_persistence_ratio_per_variant_per_num_cells = []
     group_persistence_ratio_std_per_variant_per_num_cells = []
     cell_persistence_ratio_per_variant_per_num_cells = []
     cell_persistence_ratio_std_per_variant_per_num_cells = []
     protrusion_production_per_variant_per_num_cells = []
     protrusion_production_std_per_variant_per_num_cells = []
-    velocity_alignment_per_variant_per_num_cells = []
-    velocity_alignment_std_per_variant_per_num_cells = []
-    
-    data_arrays_of_arrays = [simple_chemotaxis_success_per_variant_per_num_cells, group_persistence_time_per_variant_per_num_cells, group_persistence_time_std_per_variant_per_num_cells, cell_persistence_time_per_variant_per_num_cells, cell_persistence_time_std_per_variant_per_num_cells, protrusion_lifetime_per_variant_per_num_cells, protrusion_lifetime_std_per_variant_per_num_cells, group_x_speed_per_variant_per_num_cells, group_x_speed_std_per_variant_per_num_cells, group_speed_per_variant_per_num_cells, group_speed_std_per_variant_per_num_cells, group_persistence_ratio_per_variant_per_num_cells, group_persistence_ratio_std_per_variant_per_num_cells, cell_persistence_ratio_per_variant_per_num_cells, cell_persistence_ratio_std_per_variant_per_num_cells, protrusion_production_per_variant_per_num_cells, protrusion_production_std_per_variant_per_num_cells, velocity_alignment_per_variant_per_num_cells, velocity_alignment_std_per_variant_per_num_cells]
+    avg_num_interactions_per_variant_per_num_cells = []
+    std_num_interactions_per_variant_per_num_cells = []
+    avg_num_cil_interactions_per_variant_per_num_cells = []
+    std_num_cil_interactions_per_variant_per_num_cells = []
+    avg_num_coa_only_interactions_per_variant_per_num_cells = []
+    std_num_coa_only_interactions_per_variant_per_num_cells = []
+    avg_interaction_frequency_per_variant_per_num_cells = []
+    std_interaction_frequency_per_variant_per_num_cells = []
+    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells = (
+        []
+    )
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells = (
+        []
+    )
+
+    data_arrays_of_arrays = [
+        simple_chemotaxis_success_per_variant_per_num_cells,
+        group_persistence_time_per_variant_per_num_cells,
+        group_persistence_time_std_per_variant_per_num_cells,
+        cell_persistence_time_per_variant_per_num_cells,
+        cell_persistence_time_std_per_variant_per_num_cells,
+        protrusion_lifetime_per_variant_per_num_cells,
+        protrusion_lifetime_std_per_variant_per_num_cells,
+        cell_x_velocity_per_variant_per_num_cells,
+        cell_x_velocity_std_per_variant_per_num_cells,
+        cell_x_velocities_per_variant_per_num_cells,
+        cell_speed_per_variant_per_num_cells,
+        cell_speed_std_per_variant_per_num_cells,
+        cell_speeds_per_variant_per_num_cells,
+        group_x_velocity_per_variant_per_num_cells,
+        group_x_velocity_std_per_variant_per_num_cells,
+        group_x_velocities_per_variant_per_num_cells,
+        group_speed_per_variant_per_num_cells,
+        group_speed_std_per_variant_per_num_cells,
+        group_speeds_per_variant_per_num_cells,
+        group_persistence_ratio_per_variant_per_num_cells,
+        group_persistence_ratio_std_per_variant_per_num_cells,
+        cell_persistence_ratio_per_variant_per_num_cells,
+        cell_persistence_ratio_std_per_variant_per_num_cells,
+        protrusion_production_per_variant_per_num_cells,
+        protrusion_production_std_per_variant_per_num_cells,
+        avg_num_interactions_per_variant_per_num_cells,
+        std_num_interactions_per_variant_per_num_cells,
+        avg_num_cil_interactions_per_variant_per_num_cells,
+        std_num_cil_interactions_per_variant_per_num_cells,
+        avg_num_coa_only_interactions_per_variant_per_num_cells,
+        std_num_coa_only_interactions_per_variant_per_num_cells,
+        avg_interaction_frequency_per_variant_per_num_cells,
+        std_interaction_frequency_per_variant_per_num_cells,
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    ]
+
+    max_num_closest_neighbours = None
+    time_deltas = None
 
     for nci, nr, nc, bh, bw in zip(
         np.arange(num_cases), num_experiment_repeats, num_cells, box_heights, box_widths
@@ -4324,21 +4831,73 @@ def chemotaxis_no_corridor_tests(
         cell_persistence_time_std_per_variant = []
         protrusion_lifetime_per_variant = []
         protrusion_lifetime_std_per_variant = []
-        group_x_speed_per_variant = []
-        group_x_speed_std_per_variant = []
+        cell_x_velocity_per_variant = []
+        cell_x_velocity_std_per_variant = []
+        cell_x_velocities_per_variant = []
+        cell_speed_per_variant = []
+        cell_speed_std_per_variant = []
+        cell_speeds_per_variant = []
+        group_x_velocity_per_variant = []
+        group_x_velocity_std_per_variant = []
+        group_x_velocities_per_variant = []
         group_speed_per_variant = []
         group_speed_std_per_variant = []
+        group_speeds_per_variant = []
         group_persistence_ratio_per_variant = []
         group_persistence_ratio_std_per_variant = []
         cell_persistence_ratio_per_variant = []
         cell_persistence_ratio_std_per_variant = []
         protrusion_production_per_variant = []
         protrusion_production_std_per_variant = []
-        velocity_alignment_per_variant = []
-        velocity_alignment_std_per_variant = []
-        
-        data_arrays = [simple_chemotaxis_success_per_variant, group_persistence_time_per_variant, group_persistence_time_std_per_variant, cell_persistence_time_per_variant, cell_persistence_time_std_per_variant, protrusion_lifetime_per_variant, protrusion_lifetime_std_per_variant, group_x_speed_per_variant, group_x_speed_std_per_variant, group_speed_per_variant, group_speed_std_per_variant, group_persistence_ratio_per_variant, group_persistence_ratio_std_per_variant, cell_persistence_ratio_per_variant, cell_persistence_ratio_std_per_variant, protrusion_production_per_variant, protrusion_production_std_per_variant, velocity_alignment_per_variant, velocity_alignment_std_per_variant]
-    
+        avg_num_interactions_per_variant = []
+        std_num_interactions_per_variant = []
+        avg_num_cil_interactions_per_variant = []
+        std_num_cil_interactions_per_variant = []
+        avg_num_coa_only_interactions_per_variant = []
+        std_num_coa_only_interactions_per_variant = []
+        avg_interaction_frequency_per_variant = []
+        std_interaction_frequency_per_variant = []
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant = []
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant = []
+
+        data_arrays = [
+            simple_chemotaxis_success_per_variant,
+            group_persistence_time_per_variant,
+            group_persistence_time_std_per_variant,
+            cell_persistence_time_per_variant,
+            cell_persistence_time_std_per_variant,
+            protrusion_lifetime_per_variant,
+            protrusion_lifetime_std_per_variant,
+            cell_x_velocity_per_variant,
+            cell_x_velocity_std_per_variant,
+            cell_x_velocities_per_variant,
+            cell_speed_per_variant,
+            cell_speed_std_per_variant,
+            cell_speeds_per_variant,
+            group_x_velocity_per_variant,
+            group_x_velocity_std_per_variant,
+            group_x_velocities_per_variant,
+            group_speed_per_variant,
+            group_speed_std_per_variant,
+            group_speeds_per_variant,
+            group_persistence_ratio_per_variant,
+            group_persistence_ratio_std_per_variant,
+            cell_persistence_ratio_per_variant,
+            cell_persistence_ratio_std_per_variant,
+            protrusion_production_per_variant,
+            protrusion_production_std_per_variant,
+            avg_num_interactions_per_variant,
+            std_num_interactions_per_variant,
+            avg_num_cil_interactions_per_variant,
+            std_num_cil_interactions_per_variant,
+            avg_num_coa_only_interactions_per_variant,
+            std_num_coa_only_interactions_per_variant,
+            avg_interaction_frequency_per_variant,
+            std_interaction_frequency_per_variant,
+            avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant,
+            std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant,
+        ]
+
         for xi, vv in enumerate(test_variants):
             print("=========")
             print("nc: {}".format(nc))
@@ -4347,14 +4906,22 @@ def chemotaxis_no_corridor_tests(
             coa_factor = vv["coa_factor"]
             cil_factor = vv["cil_factor"]
             chm = vv["chm"]
+            num_cells_responsive_to_chemoattractant = vv["num_cells_responsive_to_chemoattractant"]
             pd = copy.deepcopy(parameter_dict)
-            pd.update([(key, vv[key]) for key in vv.keys() if key not in ["coa_factor", "cil_factor", "chm"]])
-                
+            pd.update(
+                [
+                    (key, vv[key])
+                    for key in vv.keys()
+                    if key not in ["coa_factor", "cil_factor", "chm", "num_responsive"]
+                ]
+            )
+
             experiment_name, drift_args, environment_wide_variable_defns, source_x, source_y = no_corridor_chemoattraction_test(
                 date_str,
                 experiment_number,
                 sub_experiment_number,
                 pd,
+                num_cells_responsive_to_chemoattractant=num_cells_responsive_to_chemoattractant,
                 chemoattractant_source_definition={
                     "source_type": "linear",
                     "x_offset_in_corridor": test_x_offset_in_corridor,
@@ -4371,8 +4938,8 @@ def chemotaxis_no_corridor_tests(
                 max_timepoints_on_ram=max_timepoints_on_ram,
                 seed=seed,
                 allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-                default_coa=coa_factor*default_coas[nci],
-                default_cil=cil_factor*default_cils[nci],
+                default_coa=coa_factor * default_coas[nci],
+                default_cil=cil_factor * default_cils[nci],
                 num_experiment_repeats=nr,
                 timesteps_between_generation_of_intermediate_visuals=timesteps_between_generation_of_intermediate_visuals,
                 produce_graphs=produce_graphs,
@@ -4398,11 +4965,25 @@ def chemotaxis_no_corridor_tests(
                 base_output_dir, date_str, experiment_number, experiment_name
             )
 
-            data_vals = get_chemotaxis_analysis_data_for_variant(redo_chemotaxis_analysis, experiment_dir, nr, produce_graphs, produce_animation, environment_wide_variable_defns, total_time_in_hours, source_x, source_y, chemotaxis_target_radius)
+            data_vals = get_chemotaxis_analysis_data_for_variant(
+                redo_chemotaxis_analysis,
+                experiment_dir,
+                nr,
+                produce_graphs,
+                produce_animation,
+                environment_wide_variable_defns,
+                total_time_in_hours,
+                source_x,
+                source_y,
+                chemotaxis_target_radius,
+            )
 
-            for arr, val in zip(data_arrays, data_vals):
+            for arr, val in zip(data_arrays, data_vals[:-2]):
                 arr.append(val)
-            
+
+            if type(max_num_closest_neighbours) == type(None):
+                max_num_closest_neighbours, time_deltas = data_vals[-2:]
+
         for arr_of_arrs, arr in zip(data_arrays_of_arrays, data_arrays):
             arr_of_arrs.append(copy.deepcopy(arr))
 
@@ -4417,8 +4998,9 @@ def chemotaxis_no_corridor_tests(
         box_heights,
         save_dir=experiment_set_directory,
         info_tag=info_tag,
+        fontsize=48,
     )
-    
+
     datavis.graph_chemotaxis_group_persistence_time_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4430,8 +5012,9 @@ def chemotaxis_no_corridor_tests(
         box_heights,
         save_dir=experiment_set_directory,
         info_tag=info_tag,
+        fontsize=48,
     )
-    
+
     datavis.graph_chemotaxis_cell_persistence_time_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4444,7 +5027,7 @@ def chemotaxis_no_corridor_tests(
         save_dir=experiment_set_directory,
         info_tag=info_tag,
     )
-    
+
     datavis.graph_chemotaxis_protrusion_lifetime_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4456,49 +5039,61 @@ def chemotaxis_no_corridor_tests(
         box_heights,
         save_dir=experiment_set_directory,
         info_tag=info_tag,
+        fontsize=48,
     )
     
-    datavis.graph_chemotaxis_group_x_speed_data(
+    datavis.graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants(
         test_variants,
         test_chemotaxis_slope,
-        group_x_speed_per_variant_per_num_cells,
-        group_x_speed_std_per_variant_per_num_cells,
+        num_cells[0],
+        cell_speed_per_variant_per_num_cells[0],
+        cell_speed_std_per_variant_per_num_cells[0],
+        cell_x_velocity_per_variant_per_num_cells[0],
+        cell_x_velocity_std_per_variant_per_num_cells[0],
+        cell_speeds_per_variant_per_num_cells[0],
+        cell_x_velocities_per_variant_per_num_cells[0],
         num_experiment_repeats,
-        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory,
+        info_tag=info_tag,
+    )
+
+    datavis.graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
+        test_variants,
+        test_chemotaxis_slope,
+        num_cells[0],
+        group_speed_per_variant_per_num_cells[0],
+        group_speed_std_per_variant_per_num_cells[0],
+        group_x_velocity_per_variant_per_num_cells[0],
+        group_x_velocity_std_per_variant_per_num_cells[0],
+        group_speeds_per_variant_per_num_cells[0],
+        group_x_velocities_per_variant_per_num_cells[0],
+        num_experiment_repeats,
         box_widths,
         box_heights,
         save_dir=experiment_set_directory,
         info_tag=info_tag,
     )
     
-    datavis.graph_chemotaxis_group_speed_data(
-        test_variants,
-        test_chemotaxis_slope,
-        group_speed_per_variant_per_num_cells,
-        group_speed_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-    
-    datavis.graph_chemotaxis_speed_data_new(
-        test_variants,
-        test_chemotaxis_slope,
-        [x[0] for x in group_speed_per_variant_per_num_cells],
-        [x[0] for x in group_speed_std_per_variant_per_num_cells],
-        [x[0] for x in group_x_speed_per_variant_per_num_cells],
-        [x[0] for x in group_x_speed_per_variant_per_num_cells],
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-    
+    if len(test_variants) == 1:
+        datavis.graph_chemotaxis_group_velocity_data_changing_num_cells(
+            test_variants,
+            test_chemotaxis_slope,
+            num_cells,
+            [x[0] for x in group_speed_per_variant_per_num_cells],
+            [x[0] for x in group_speed_std_per_variant_per_num_cells],
+            [x[0] for x in group_x_velocity_per_variant_per_num_cells],
+            [x[0] for x in group_x_velocity_std_per_variant_per_num_cells],
+            [x[0] for x in group_speeds_per_variant_per_num_cells],
+            [x[0] for x in group_x_velocities_per_variant_per_num_cells],
+            num_experiment_repeats,
+            box_widths,
+            box_heights,
+            save_dir=experiment_set_directory,
+            info_tag=info_tag,
+        )
+
     datavis.graph_chemotaxis_group_persistence_ratio_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4510,8 +5105,9 @@ def chemotaxis_no_corridor_tests(
         box_heights,
         save_dir=experiment_set_directory,
         info_tag=info_tag,
+        fontsize=48,
     )
-    
+
     datavis.graph_chemotaxis_cell_persistence_ratio_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4524,12 +5120,26 @@ def chemotaxis_no_corridor_tests(
         save_dir=experiment_set_directory,
         info_tag=info_tag,
     )
-    
+
+    #    avg_velocity_alignment_per_variant_per_num_cells_per_num_closest_neighbours_per_time_delta = []
+    #    std_velocity_alignment_per_variant_per_num_cells_per_num_closest_neighbours_per_time_delta = []
+    #    for vi in range(len(test_variants)):
+    #        avg_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta = []
+    #        std_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta = []
+    #        for nci in range(len(num_cells)):
+    #            avg_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta.append(copy.deepcopy(avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells[vi][nci]))
+    #            std_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta.append(copy.deepcopy(std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells[vi][nci]))
+    #
+    #        avg_velocity_alignment_per_variant_per_num_cells_per_num_closest_neighbours_per_time_delta.append(copy.deepcopy(avg_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta))
+    #        std_velocity_alignment_per_variant_per_num_cells_per_num_closest_neighbours_per_time_delta.append(copy.deepcopy(std_velocity_alignment_per_num_cells_per_num_closest_neighbours_per_time_delta))
+
     datavis.graph_chemotaxis_velocity_alignment_data(
         test_variants,
         test_chemotaxis_slope,
-        velocity_alignment_per_variant_per_num_cells,
-        velocity_alignment_std_per_variant_per_num_cells,
+        max_num_closest_neighbours,
+        time_deltas,
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
         num_experiment_repeats,
         num_cells,
         box_widths,
@@ -4537,7 +5147,43 @@ def chemotaxis_no_corridor_tests(
         save_dir=experiment_set_directory,
         info_tag=info_tag,
     )
-    
+
+    datavis.graph_specific_chemotaxis_velocity_alignment_data(
+        test_variants,
+        test_chemotaxis_slope,
+        4,
+        5.0,
+        max_num_closest_neighbours,
+        time_deltas,
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        num_experiment_repeats,
+        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory,
+        info_tag=info_tag,
+        fontsize=48,
+    )
+
+    datavis.graph_specific_chemotaxis_velocity_alignment_data(
+        test_variants,
+        test_chemotaxis_slope,
+        10,
+        5.0,
+        max_num_closest_neighbours,
+        time_deltas,
+        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+        num_experiment_repeats,
+        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory,
+        info_tag=info_tag,
+        fontsize=48,
+    )
+
     datavis.graph_chemotaxis_protrusion_production_data(
         test_variants,
         test_chemotaxis_slope,
@@ -4551,7 +5197,39 @@ def chemotaxis_no_corridor_tests(
         info_tag=info_tag,
     )
 
+    datavis.graph_chemotaxis_interaction_quantification_data(
+        test_variants,
+        test_chemotaxis_slope,
+        avg_num_interactions_per_variant_per_num_cells,
+        std_num_interactions_per_variant_per_num_cells,
+        avg_num_cil_interactions_per_variant_per_num_cells,
+        std_num_cil_interactions_per_variant_per_num_cells,
+        avg_num_coa_only_interactions_per_variant_per_num_cells,
+        std_num_coa_only_interactions_per_variant_per_num_cells,
+        num_experiment_repeats,
+        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory,
+        info_tag=info_tag,
+    )
+
+    datavis.graph_chemotaxis_cil_interaction_frequency_data(
+        test_variants,
+        test_chemotaxis_slope,
+        avg_interaction_frequency_per_variant_per_num_cells,
+        std_interaction_frequency_per_variant_per_num_cells,
+        num_experiment_repeats,
+        num_cells,
+        box_widths,
+        box_heights,
+        save_dir=experiment_set_directory,
+        info_tag=info_tag,
+        fontsize=48,
+    )
+
     print("Complete.")
+
 
 # =============================================================================
 
