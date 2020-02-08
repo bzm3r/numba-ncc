@@ -454,39 +454,48 @@ def run_simple_experiment_and_return_cell(
 
 
 def remake_graphics(
-    remake_graphs, remake_animation, environment_dir, an_environment, animation_settings
+    remake_graphs, remake_animation, remake_polarization_animation, remake_specific_timestep_snpashots, environment_dir, an_environment, animation_settings
 ):
     curr_tpoint = an_environment.curr_tpoint
     draw_tpoint = curr_tpoint + 1
     visuals_save_dir = os.path.join(environment_dir, "T={}".format(draw_tpoint))
+    visuals_save_dir_polarization = os.path.join(environment_dir, "polarization-T={}".format(draw_tpoint))
 
     cell_group_indices = []
     cell_Ls = []
+    cell_Ts = []
     cell_etas = []
     cell_skip_dynamics = []
 
     for a_cell in an_environment.cells_in_environment:
         cell_group_indices.append(a_cell.cell_group_index)
         cell_Ls.append(a_cell.L / 1e-6)
+        cell_Ts.append(a_cell.T)
         cell_etas.append(a_cell.eta)
         cell_skip_dynamics.append(a_cell.skip_dynamics)
 
     images_global_dir = os.path.join(environment_dir, "images_global")
+    images_global_dir_polarization = os.path.join(environment_dir, "images_global_polarization")
 
     if remake_animation:
         if os.path.exists(images_global_dir):
             shutil.rmtree(images_global_dir)
 
-        visuals_dir_content = os.listdir(visuals_save_dir)
-        for content in visuals_dir_content:
-            content_path = os.path.join(visuals_save_dir, content)
-            if os.path.isdir(content_path):
-                if content[:8] == "images_n":
-                    shutil.rmtree(content_path)
-                    break
+        if os.path.exists(visuals_save_dir):
+            shutil.rmtree(visuals_save_dir)
+
+    if remake_polarization_animation:
+        if os.path.exists(images_global_dir_polarization):
+            shutil.rmtree(images_global_dir_polarization)
+
+        if os.path.exists(visuals_save_dir_polarization):
+            shutil.rmtree(visuals_save_dir_polarization)
 
     ani_sets = an_environment.animation_settings
     ani_sets.update(animation_settings)
+
+    for outdated_keywords in ["specific_timesteps_to_draw_as_svg"]:
+        ani_sets.pop(outdated_keywords, None)
 
     animation_object = animator.EnvironmentAnimation(
         an_environment.environment_dir,
@@ -496,6 +505,7 @@ def remake_graphics(
         an_environment.num_timepoints,
         cell_group_indices,
         cell_Ls,
+        cell_Ts,
         cell_etas,
         cell_skip_dynamics,
         an_environment.storefile_path,
@@ -510,6 +520,8 @@ def remake_graphics(
         animation_object,
         remake_graphs,
         remake_animation,
+        remake_polarization_animation,
+        remake_specific_timestep_snpashots,
     )
 
 
@@ -539,6 +551,7 @@ def check_if_simulation_exists_and_is_complete(
     environment_wide_variable_defns,
     produce_graphs,
     produce_animation,
+    produce_polarization_animation,
     produce_intermediate_visuals,
     extend_simulation,
     new_num_timesteps,
@@ -573,6 +586,7 @@ def check_if_simulation_exists_and_is_complete(
         env_pkl_path,
         produce_graphs,
         produce_animation,
+        produce_polarization_animation,
         produce_intermediate_visuals,
         environment_wide_variable_defns,
         simulation_execution_enabled=run_experiments,
@@ -644,6 +658,7 @@ def run_template_experiments(
     produce_intermediate_visuals=True,
     produce_graphs=True,
     produce_animation=True,
+    produce_polarization_animation=True,
     full_print=False,
     delete_and_rerun_experiments_without_stored_env=True,
     run_experiments=False,
@@ -652,6 +667,8 @@ def run_template_experiments(
     justify_parameters=True,
     remake_graphs=False,
     remake_animation=False,
+    remake_polarization_animation=False,
+    remake_specific_timestep_snapshots=False,
 ):
 
     template_experiment_name_format_string = "RPT={}"
@@ -672,6 +689,7 @@ def run_template_experiments(
                 environment_wide_variable_defns,
                 produce_graphs,
                 produce_animation,
+                produce_polarization_animation,
                 produce_intermediate_visuals,
                 extend_simulation,
                 new_num_timesteps,
@@ -714,6 +732,7 @@ def run_template_experiments(
                         produce_intermediate_visuals=produce_intermediate_visuals,
                         produce_graphs=produce_graphs,
                         produce_animation=produce_animation,
+                        produce_polarization_animation=produce_polarization_animation,
                         elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs,
                         elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations,
                     )
@@ -725,6 +744,8 @@ def run_template_experiments(
                 remake_graphics(
                     remake_graphs,
                     remake_animation,
+                    remake_polarization_animation,
+                    remake_specific_timestep_snapshots,
                     environment_dir,
                     an_environment,
                     animation_settings,
@@ -806,6 +827,7 @@ def retrieve_environment(
     produce_intermediate_visuals,
     produce_graphs,
     produce_animation,
+    produce_polarization_animation,
     environment_wide_variable_defns,
     simulation_execution_enabled=False,
 ):
@@ -820,6 +842,7 @@ def retrieve_environment(
         env.produce_intermediate_visuals = produce_intermediate_visuals
         env.produce_graphs = produce_graphs
         env.produce_animation = produce_animation
+        env.produce_polarization_animation = produce_polarization_animation
     else:
         raise Exception(
             "Could not load environment pickle file at: {}".format(

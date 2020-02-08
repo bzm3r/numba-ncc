@@ -143,8 +143,8 @@ if __name__ == "__main__":
     ]
     parameter_dict.update(standard_rps)
 
-    a, b = 0, 1
-    test_chemotaxis_magnitudes = [7.5]  # [0.0, 5.0, 7.5, 10.0][a:b]
+    a, b = 2, 3
+    test_chemotaxis_magnitudes = [0.0, 5.0, 7.5, 10.0][a:b]
     c, d = 1, 2
     test_randomization_parameters = [
         [
@@ -180,45 +180,21 @@ if __name__ == "__main__":
     e, f = 0, 1
     test_num_cells_responsive_to_chemoattractant = [-1][e:f]
 
-    #    [
-    #            [("randomization_scheme", "m"),
-    #        ("randomization_time_mean", 10.0),
-    #        ("randomization_time_variance_factor", 0.1),
-    #        ("randomization_magnitude", 20.0),
-    #        ("randomization_node_percentage", 0.25)],
-    #             [("randomization_scheme", "m"),
-    #        ("randomization_time_mean", 10.0),
-    #        ("randomization_time_variance_factor", 0.1),
-    #        ("randomization_magnitude", 10.0),
-    #        ("randomization_node_percentage", 0.25)],
-    #             [("randomization_scheme", "m"),
-    #        ("randomization_time_mean", 40.0),
-    #        ("randomization_time_variance_factor", 0.1),
-    #        ("randomization_magnitude", 10.0),
-    #        ("randomization_node_percentage", 0.25)],
-    #              [("randomization_scheme", "m"),
-    #        ("randomization_time_mean", 80.0),
-    #        ("randomization_time_variance_factor", 0.1),
-    #        ("randomization_magnitude", 10.0),
-    #        ("randomization_node_percentage", 0.25)],
-    #             [("randomization_scheme", "m"),
-    #        ("randomization_time_mean", 160.0),
-    #        ("randomization_time_variance_factor", 0.1),
-    #        ("randomization_magnitude", 10.0),
-    #        ("randomization_node_percentage", 0.25)],
-    #              [("randomization_scheme", None)],
-    #        ][c:d]
-
     x, y = 4, 5
     test_cell_group_sizes = [1, 2, 4, 9, 16, 25, 36, 49][x:y]
     test_cell_group_widths = [1, 2, 2, 3, 4, 5, 6, 7][x:y]
     test_cell_group_heights = [1, 1, 2, 3, 4, 5, 6, 7][x:y]
-    num_experiment_repeats = [50, 20, 20, 20, 20, 20, 20, 20][x:y]
-    cil_knockdown = [(0.75, 1.0), (0.5, 1.0), (0.25, 1.0), (0.0, 1.0)]
-    cil_knockdown.reverse()
-    intercellular_interaction_knockdown_cases = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)]
-    #intercellular_interaction_knockdown_cases = cil_knockdown + [(1.0, 1.0), (1.0, 0.75), (1.0, 0.5), (1.0, 0.25), (1.0, 0.0)]
-    #intercellular_interaction_knockdown_cases = 
+    num_experiment_repeats = [50, 20, 20, 20, 20, 20, 20, 1][x:y]
+    #intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
+    intercellular_interaction_knockdown_cases = [
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (0.0, 1.0),
+        (1.0, 1.0),
+    ]
+    #intercellular_interaction_knockdown_cases = [(0.0, 1.0), (0.1, 1.0), (0.15, 1.0), (0.2, 1.0), (0.25, 1.0), (0.5, 1.0), (0.75, 1.0), (1.0, 1.0)]
+    # intercellular_interaction_knockdown_cases = cil_knockdown + [(1.0, 1.0), (1.0, 0.75), (1.0, 0.5), (1.0, 0.25), (1.0, 0.0)]
+    # intercellular_interaction_knockdown_cases =
     test_variants = []
     info_tag = ""
 
@@ -261,6 +237,7 @@ if __name__ == "__main__":
             "protrusion existence": True,
             "protrusion bias": True,
         },
+        specific_timesteps_to_draw=[], #[0, 8999, 17999],
         produce_animation=False,
         full_print=False,
         delete_and_rerun_experiments_without_stored_env=True,
@@ -281,6 +258,8 @@ if __name__ == "__main__":
             "protrusion bias": False,
         },
         remake_animation=False,
+        remake_polarization_animation=False,
+        remake_specific_timestep_snapshots=False,
         redo_chemotaxis_analysis=False,
         do_final_analysis=False,
         remake_final_analysis_graphs=False,

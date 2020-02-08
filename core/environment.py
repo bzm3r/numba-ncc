@@ -203,7 +203,7 @@ def find_relevant_bin_index(theta, theta_bins):
 
 
 def is_collision(
-    last_placed_cell_index,
+    last_placed_ci,
     cell_centers,
     cell_diameter,
     corridor_origin,
@@ -219,7 +219,7 @@ def is_collision(
     if center_x < corridor_origin[0] + 0.5 * cell_diameter:
         return True
 
-    for n in range(last_placed_cell_index + 1):
+    for n in range(last_placed_ci + 1):
         other_x, other_y = cell_centers[n]
 
         if (
@@ -237,7 +237,7 @@ def is_collision(
 
 def try_placing_cell_randomly(
     last_successful_anchor_index,
-    last_placed_cell_index,
+    last_placed_ci,
     cell_centers,
     theta_bins,
     cell_diameter,
@@ -263,7 +263,7 @@ def try_placing_cell_randomly(
         dx, dy = placement_distance * np.cos(theta), placement_distance * np.sin(theta)
         test_x, test_y = center_x + dx, center_y + dy
         if is_collision(
-            last_placed_cell_index,
+            last_placed_ci,
             cell_centers,
             cell_diameter,
             corridor_origin,
@@ -275,10 +275,10 @@ def try_placing_cell_randomly(
                 find_relevant_bin_index(theta, theta_bins), theta_bin_probabilities
             )
         else:
-            cell_index = last_placed_cell_index + 1
-            cell_centers[cell_index] = np.array([test_x, test_y])
+            ci = last_placed_ci + 1
+            cell_centers[ci] = np.array([test_x, test_y])
 
-            return cell_index, cell_centers
+            return ci, cell_centers
 
     return -1, cell_centers
 
@@ -320,7 +320,7 @@ def place_cells_randomly(
     theta_bins = generate_theta_bin_boundaries(num_theta_bins)
 
     while num_cells_placed != num_cells:
-        cell_index, cell_centers = try_placing_cell_randomly(
+        ci, cell_centers = try_placing_cell_randomly(
             possible_anchor_indices[trial_anchor_index],
             num_cells_placed - 1,
             cell_centers,
@@ -333,9 +333,9 @@ def place_cells_randomly(
             max_placement_distance_factor,
         )
 
-        if cell_index != -1:
+        if ci != -1:
             num_cells_placed += 1
-            possible_anchor_indices.append(cell_index)
+            possible_anchor_indices.append(ci)
         else:
             trial_anchor_index = (trial_anchor_index + 1) % len(possible_anchor_indices)
 
@@ -497,10 +497,10 @@ class Environment:
         )
         self.full_print = full_print
 
-        for cell_index in range(self.num_cells):
+        for ci in range(self.num_cells):
             if self.environment_dir != None:
                 hardio.create_cell_dataset(
-                    cell_index,
+                    ci,
                     self.storefile_path,
                     self.num_nodes,
                     parameterorg.num_info_labels,
@@ -587,12 +587,12 @@ class Environment:
         cells_in_environment = []
         cell_bounding_boxes_wrt_time = []
 
-        cell_index_offset = 0
+        ci_offset = 0
         for cell_group_index, cell_group_defn in enumerate(self.cell_group_defns):
             cells_in_group, init_cell_bounding_boxes = self.create_cell_group(
-                self.num_timesteps, cell_group_defn, cell_group_index, cell_index_offset
+                self.num_timesteps, cell_group_defn, cell_group_index, ci_offset
             )
-            cell_index_offset += len(cells_in_group)
+            ci_offset += len(cells_in_group)
             cells_in_environment += cells_in_group
             cell_bounding_boxes_wrt_time.append(init_cell_bounding_boxes)
 
@@ -601,14 +601,21 @@ class Environment:
     # -----------------------------------------------------------------
 
     def create_cell_group(
-        self, num_timesteps, cell_group_defn, cell_group_index, cell_index_offset
+        self, num_timesteps, cell_group_defn, cell_group_index, ci_offset
     ):
         cell_group_name = cell_group_defn["cell_group_name"]
         num_cells = cell_group_defn["num_cells"]
         cell_group_bounding_box = cell_group_defn["cell_group_bounding_box"]
-        num_cells_responsive_to_chemoattractant = cell_group_defn["num_cells_responsive_to_chemoattractant"]
-        if not(num_cells_responsive_to_chemoattractant < 0 or num_cells_responsive_to_chemoattractant >= num_cells):
-            responsive_cells = np.random.choice(np.arange(num_cells), size=num_cells_responsive_to_chemoattractant)
+        num_cells_responsive_to_chemoattractant = cell_group_defn[
+            "num_cells_responsive_to_chemoattractant"
+        ]
+        if not (
+            num_cells_responsive_to_chemoattractant < 0
+            or num_cells_responsive_to_chemoattractant >= num_cells
+        ):
+            responsive_cells = np.random.choice(
+                np.arange(num_cells), size=num_cells_responsive_to_chemoattractant
+            )
         else:
             responsive_cells = np.arange(num_cells)
 
@@ -636,7 +643,11 @@ class Environment:
             if cell_number in cells_with_bias_info:
                 bias_defn = biased_rgtpase_distrib_defns[cell_number]
 
-            init_node_coords, length_edge_resting, area_resting = self.create_default_init_cell_node_coords(
+            (
+                init_node_coords,
+                length_edge_resting,
+                area_resting,
+            ) = self.create_default_init_cell_node_coords(
                 bounding_box, init_cell_radius, num_nodes
             )
 
@@ -649,9 +660,9 @@ class Environment:
                 ]
             )
 
-            cell_index = cell_index_offset + cell_number
+            ci = ci_offset + cell_number
 
-            # cell_label, cell_group_index, cell_index, integration_params, num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict
+            # cell_label, cell_group_index, ci, integration_params, num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict
 
             undefined_labels = parameterorg.find_undefined_labels(cell_parameter_dict)
             if len(undefined_labels) > 0:
@@ -666,9 +677,9 @@ class Environment:
                 and self.parameter_explorer_init_rho_gtpase_conditions != None
             ):
                 new_cell = cell.Cell(
-                    str(cell_group_name) + "_" + str(cell_index),
+                    str(cell_group_name) + "_" + str(ci),
                     cell_group_index,
-                    cell_index,
+                    ci,
                     integration_params,
                     num_timesteps,
                     self.T,
@@ -681,9 +692,9 @@ class Environment:
                 )
             else:
                 new_cell = cell.Cell(
-                    str(cell_group_name) + "_" + str(cell_index),
+                    str(cell_group_name) + "_" + str(ci),
                     cell_group_index,
-                    cell_index,
+                    ci,
                     integration_params,
                     num_timesteps,
                     self.T,
@@ -833,32 +844,32 @@ class Environment:
 
         self.exec_orders[t] = np.copy(execution_sequence)
 
-        first_cell_index = execution_sequence[0]
-        last_cell_index = execution_sequence[-1]
+        first_ci = execution_sequence[0]
+        last_ci = execution_sequence[-1]
 
-        for cell_index in execution_sequence:
-            current_cell = environment_cells[cell_index]
+        for ci in execution_sequence:
+            current_cell = environment_cells[ci]
             if self.verbose == True:
                 if self.full_print:
-                    if cell_index != first_cell_index:
+                    if ci != first_ci:
                         print("-" * 40)
                     else:
                         print("=" * 40)
 
-                    print("centroid_drift: ", centroid_drifts[cell_index])
-                    if recalc_geometry[cell_index]:
+                    print("centroid_drift: ", centroid_drifts[ci])
+                    if recalc_geometry[ci]:
                         print("**GEOMETRY RECALC IN PROGRESS**")
                     print("Time step: {}/{}".format(t, self.num_timesteps))
-                    print("Executing dyanmics for cell: ", cell_index)
+                    print("Executing dyanmics for cell: ", ci)
 
-            # this_cell_index, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
+            # this_ci, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
             current_cell.execute_step(
-                cell_index,
+                ci,
                 self.num_nodes,
                 environment_cells_node_coords,
                 environment_cells_node_forces,
-                cells_node_distance_matrix[cell_index],
-                cells_line_segment_intersection_matrix[cell_index],
+                cells_node_distance_matrix[ci],
+                cells_line_segment_intersection_matrix[ci],
                 self.chemoattractant_shielding_effect_length_squared,
                 self.chemoattractant_signal_fn,
                 be_talkative=self.full_print,
@@ -868,17 +879,17 @@ class Environment:
                 this_cell_coords = current_cell.curr_node_coords * current_cell.L
                 this_cell_forces = current_cell.curr_node_forces * current_cell.ML_T2
 
-                environment_cells_node_coords[cell_index] = this_cell_coords
-                environment_cells_node_forces[cell_index] = this_cell_forces
+                environment_cells_node_coords[ci] = this_cell_coords
+                environment_cells_node_forces[ci] = this_cell_forces
 
                 cells_bounding_box_array[
-                    cell_index
+                    ci
                 ] = geometry.calculate_polygon_bounding_box(this_cell_coords)
-                if recalc_geometry[cell_index]:
-                    # cells_node_distance_matrix, cells_line_segment_intersection_matrix =  geometry.update_line_segment_intersection_and_dist_squared_matrices_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
+                if recalc_geometry[ci]:
+                    # cells_node_distance_matrix, cells_line_segment_intersection_matrix =  geometry.update_line_segment_intersection_and_dist_squared_matrices_old(ci, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_bounding_box_array, cells_node_distance_matrix, cells_line_segment_intersection_matrix)
                     geometry.update_line_segment_intersection_and_dist_squared_matrices(
                         4,
-                        self.geometry_tasks_per_cell[cell_index],
+                        self.geometry_tasks_per_cell[ci],
                         self.num_cells,
                         self.num_nodes,
                         environment_cells_node_coords,
@@ -891,17 +902,17 @@ class Environment:
                 else:
                     geometry.update_distance_squared_matrix(
                         4,
-                        self.geometry_tasks_per_cell[cell_index],
+                        self.geometry_tasks_per_cell[ci],
                         self.num_cells,
                         self.num_nodes,
                         environment_cells_node_coords,
                         cells_node_distance_matrix,
                     )
-                    # cells_node_distance_matrix = geometry.update_distance_squared_matrix_old(cell_index, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
+                    # cells_node_distance_matrix = geometry.update_distance_squared_matrix_old(ci, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
 
             if self.verbose == True:
                 if self.full_print:
-                    if cell_index == last_cell_index:
+                    if ci == last_ci:
                         print("=" * 40)
 
         return (
@@ -922,6 +933,8 @@ class Environment:
         animation_obj,
         produce_graphs,
         produce_animation,
+        produce_polarization_animation,
+        produce_specific_timestep_snapshots,
         num_polar_graph_bins=10,
     ):
         if self.environment_dir == None:
@@ -949,20 +962,25 @@ class Environment:
             data_dict = {}
 
             if produce_graphs["cell specific"]:
-                for cell_index in range(self.num_cells):
-                    this_cell = self.cells_in_environment[cell_index]
+                for ci in range(self.num_cells):
+                    this_cell = self.cells_in_environment[ci]
+                    save_dir_for_cell = os.path.join(save_dir, "cell_{}".format(ci))
+
                     if this_cell.skip_dynamics == True:
                         continue
 
-                    save_dir_for_cell = os.path.join(
-                        save_dir, "cell_{}".format(cell_index)
-                    )
-
                     if not os.path.exists(save_dir_for_cell):
                         os.makedirs(save_dir_for_cell)
+                        
+                    save_dir_for_cell = os.path.join(
+                        save_dir, "cell_{}".format(ci)
+                    )
 
-                    averaged_score, scores_per_tstep = cu.calculate_rgtpase_polarity_score(
-                        cell_index,
+                    (
+                        averaged_score,
+                        scores_per_tstep,
+                    ) = cu.calculate_rgtpase_polarity_score(
+                        ci,
                         self.storefile_path,
                         significant_difference=0.2,
                         max_tstep=t,
@@ -971,11 +989,11 @@ class Environment:
 
                     data_dict = datavis.graph_important_cell_variables_over_time(
                         self.T / 60.0,
-                        cell_Ls[cell_index],
-                        cell_index,
+                        cell_Ls[ci],
+                        ci,
                         self.storefile_path,
                         polarity_scores=scores_per_tstep,
-                        save_name="C={}".format(cell_index)
+                        save_name="C={}".format(ci)
                         + "_important_cell_vars_graph_T={}".format(t - 1),
                         save_dir=save_dir_for_cell,
                         max_tstep=t,
@@ -988,18 +1006,18 @@ class Environment:
                         this_cell.kgtp_rho_baseline,
                         this_cell.kdgtp_rac_baseline,
                         this_cell.kdgtp_rho_baseline,
-                        cell_index,
+                        ci,
                         self.storefile_path,
-                        save_name="C={}".format(cell_index)
+                        save_name="C={}".format(ci)
                         + "_rates_graph_T={}".format(t - 1),
                         save_dir=save_dir_for_cell,
                         max_tstep=t,
                     )
                     data_dict = datavis.graph_edge_and_areal_strains(
                         self.T / 60.0,
-                        cell_index,
+                        ci,
                         self.storefile_path,
-                        save_name="C={}".format(cell_index)
+                        save_name="C={}".format(ci)
                         + "_strain_graph_T={}".format(t - 1),
                         save_dir=save_dir_for_cell,
                         max_tstep=t,
@@ -1048,7 +1066,11 @@ class Environment:
                 )
 
             if produce_graphs["protrusion existence"]:
-                protrusion_existence_per_tstep_per_cell, protrusion_lifetime_and_average_directions_per_cell, protrusion_group_directions = cu.collate_protrusion_data(
+                (
+                    protrusion_existence_per_tstep_per_cell,
+                    protrusion_lifetime_and_average_directions_per_cell,
+                    protrusion_group_directions,
+                ) = cu.collate_protrusion_data(
                     self.num_cells, self.T, self.storefile_path, max_tstep=t
                 )
                 datavis.add_to_general_data_structure(
@@ -1126,10 +1148,16 @@ class Environment:
             animation_obj.create_animation_from_data(
                 save_dir, "animation.mp4", timestep_to_draw_till=t
             )
+        if produce_polarization_animation:
+            animation_obj.create_polarization_animation_from_data(
+                save_dir, "polarization-animation.mp4", timestep_to_draw_till=t
+            )
+        if produce_specific_timestep_snapshots and len(animation_obj.specific_timesteps_to_draw) > 0:
+            animation_obj.draw_specific_timesteps(save_dir, image_format=".svg")
 
     # -----------------------------------------------------------------
-    def get_empty_cell(self, cell_index):
-        empty_cell = copy.deepcopy(self.cells_in_environment[cell_index])
+    def get_empty_cell(self, ci):
+        empty_cell = copy.deepcopy(self.cells_in_environment[ci])
 
         empty_cell.system_history = None
 
@@ -1171,18 +1199,18 @@ class Environment:
 
         access_index = self.get_system_history_index(self.curr_tpoint)
 
-        for cell_index in range(self.num_cells):
-            this_cell = self.cells_in_environment[cell_index]
+        for ci in range(self.num_cells):
+            this_cell = self.cells_in_environment[ci]
             if this_cell.last_trim_timestep < 0:
                 hardio.append_cell_data_to_dataset(
-                    cell_index,
+                    ci,
                     this_cell.system_history[: access_index + 1],
                     self.storefile_path,
                 )
                 this_cell.trim_system_history(tpoint)
             elif this_cell.last_trim_timestep < tpoint:
                 hardio.append_cell_data_to_dataset(
-                    cell_index,
+                    ci,
                     this_cell.system_history[1 : access_index + 1],
                     self.storefile_path,
                 )
@@ -1291,6 +1319,7 @@ class Environment:
             "protrusion bias": True,
         },
         produce_animation=True,
+        produce_polarization_animation=True,
         elapsed_timesteps_before_producing_intermediate_graphs=2500,
         elapsed_timesteps_before_producing_intermediate_animations=5000,
         given_pool_for_making_visuals=None,
@@ -1323,7 +1352,10 @@ class Environment:
                 num_cells, num_nodes, environment_cells_node_coords
             )
             # num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords
-            cells_node_distance_matrix, cells_line_segment_intersection_matrix = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(
+            (
+                cells_node_distance_matrix,
+                cells_line_segment_intersection_matrix,
+            ) = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(
                 num_cells,
                 num_nodes,
                 cells_bounding_box_array,
@@ -1351,19 +1383,22 @@ class Environment:
                     "protrusion bias": False,
                 }
                 produce_animation = False
+                produce_polarization_animation = False
             else:
                 cell_group_indices = []
                 cell_Ls = []
+                cell_Ts = []
                 cell_etas = []
                 cell_skip_dynamics = []
 
                 for a_cell in self.cells_in_environment:
                     cell_group_indices.append(a_cell.cell_group_index)
                     cell_Ls.append(a_cell.L / 1e-6)
+                    cell_Ts.append(a_cell.T)
                     cell_etas.append(a_cell.eta)
                     cell_skip_dynamics.append(a_cell.skip_dynamics)
 
-                if produce_animation:
+                if produce_animation or produce_polarization_animation:
                     animation_obj = animator.EnvironmentAnimation(
                         self.environment_dir,
                         self.environment_name,
@@ -1372,6 +1407,7 @@ class Environment:
                         self.num_timepoints,
                         cell_group_indices,
                         cell_Ls,
+                        cell_Ts,
                         cell_etas,
                         cell_skip_dynamics,
                         self.storefile_path,
@@ -1413,11 +1449,18 @@ class Environment:
                                 data_save_dir,
                                 animation_settings,
                                 animation_obj,
-                                True,
-                                True,
+                                produce_graphs,
+                                produce_animation,
+                                produce_polarization_animation,
                             )
 
-                    cells_node_distance_matrix, cells_bounding_box_array, cells_line_segment_intersection_matrix, environment_cells_node_coords, environment_cells_node_forces = self.execute_system_dynamics_in_random_sequence(
+                    (
+                        cells_node_distance_matrix,
+                        cells_bounding_box_array,
+                        cells_line_segment_intersection_matrix,
+                        environment_cells_node_coords,
+                        environment_cells_node_forces,
+                    ) = self.execute_system_dynamics_in_random_sequence(
                         t,
                         cells_node_distance_matrix,
                         cells_bounding_box_array,
@@ -1465,7 +1508,7 @@ class Environment:
                     ]
                 )
             )
-            if produce_some_graphs or produce_animation:
+            if produce_some_graphs or produce_animation or produce_polarization_animation:
                 t = self.num_timepoints
                 data_save_dir = os.path.join(self.environment_dir, "T={}".format(t))
 
@@ -1480,6 +1523,8 @@ class Environment:
                         animation_obj,
                         produce_graphs,
                         produce_animation,
+                        produce_polarization_animation,
+                        [],
                     )
 
             simulation_time = np.round(simulation_et - simulation_st, decimals=2)

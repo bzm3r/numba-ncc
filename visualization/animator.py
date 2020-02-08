@@ -1,4 +1,4 @@
-import cairo  # pycairo package
+import cairo
 import numpy as np
 import numba as nb
 import core.geometry as geometry
@@ -17,6 +17,7 @@ import dill
 
 def fsquared(x):
     return x * x
+
 
 
 def convert_numpy_array_to_pycairo_matrix(np_array):
@@ -83,6 +84,27 @@ def create_transformation_matrix_entries(
 
     return xx, xy, x0, yx, yy, y0
 
+# -------------------------------------
+
+# @nb.jit()
+def draw_line_jit(
+    p1,
+    p2,
+    color,
+    line_width,
+    context,
+):
+    context.new_path()
+    r, g, b = color
+    context.set_source_rgb(r, g, b)
+    context.set_line_width(line_width)
+
+    p1x, p1y = p1
+    context.move_to(p1x, p1y)
+    p2x, p2y = p2
+    context.line_to(p2x, p2y)
+
+    context.stroke_preserve()
 
 # -------------------------------------
 
@@ -90,7 +112,6 @@ def create_transformation_matrix_entries(
 def draw_polygon_jit(
     polygon_coords,
     polygon_edge_and_vertex_color,
-    polygon_fill_color,
     polygon_line_width,
     context,
 ):
@@ -108,14 +129,12 @@ def draw_polygon_jit(
 
     context.close_path()
     context.stroke_preserve()
-    context.set_source_rgb(*polygon_fill_color)
-    context.fill()
 
 
 # -------------------------------------
 
 
-@nb.jit()
+#@nb.jit()
 def draw_dot_jit(centre_coords, color, line_width, context):
     context.new_path()
     r, g, b = color
@@ -130,7 +149,7 @@ def draw_dot_jit(centre_coords, color, line_width, context):
 # -------------------------------------
 
 
-@nb.jit()
+#@nb.jit()
 def draw_circle_jit(
     centre_coords,
     circle_radius,
@@ -146,11 +165,51 @@ def draw_circle_jit(
     context.arc(centre_coords[0], centre_coords[1], circle_radius, 0.0, 2 * np.pi)
     context.stroke()
 
+# -------------------------------------
+
+
+#@nb.jit()
+def draw_arrow_jit(
+    start_coords,
+    relative_end_coords,
+    arrow_color,
+    arrow_line_width,
+    context,
+):
+    end_coords = start_coords + relative_end_coords
+
+    default_arrow_start = np.array([0.0, 0.0])
+    default_arrow_end = np.array([1.0, 0.0])
+    arrow_head_theta_left = np.pi - 0.1*np.pi
+    default_arrow_head_left_end = np.array([np.cos(arrow_head_theta_left), np.sin(arrow_head_theta_left)])
+    arrow_head_theta_right = np.pi + 0.1*np.pi
+    default_arrow_head_right_end = np.array([np.cos(arrow_head_theta_right), np.sin(arrow_head_theta_right)])
+
+    mag = 25*np.linalg.norm(end_coords - start_coords)
+    theta = geometry.calculate_2D_vector_direction(end_coords - start_coords)
+
+    arrow_start = default_arrow_start + start_coords
+    arrow_end = arrow_start + geometry.rotate_2D_vector_CCW_by_theta(theta, default_arrow_end*mag)
+    arrow_head_left_end = arrow_end + geometry.rotate_2D_vector_CCW_by_theta(theta, default_arrow_head_left_end*0.1*mag)
+    arrow_head_right_end = arrow_end + geometry.rotate_2D_vector_CCW_by_theta(theta, default_arrow_head_right_end * 0.1 * mag)
+
+    r, g, b = arrow_color
+    context.set_source_rgb(r, g, b)
+    context.set_line_width(arrow_line_width)
+
+    context.new_path()
+    context.move_to(*arrow_start)
+    context.line_to(*arrow_end)
+    context.line_to(*arrow_head_left_end)
+    context.move_to(*arrow_end)
+    context.line_to(*arrow_head_right_end)
+    context.stroke()
+
 
 # -------------------------------------
 
 
-@nb.jit()
+#@nb.jit()
 def draw_centroid_trail_jit(
     centroid_line_width, centroid_color, centroid_coords, context
 ):
@@ -581,52 +640,6 @@ def get_simplified_polygon_matrices_and_coa_data(
     return simplified_polygons, average_coa_data_per_polygon
 
 
-# --------------------------------------
-
-# @nb.jit()
-def draw_coa_overlay(
-    coa_overlay_color, resolution, coa_grid_points, coa_data_per_gridpoint, context
-):
-    r, g, b = coa_overlay_color
-    standard_tl = 0.01 * resolution * np.array([-0.5, 0.5])
-
-    #    simplified_coa_polygons, simplified_coa_polygon_data = get_simplified_polygon_matrices_and_coa_data(coa_grid_points, coa_data_per_gridpoint, resolution, 0.05)
-    #
-    #    print("COA overlay simplification benefit: {}".format(1.0 - np.round(len(simplified_coa_polygons)/coa_grid_points.shape[0], decimals=2)))
-    #
-    #    alphas = np.array([(coa/(16*24.0)) for coa in simplified_coa_polygon_data])
-    #    alphas = 0.8*alphas/np.max(alphas)
-    #
-    #    for polygon, a in zip(simplified_coa_polygons, alphas):
-    #        context.new_path()
-    #        for n, coord in enumerate(polygon):
-    #            x, y = coord
-    #            if n == 0:
-    #                context.move_to(x, y)
-    #            else:
-    #                context.line_to(x, y)
-    #
-    #        context.close_path()
-    #        if a > 0.01:
-    #            context.set_source_rgba(r, g, b, a)
-    #            context.fill()
-
-    alphas = np.array(
-        [(coa / (16 * 24.0)) if coa > 0 else 0.0 for coa in coa_data_per_gridpoint]
-    )
-    alphas = 0.8 * alphas / np.max(alphas)
-    for gp, a in zip(coa_grid_points, alphas):
-        if a > 0.01:
-            rect_tl = gp + standard_tl
-            context.set_source_rgba(r, g, b, a)
-            context.new_path()
-            context.rectangle(rect_tl[0], rect_tl[1], resolution, resolution)
-            context.fill()
-
-
-# -------------------------------------
-
-
 class AnimationCell:
     def __init__(
         self,
@@ -638,6 +651,7 @@ class AnimationCell:
         centroid_color,
         coa_color,
         chemoattractant_color,
+        polarization_vector_color,
         hidden,
         show_rgtpase,
         show_velocities,
@@ -645,12 +659,14 @@ class AnimationCell:
         show_coa,
         show_chemoattractant,
         show_protrusion_existence,
+        show_polarization_velocity,
         polygon_line_width,
         rgtpase_line_width,
         velocity_line_width,
         centroid_line_width,
         coa_line_width,
         chemoattractant_line_width,
+        polarization_vector_line_width,
     ):
         self.hidden = hidden
 
@@ -660,6 +676,7 @@ class AnimationCell:
         self.show_coa = show_coa
         self.show_chemoattractant = show_chemoattractant
         self.show_protrusion_existence = show_protrusion_existence
+        self.show_polarization_velocity = show_polarization_velocity
 
         self.polygon_edge_and_vertex_color = polygon_edge_and_vertex_color
         self.polygon_fill_color = polygon_fill_color
@@ -681,6 +698,9 @@ class AnimationCell:
         self.chemoattractant_color = chemoattractant_color
         self.chemoattractant_line_width = chemoattractant_line_width
 
+        self.polarization_vector_color = polarization_vector_color
+        self.polarization_vector_line_width = polarization_vector_line_width
+
     # -------------------------------------
 
     def hide(self):
@@ -697,10 +717,39 @@ class AnimationCell:
         draw_polygon_jit(
             polygon_coords,
             self.polygon_edge_and_vertex_color,
-            self.polygon_fill_color,
             self.polygon_line_width,
             context,
         )
+
+        context.new_path()
+        r, g, b = self.polygon_edge_and_vertex_color
+        context.set_source_rgb(r, g, b)
+        context.set_line_width(self.polygon_line_width)
+
+        for n, coord in enumerate(polygon_coords):
+            x, y = coord
+            if n == 0:
+                context.move_to(x, y)
+            else:
+                context.line_to(x, y)
+
+        context.close_path()
+        context.stroke_preserve()
+
+    def draw_polarization_vector(self, context, centroid_coords, polarization_vector, velocity_vectors):
+        if type(velocity_vectors) == type(None):
+            draw_arrow_jit(centroid_coords, polarization_vector, self.polarization_vector_color, self.polarization_vector_line_width*1.5, context)
+        else:
+            uv = geometry.rotate_2D_vector_CCW(polarization_vector)
+            uv = uv/np.linalg.norm(uv)
+
+            draw_arrow_jit(centroid_coords + 0.1*uv, polarization_vector, self.polarization_vector_color, self.polarization_vector_line_width, context)
+
+            draw_arrow_jit(centroid_coords - 0.1 * uv, velocity_vectors, colors.RGB_ORANGE, self.polarization_vector_line_width, context)
+
+
+    def draw_centroid(self, context, centroid_coords, color):
+        draw_dot_jit(centroid_coords, color, 2, context)
 
     def draw_protrusion_vertices(
         self, context, polygon_coords, protrusion_existence_data
@@ -875,7 +924,7 @@ class AnimationCell:
 
     # -------------------------------------
 
-    def draw(
+    def draw_self_in_frame(
         self,
         context,
         polygon_coords,
@@ -888,7 +937,6 @@ class AnimationCell:
         protrusion_existence_data,
     ):
         if self.hidden == False:
-
             self.draw_cell_polygon(context, polygon_coords)
 
             if self.show_velocities == True:
@@ -929,13 +977,36 @@ class AnimationCell:
         else:
             return False
 
+    def draw_self_in_polarization_animation_frame(
+        self,
+        context,
+        polygon_coords,
+        centroid,
+        centroid_type_data,
+        polarization_vector,
+        velocity_vector
+    ):
+        if self.hidden == False:
+            self.draw_cell_polygon(context, polygon_coords)
+            if centroid_type_data == 0:
+                centroid_color = colors.RGB_BLACK
+            else:
+                centroid_color = colors.RGB_BLACK
+
+            self.draw_centroid(context, centroid, centroid_color)
+            self.draw_polarization_vector(context, centroid, polarization_vector, velocity_vector)
+
+            return True
+        else:
+            return False
+
     # -------------------------------------
 
 
 # -------------------------------------
 
 
-def prepare_velocity_data(
+def prepare_velocity_vectors(
     num_nodes,
     eta,
     velocity_scale,
@@ -1020,7 +1091,9 @@ def prepare_velocity_data(
         + polygon_y
     )
 
-    return VF, VEFplus, VEFminus, VF_rgtpase, VF_cytoplasmic
+    VF_total = np.sum(VF, axis=1)
+
+    return VF, VEFplus, VEFminus, VF_rgtpase, VF_cytoplasmic, VF_total
 
 
 # -------------------------------------
@@ -1255,292 +1328,6 @@ def calculate_polygon_bbs(polygon_coords):
 
     return bbs
 
-
-# ------------------------------------------------------------------
-@nb.jit(nopython=True)
-def coa_data_calculation_worker(
-    timepoint_indices_chunk,
-    polygon_coords_per_cell_chunk,
-    valid_grid_points,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
-    max_coa_signal,
-    too_close_dist_squared,
-    coa_distribution_exponent,
-    coa_intersection_exponent,
-    cell_dependent_coa_signal_strengths,
-    pw,
-    ph,
-):
-    num_timepoints = timepoint_indices_chunk.shape[0]
-    num_cells = polygon_coords_per_cell_chunk.shape[1]
-    num_vertices = polygon_coords_per_cell_chunk.shape[2]
-    num_valid_grid_points = valid_grid_points.shape[0]
-
-    max_ds = (np.log(0.01) / coa_distribution_exponent) ** 2
-
-    relevant_grid_point_coa_data = np.zeros(
-        (num_timepoints, num_valid_grid_points), dtype=np.float64
-    )
-
-    for ti in range(num_timepoints):
-        relevant_cell_polygons = polygon_coords_per_cell_chunk[ti]
-        relevant_cell_polygon_bbs = calculate_polygon_bbs(relevant_cell_polygons)
-
-        for gi in range(num_valid_grid_points):
-            gp = valid_grid_points[gi]
-
-            coa_data_at_gp = 0.0
-
-            for ci in range(num_cells):
-                break_loop = False
-                signal_strength = cell_dependent_coa_signal_strengths[ci]
-                relevant_cell_polygon = relevant_cell_polygons[ci]
-
-                for vi in range(num_vertices):
-                    vp = relevant_cell_polygon[vi]
-
-                    ds = geometry.calculate_squared_dist(gp, vp)
-
-                    if not (too_close_dist_squared < ds < max_ds):
-                        continue
-
-                    num_intersections = geometry.check_if_line_segment_going_from_vertex_of_one_polygon_to_point_passes_through_any_polygon(
-                        ci,
-                        vi,
-                        gp,
-                        relevant_cell_polygons,
-                        relevant_cell_polygon_bbs,
-                        space_migratory_bdry_polygon,
-                        space_physical_bdry_polygon,
-                    )
-                    intersection_factor = (
-                        1.0 / (num_intersections + 1.0) ** coa_intersection_exponent
-                    )
-
-                    if intersection_factor < 0.01:
-                        continue
-
-                    break_loop, coa_data_at_gp = chemistry.calculate_coa_signal(
-                        max_coa_signal,
-                        0,
-                        coa_distribution_exponent,
-                        coa_data_at_gp,
-                        signal_strength,
-                        ds,
-                        intersection_factor,
-                    )
-
-                    if break_loop:
-                        break
-
-                if break_loop:
-                    break
-
-            if coa_data_at_gp > 1.0:
-                relevant_grid_point_coa_data[ti][gi] = coa_data_at_gp
-
-    return relevant_grid_point_coa_data
-
-
-# ------------------------------------------------------------------
-
-
-def generate_coa_data_depending_on_grid_point_relevancy(
-    unique_undrawn_timesteps,
-    all_grid_points,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
-    polygon_coords_per_timepoint_per_cell,
-    max_coa_signal,
-    too_close_dist_squared,
-    coa_distribution_exponent,
-    coa_intersection_exponent,
-    cell_dependent_coa_signal_strengths,
-    storefile_path,
-    num_processes=4,
-    sequential=False,
-    pw=0,
-    ph=0,
-):
-    is_grid_point_valid_array = np.zeros(all_grid_points.shape[0], dtype=np.bool)
-    num_all_grid_points = all_grid_points.shape[0]
-
-    chunksize = num_processes * 15
-
-    grid_point_indices = np.arange(num_all_grid_points)
-    chunked_grid_point_indices = gu.chunkify(chunksize, grid_point_indices)
-    chunked_grid_points = gu.chunkify(chunksize, all_grid_points)
-
-    # Create argument tuples for each input chunk
-    grid_point_validation_tasks = [
-        (
-            space_migratory_bdry_polygon,
-            space_physical_bdry_polygon,
-            grid_point_chunk,
-            grid_point_indices_chunk,
-            is_grid_point_valid_array,
-        )
-        for grid_point_chunk, grid_point_indices_chunk in zip(
-            chunked_grid_points, chunked_grid_point_indices
-        )
-    ]
-
-    # Spawn one thread per chunk
-    if not sequential:
-        threads = [
-            threading.Thread(target=grid_point_validation_worker, args=c)
-            for c in grid_point_validation_tasks
-        ]
-
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-    else:
-        for task in grid_point_validation_tasks:
-            grid_point_validation_worker(*task)
-
-    del grid_point_validation_tasks
-
-    valid_grid_points = np.array(
-        [
-            gp
-            for i, gp in enumerate(all_grid_points)
-            if is_grid_point_valid_array[i] == 1
-        ]
-    )
-    # num_valid_grid_points = valid_grid_points.shape[0]
-    del is_grid_point_valid_array
-    del all_grid_points
-
-    success, grid_point_coa_data = hardio.get_coa_overlay_data(
-        storefile_path, valid_grid_points
-    )
-
-    if not success:
-        print("Could not find stored coa overlay data.")
-        polygon_coords_per_cell_per_timepoint = rearrange_data_per_x_per_y_into_data_per_y_per_x(
-            polygon_coords_per_timepoint_per_cell
-        )
-        num_cells = polygon_coords_per_cell_per_timepoint.shape[1]
-        num_cell_poly_vertices = polygon_coords_per_timepoint_per_cell.shape[2]
-        num_timepoints = unique_undrawn_timesteps.shape[0]
-
-        timepoint_indices = np.arange(num_timepoints)
-
-        chunked_timepoint_indices = gu.chunkify(chunksize, timepoint_indices)
-        chunked_polygon_coords_per_cell = gu.chunkify(
-            chunksize, polygon_coords_per_cell_per_timepoint
-        )
-
-        per_node_cell_info = []
-        for ci in range(num_cells):
-            per_node_cell_info += [ci] * num_cell_poly_vertices
-        per_node_cell_info = np.array(per_node_cell_info, dtype=np.int64)
-
-        coa_data_calculation_worker_tasks = [
-            (
-                timepoint_indices_chunk,
-                polygon_coords_per_cell_chunk,
-                valid_grid_points,
-                space_migratory_bdry_polygon,
-                space_physical_bdry_polygon,
-                max_coa_signal,
-                too_close_dist_squared,
-                coa_distribution_exponent,
-                coa_intersection_exponent,
-                cell_dependent_coa_signal_strengths,
-                pw,
-                ph,
-            )
-            for polygon_coords_per_cell_chunk, timepoint_indices_chunk in zip(
-                chunked_polygon_coords_per_cell, chunked_timepoint_indices
-            )
-            if timepoint_indices_chunk.shape[0] > 0
-        ]
-
-        if not sequential and num_timepoints > 10:
-            print("Executing in parallel.")
-            st = time.time()
-
-            pool = ProcessPool(nodes=4)
-            results = pool.map(
-                coa_data_calculation_worker, coa_data_calculation_worker_tasks
-            )
-
-            et = time.time()
-            print("Time taken: {}s.".format(np.round(et - st, decimals=1)))
-        else:
-            st = time.time()
-            print("Executing in sequence.")
-            results = []
-            for task in coa_data_calculation_worker_tasks:
-                results.append(coa_data_calculation_worker(*task))
-
-            et = time.time()
-            print("Time taken: {}s.".format(np.round(et - st, decimals=1)))
-    else:
-        print("Found stored coa overlay data successfully.")
-
-    grid_point_coa_data = np.concatenate(results)
-    return valid_grid_points, grid_point_coa_data
-
-
-# ------------------------------------------------------------------
-
-
-def generate_coa_overlay_data(
-    unique_undrawn_timesteps,
-    plate_width,
-    plate_height,
-    max_coa_signal,
-    too_close_dist_squared,
-    coa_distribution_exponent,
-    coa_intersection_exponent,
-    cell_dependent_coa_signal_strengths,
-    polygon_coords_per_timepoint_per_cell,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
-    storefile_path,
-    resolution=1,
-):
-    print("Dividing space into grid points...")
-    num_x_points = int(plate_width / resolution) + 1
-    num_y_points = int(plate_height / resolution) + 1
-    x_point_bdries = resolution * np.arange(num_x_points)
-    y_point_bdries = resolution * np.arange(num_y_points)
-
-    x_points = np.array(
-        [(x1 + x2) / 2.0 for x1, x2 in zip(x_point_bdries[1:], x_point_bdries[:-1])],
-        dtype=np.float64,
-    )
-    y_points = np.array(
-        [(y1 + y2) / 2.0 for y1, y2 in zip(y_point_bdries[1:], y_point_bdries[:-1])],
-        dtype=np.float64,
-    )
-
-    all_grid_points = float_cartesian_product(x_points, y_points)
-
-    relevant_grid_points, relevant_grid_point_coa_data = generate_coa_data_depending_on_grid_point_relevancy(
-        unique_undrawn_timesteps,
-        all_grid_points,
-        space_migratory_bdry_polygon,
-        space_physical_bdry_polygon,
-        polygon_coords_per_timepoint_per_cell,
-        max_coa_signal,
-        too_close_dist_squared,
-        coa_distribution_exponent,
-        coa_intersection_exponent,
-        cell_dependent_coa_signal_strengths,
-        storefile_path,
-        pw=plate_width,
-        ph=plate_height,
-    )
-
-    return relevant_grid_points, relevant_grid_point_coa_data
-
-
 # -------------------------------------
 
 
@@ -1579,7 +1366,7 @@ def draw_timestamp(
 
 def draw_animation_frame(task):
 
-    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, group_centroid_coords_per_timepoint, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_line_coords_per_timepoint_per_cell, protrusion_existence_per_timepoint_per_cell, coa_overlay_color, coa_overlay_resolution, coa_grid_points, this_image_coa_data, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = (
+    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, velocity_line_coords_per_label_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, group_centroid_coords_per_timepoint, coa_line_coords_per_timepoint_per_cell, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, chemoattractant_line_coords_per_timepoint_per_cell, protrusion_existence_per_timepoint_per_cell, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = (
         task
     )
 
@@ -1590,7 +1377,7 @@ def draw_animation_frame(task):
     elif image_format == ".svg":
         surface = cairo.SVGSurface(
             os.path.join(
-                global_image_dir, global_image_name_format_str.format(timestep)
+                global_image_dir, "T={}-snapshot{}".format(timestep_index, image_format)
             ),
             image_width_in_pixels,
             image_height_in_pixels,
@@ -1620,31 +1407,18 @@ def draw_animation_frame(task):
         draw_polygon_jit(
             space_physical_bdry_polygon,
             physical_bdry_color,
-            background_color,
             2,
             context,
         )
 
     if space_migratory_bdry_polygon.shape[0] != 0:
         context.new_path()
-        # polygon_coords, polygon_edge_and_vertex_color, polygon_fill_color, polygon_line_width, context
         draw_polygon_jit(
             space_migratory_bdry_polygon,
             migratory_bdry_color,
-            background_color,
             2,
             context,
         )
-
-    if type(this_image_coa_data) == np.ndarray:
-        if coa_grid_points.shape[0] > 0:
-            draw_coa_overlay(
-                coa_overlay_color,
-                coa_overlay_resolution,
-                coa_grid_points,
-                this_image_coa_data,
-                context,
-            )
 
     for cell_index, anicell in enumerate(animation_cells):
 
@@ -1663,16 +1437,16 @@ def draw_animation_frame(task):
             ][timestep_index]
 
         if type(velocity_line_coords_per_label_per_timepoint_per_cell) != np.ndarray:
-            velocity_data = None
+            velocity_vectors = None
         else:
-            velocity_data = velocity_line_coords_per_label_per_timepoint_per_cell[
+            velocity_vectors = velocity_line_coords_per_label_per_timepoint_per_cell[
                 cell_index
             ][timestep_index]
 
         if type(centroid_coords_per_timepoint_per_cell) != np.ndarray:
-            centroid_data = None
+            centroids = None
         else:
-            centroid_data = centroid_coords_per_timepoint_per_cell[cell_index][
+            centroids = centroid_coords_per_timepoint_per_cell[cell_index][
                 unique_timesteps[: timestep + 1]
             ]
 
@@ -1697,13 +1471,13 @@ def draw_animation_frame(task):
                 cell_index, timestep_index
             ]
 
-        anicell.draw(
+        anicell.draw_self_in_frame(
             context,
             polygon_coords_per_timepoint_per_cell[cell_index][timestep_index],
             rgtpase_data,
             rac_random_spikes_info,
-            velocity_data,
-            centroid_data,
+            velocity_vectors,
+            centroids,
             coa_data,
             chemoattractant_data,
             protrusion_existence_data,
@@ -1732,7 +1506,114 @@ def draw_animation_frame(task):
         )
 
     if image_format == ".svg":
-        # context.show_page()
+        surface.finish()
+    else:
+        if global_image_name_format_str != "":
+            image_fp = os.path.join(
+                global_image_dir, global_image_name_format_str.format(timestep)
+            )
+        else:
+            image_fp = os.path.join(global_image_dir, "T={}-snapshot{}".format(timestep_index, image_format))
+        surface.write_to_png(image_fp)
+
+def draw_polarization_animation_frame(task):
+    timestep_index, timestep, timestep_length, font_color, font_size, global_scale, plate_width, plate_height, image_height_in_pixels, image_width_in_pixels, transform_matrix, animation_cells, polygon_coords_per_timepoint_per_cell, centroids_per_cell_per_timepoint, centroid_type_per_cell_per_timepoint, delaunay_neighbours_per_cell_per_timestep, polarization_vector_per_cell_per_timepoint, velocity_per_cell_per_timepoint, space_physical_bdry_polygon, space_migratory_bdry_polygon, chemoattractant_source_location, chemotaxis_target_radius, background_color, migratory_bdry_color, physical_bdry_color, chemoattractant_dot_color, unique_timesteps, global_image_dir, global_image_name_format_str, image_format = task
+
+    if image_format == ".png":
+        surface = cairo.ImageSurface(
+            cairo.FORMAT_ARGB32, image_width_in_pixels, image_height_in_pixels
+        )
+    elif image_format == ".svg":
+        surface = cairo.SVGSurface(
+            os.path.join(
+                global_image_dir, global_image_name_format_str.format(timestep)
+            ),
+            image_width_in_pixels,
+            image_height_in_pixels,
+        )
+
+    context = cairo.Context(surface)
+
+    context.set_source_rgb(*background_color)
+    context.paint()
+
+    draw_timestamp(
+        timestep,
+        timestep_length,
+        font_color,
+        font_size,
+        global_scale,
+        image_width_in_pixels,
+        image_height_in_pixels,
+        context,
+    )
+
+    context.transform(convert_numpy_array_to_pycairo_matrix(transform_matrix))
+
+    if space_physical_bdry_polygon.shape[0] != 0:
+        context.new_path()
+        draw_polygon_jit(
+            space_physical_bdry_polygon,
+            physical_bdry_color,
+            2,
+            context,
+        )
+
+    if space_migratory_bdry_polygon.shape[0] != 0:
+        context.new_path()
+        draw_polygon_jit(
+            space_migratory_bdry_polygon,
+            migratory_bdry_color,
+            background_color,
+            2,
+            context,
+        )
+
+    for cell_index, anicell in enumerate(animation_cells):
+        if type(velocity_per_cell_per_timepoint) == type(None):
+            velocity_vector = None
+        else:
+            velocity_vector = velocity_per_cell_per_timepoint[timestep_index][cell_index]
+
+        polygon_coords = polygon_coords_per_timepoint_per_cell[cell_index][timestep_index]
+        centroid = centroids_per_cell_per_timepoint[timestep_index][cell_index]
+        centroid_type = centroid_type_per_cell_per_timepoint[timestep_index][cell_index]
+        polarization_vector = polarization_vector_per_cell_per_timepoint[timestep_index][cell_index]
+        anicell.draw_self_in_polarization_animation_frame(
+            context,
+            polygon_coords,
+            centroid,
+            centroid_type,
+            polarization_vector,
+            velocity_vector
+        )
+
+    # relevant_delaunay_neighbours_per_cell = delaunay_neighbours_per_cell_per_timestep[timestep_index]
+    # delaunay_line_width = 0.5*animation_cells[0].polygon_line_width
+    # relevant_centroids = centroids_per_cell_per_timepoint[timestep_index]
+    # for ci in range(len(animation_cells)):
+    #     centroid = centroids_per_cell_per_timepoint[timestep_index][ci]
+    #     num_delaunay_neighbours = relevant_delaunay_neighbours_per_cell[ci][0]
+    #     this_cell_relevant_delaunay_neighbours = relevant_delaunay_neighbours_per_cell[ci][1:(num_delaunay_neighbours + 1)]
+    #     for dni in this_cell_relevant_delaunay_neighbours:
+    #         draw_line_jit(centroid, relevant_centroids[dni], colors.RGB_DARK_GREEN, delaunay_line_width, context)
+
+    if len(chemoattractant_source_location) != 0:
+        context.new_path()
+        draw_dot_jit(
+            chemoattractant_source_location, chemoattractant_dot_color, 2, context
+        )
+
+        if chemotaxis_target_radius > 0.0:
+            draw_circle_jit(
+                chemoattractant_source_location,
+                chemotaxis_target_radius,
+                chemoattractant_dot_color,
+                2,
+                context,
+            )
+
+    if image_format == ".svg":
         surface.finish()
     else:
         image_fp = os.path.join(
@@ -1740,14 +1621,20 @@ def draw_animation_frame(task):
         )
         surface.write_to_png(image_fp)
 
+# ------------------------------------------------------------
 
 def draw_animation_frame_for_given_timesteps(tasks):
 
     for task in tasks:
         draw_animation_frame(task)
 
+def draw_polarization_animation_frame_for_given_timesteps(tasks):
 
-# --------------------------------------------------------------------------
+    for task in tasks:
+        draw_polarization_animation_frame(task)
+
+
+# ------------------------------------------------------------
 
 
 def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
@@ -1760,7 +1647,7 @@ def make_progress_str(progress, len_progress_bar=20, progress_char="-"):
     )
 
 
-# --------------------------------------------------------------------------
+# ------------------------------------------------------------
 
 
 class EnvironmentAnimation:
@@ -1773,6 +1660,7 @@ class EnvironmentAnimation:
         max_num_timepoints,
         cell_group_indices,
         cell_Ls,
+        cell_Ts,
         cell_etas,
         cell_skip_dynamics,
         env_storefile_path,
@@ -1787,6 +1675,7 @@ class EnvironmentAnimation:
         rgtpase_scale=1,
         coa_scale=1,
         chemoattractant_scale=1,
+        polarization_vector_scale=1,
         show_velocities=False,
         show_rgtpase=False,
         show_inactive_rgtpase=False,
@@ -1796,8 +1685,7 @@ class EnvironmentAnimation:
         show_protrusion_existence=False,
         color_each_group_differently=False,
         show_rac_random_spikes=False,
-        create_main_animation=False,
-        create_polarization_animation=False,
+        show_polarization_velocity=False,
         only_show_cells=[],
         background_color=colors.RGB_WHITE,
         chemoattractant_dot_color=colors.RGB_LIGHT_GREEN,
@@ -1854,12 +1742,9 @@ class EnvironmentAnimation:
         origin_offset_in_pixels=np.zeros(2),
         string_together_pictures_into_animation=True,
         allowed_drift_before_geometry_recalc=-1.0,
-        specific_timesteps_to_draw_as_svg=[],
+        specific_timesteps_to_draw=[],
         chemotaxis_target_radius=-1,
     ):
-        self.create_main_animation = create_main_animation
-        self.create_polarization_animation = create_polarization_animation
-
         self.global_scale = global_scale
         self.rotation_theta = rotation_theta
         self.translation_x = translation_x
@@ -1869,7 +1754,6 @@ class EnvironmentAnimation:
         self.plate_width_in_micrometers = plate_width_in_micrometers
 
         self.string_together_into_animation = string_together_pictures_into_animation
-        self.animation_name = environment_name + "_animation.mp4"
         self.short_video_length_definition = short_video_length_definition
         self.short_video_duration = short_video_duration
         self.fps = 30
@@ -1905,11 +1789,13 @@ class EnvironmentAnimation:
             self.show_protrusion_existence = show_protrusion_existence
         else:
             self.show_protrusion_existence = False
+        self.show_polarization_velocity = show_polarization_velocity
 
         self.velocity_scale = velocity_scale
         self.rgtpase_scale = rgtpase_scale
         self.coa_scale = coa_scale
         self.chemoattractant_scale = chemoattractant_scale
+        self.polarization_vector_scale = polarization_vector_scale
 
         self.only_show_cells = only_show_cells
         self.background_color = background_color
@@ -1985,6 +1871,7 @@ class EnvironmentAnimation:
 
         self.cell_etas = cell_etas
         self.cell_Ls = cell_Ls
+        self.cell_Ts = cell_Ts
         self.offset_magnitudes = np.array(self.cell_Ls) * self.offset_scale
         self.cell_skip_dynamics = cell_skip_dynamics
         self.storefile_path = env_storefile_path
@@ -1994,15 +1881,21 @@ class EnvironmentAnimation:
             general_animation_save_folder_path, "images_global"
         )
 
+        self.global_image_dir_polarization = os.path.join(
+            general_animation_save_folder_path, "images_global_polarization"
+        )
+
         if not os.path.exists(self.global_image_dir):
             os.makedirs(self.global_image_dir)
         else:
             shutil.rmtree(self.global_image_dir)
             os.makedirs(self.global_image_dir)
 
-        self.coa_overlay_data_store_path = os.path.join(
-            general_animation_save_folder_path, "coa_overlay_data.hdf5"
-        )
+        if not os.path.exists(self.global_image_dir_polarization):
+            os.makedirs(self.global_image_dir_polarization)
+        else:
+            shutil.rmtree(self.global_image_dir_polarization)
+            os.makedirs(self.global_image_dir_polarization)
 
         self.gathered_info = np.zeros(
             (self.max_num_timepoints, self.num_cells), dtype=np.int64
@@ -2012,16 +1905,6 @@ class EnvironmentAnimation:
             np.zeros(self.max_num_timepoints, dtype=np.int64)
         )
 
-        self.coa_overlay_info = (
-            self.plate_width_in_micrometers,
-            self.plate_height_in_micrometers,
-            max_coa_signal,
-            coa_too_close_dist_squared,
-            coa_distribution_exponent,
-            cell_dependent_coa_signal_strengths,
-        )
-        self.coa_overlay_color = coa_overlay_color
-        self.coa_overlay_resolution = coa_overlay_resolution
         self.max_coa_signal = max_coa_signal
         self.coa_too_close_dist_squared = coa_too_close_dist_squared
         self.coa_distribution_exponent = coa_distribution_exponent
@@ -2029,7 +1912,7 @@ class EnvironmentAnimation:
         self.coa_intersection_exponent = coa_intersection_exponent
 
         self.allowed_drift_before_geometry_recalc = allowed_drift_before_geometry_recalc
-        self.specific_timesteps_to_draw_as_svg = specific_timesteps_to_draw_as_svg
+        self.specific_timesteps_to_draw = specific_timesteps_to_draw
 
     # ---------------------------------------------------------------------
 
@@ -2054,8 +1937,7 @@ class EnvironmentAnimation:
         context.scale(self.global_scale, self.global_scale)
         context.rotate(self.rotation_theta)
         context.translate(self.translation_x, self.translation_y)
-        #        xx, xy, x0, yx, yy, y0 = create_transformation_matrix_entries(self.global_scale, self.global_scale, self.rotation_theta + np.pi, self.translation_x, self.translation_y, self.plate_width_in_micrometers, self.plate_width_in_micrometers)
-        # return cairo.Matrix(xx, yx, xy, yy, x0, y0)
+
         return context.get_matrix()
 
     # ---------------------------------------------------------------------
@@ -2129,117 +2011,30 @@ class EnvironmentAnimation:
         else:
             protrusion_existence_per_timepoint_per_cell = None
 
-        coa_grid_points, coa_grid_point_data = np.array([]), np.array([])
-
         print("Gathering data for visualizing cells...")
-        if self.create_main_animation:
-            for cell_index in range(self.num_cells):
-                L = self.cell_Ls[cell_index]
-                this_cell_polygon_coords_per_timestep = (
-                    L
-                    * hardio.get_node_coords_for_given_tsteps(
-                        cell_index, unique_undrawn_timesteps, self.storefile_path
-                    )
-                )
-    
-                polygon_coords_per_timepoint_per_cell[
-                    cell_index, :, :, :
-                ] = this_cell_polygon_coords_per_timestep
-    
-                if self.show_centroid_trail or self.show_group_centroid_trail:
-                    centroid_coords_per_timepoint_per_cell[
-                        cell_index, :, :
-                    ] = cu.calculate_cell_centroids_until_tstep(
-                        cell_index, timestep_to_draw_till, self.storefile_path
-                    )
-    
-                if self.show_velocities:
-                    eta = self.cell_etas[cell_index]
-                    velocity_data_for_undrawn_timesteps = prepare_velocity_data(
-                        self.num_nodes,
-                        eta,
-                        self.velocity_scale,
-                        cell_index,
-                        unique_undrawn_timesteps,
-                        this_cell_polygon_coords_per_timestep,
-                        self.storefile_path,
-                    )
-    
-                    for x in range(self.num_velocity_labels):
-                        velocity_line_coords_per_label_per_timepoint_per_cell[
-                            cell_index, :, x, :, :
-                        ] = velocity_data_for_undrawn_timesteps[x]
-    
-                if self.show_rgtpase:
-                    offset_magnitude = self.offset_magnitudes[cell_index]
-                    rgtpase_data_for_undrawn_timesteps = prepare_rgtpase_data(
-                        self.rgtpase_scale,
-                        cell_index,
-                        unique_undrawn_timesteps,
-                        this_cell_polygon_coords_per_timestep,
-                        self.global_scale * offset_magnitude,
-                        self.storefile_path,
-                    )
-    
-                    for x in range(self.num_rgtpase_labels + 1):
-                        rgtpase_line_coords_per_label_per_timepoint_per_cell[
-                            cell_index, :, x, :, :
-                        ] = rgtpase_data_for_undrawn_timesteps[x]
-    
-                if self.show_rac_random_spikes:
-                    rac_random_spike_info_per_timepoint_per_cell[
-                        cell_index, :, :
-                    ] = prepare_rac_random_spike_data(
-                        cell_index, unique_undrawn_timesteps, self.storefile_path
-                    )
-    
-                if self.show_coa:
-                    coa_line_coords_per_timepoint_per_cell[
-                        cell_index, :, :, :
-                    ] = prepare_coa_data(
-                        self.coa_scale,
-                        cell_index,
-                        unique_undrawn_timesteps,
-                        this_cell_polygon_coords_per_timestep,
-                        self.storefile_path,
-                    )
-    
-            if self.show_group_centroid_trail:
-                group_centroid_coords_per_timepoint = np.average(
-                    centroid_coords_per_timepoint_per_cell, axis=0
-                )
-                if not self.show_centroid_trail:
-                    centroid_coords_per_timepoint_per_cell = None
-    
-                coa_grid_points, coa_grid_point_data = generate_coa_overlay_data(
-                    unique_undrawn_timesteps,
-                    self.plate_width_in_micrometers,
-                    self.plate_height_in_micrometers,
-                    self.max_coa_signal,
-                    self.coa_too_close_dist_squared,
-                    self.coa_distribution_exponent,
-                    self.coa_intersection_exponent,
-                    self.cell_dependent_coa_signal_strengths,
-                    polygon_coords_per_timepoint_per_cell,
-                    self.space_migratory_bdry_polygon,
-                    self.space_physical_bdry_polygon,
-                    self.coa_overlay_data_store_path,
-                    resolution=self.coa_overlay_resolution,
-                )
-                
-        if self.create_polarization_animation:
+        for cell_index in range(self.num_cells):
             L = self.cell_Ls[cell_index]
-    
-            if not(self.create_main_animation and self.show_centroid_trail):
+            this_cell_polygon_coords_per_timestep = (
+                L
+                * hardio.get_node_coords_for_given_tsteps(
+                    cell_index, unique_undrawn_timesteps, self.storefile_path
+                )
+            )
+
+            polygon_coords_per_timepoint_per_cell[
+                cell_index, :, :, :
+            ] = this_cell_polygon_coords_per_timestep
+
+            if self.show_centroid_trail or self.show_group_centroid_trail:
                 centroid_coords_per_timepoint_per_cell[
-                            cell_index, :, :
-                        ] = cu.calculate_cell_centroids_until_tstep(
-                            cell_index, timestep_to_draw_till, self.storefile_path
-                        )
-    
-            if not(self.create_main_animation and self.show_velocities):
+                    cell_index, :, :
+                ] = cu.calculate_cell_centroids_until_tstep(
+                    cell_index, timestep_to_draw_till, self.storefile_path
+                )
+
+            if self.show_velocities:
                 eta = self.cell_etas[cell_index]
-                velocity_data_for_undrawn_timesteps = prepare_velocity_data(
+                velocity_vectors_for_undrawn_timesteps = prepare_velocity_vectors(
                     self.num_nodes,
                     eta,
                     self.velocity_scale,
@@ -2252,49 +2047,48 @@ class EnvironmentAnimation:
                 for x in range(self.num_velocity_labels):
                     velocity_line_coords_per_label_per_timepoint_per_cell[
                         cell_index, :, x, :, :
-                    ] = velocity_data_for_undrawn_timesteps[x]
-    
-                if self.show_rgtpase:
-                    offset_magnitude = self.offset_magnitudes[cell_index]
-                    rgtpase_data_for_undrawn_timesteps = prepare_rgtpase_data(
-                        self.rgtpase_scale,
-                        cell_index,
-                        unique_undrawn_timesteps,
-                        this_cell_polygon_coords_per_timestep,
-                        self.global_scale * offset_magnitude,
-                        self.storefile_path,
-                    )
-    
-                    for x in range(self.num_rgtpase_labels + 1):
-                        rgtpase_line_coords_per_label_per_timepoint_per_cell[
-                            cell_index, :, x, :, :
-                        ] = rgtpase_data_for_undrawn_timesteps[x]
-    
-                if self.show_rac_random_spikes:
-                    rac_random_spike_info_per_timepoint_per_cell[
-                        cell_index, :, :
-                    ] = prepare_rac_random_spike_data(
-                        cell_index, unique_undrawn_timesteps, self.storefile_path
-                    )
-    
-                if self.show_coa:
-                    coa_line_coords_per_timepoint_per_cell[
-                        cell_index, :, :, :
-                    ] = prepare_coa_data(
-                        self.coa_scale,
-                        cell_index,
-                        unique_undrawn_timesteps,
-                        this_cell_polygon_coords_per_timestep,
-                        self.storefile_path,
-                    )
-    
-            if self.show_group_centroid_trail:
-                group_centroid_coords_per_timepoint = np.average(
-                    centroid_coords_per_timepoint_per_cell, axis=0
+                    ] = velocity_vectors_for_undrawn_timesteps[x]
+
+            if self.show_rgtpase:
+                offset_magnitude = self.offset_magnitudes[cell_index]
+                rgtpase_data_for_undrawn_timesteps = prepare_rgtpase_data(
+                    self.rgtpase_scale,
+                    cell_index,
+                    unique_undrawn_timesteps,
+                    this_cell_polygon_coords_per_timestep,
+                    self.global_scale * offset_magnitude,
+                    self.storefile_path,
                 )
-                if not self.show_centroid_trail:
-                    centroid_coords_per_timepoint_per_cell = None
-            
+
+                for x in range(self.num_rgtpase_labels + 1):
+                    rgtpase_line_coords_per_label_per_timepoint_per_cell[
+                        cell_index, :, x, :, :
+                    ] = rgtpase_data_for_undrawn_timesteps[x]
+
+            if self.show_rac_random_spikes:
+                rac_random_spike_info_per_timepoint_per_cell[
+                    cell_index, :, :
+                ] = prepare_rac_random_spike_data(
+                    cell_index, unique_undrawn_timesteps, self.storefile_path
+                )
+
+            if self.show_coa:
+                coa_line_coords_per_timepoint_per_cell[
+                    cell_index, :, :, :
+                ] = prepare_coa_data(
+                    self.coa_scale,
+                    cell_index,
+                    unique_undrawn_timesteps,
+                    this_cell_polygon_coords_per_timestep,
+                    self.storefile_path,
+                )
+
+        if self.show_group_centroid_trail:
+            group_centroid_coords_per_timepoint = np.average(
+                centroid_coords_per_timepoint_per_cell, axis=0
+            )
+            if not self.show_centroid_trail:
+                centroid_coords_per_timepoint_per_cell = None
 
         print("Done gathering visualization data.")
         return (
@@ -2305,11 +2099,58 @@ class EnvironmentAnimation:
             rgtpase_line_coords_per_label_per_timepoint_per_cell,
             rac_random_spike_info_per_timepoint_per_cell,
             coa_line_coords_per_timepoint_per_cell,
-            polarization_vectors_per_timepoint_per_cell,
-            coa_grid_points,
-            coa_grid_point_data,
             chemoattractant_line_coords_per_timepoint_per_cell,
             protrusion_existence_per_timepoint_per_cell,
+        )
+
+    def gather_data_for_polarization_animation(self, timestep_to_draw_till, unique_undrawn_timesteps):
+        polygon_coords_per_timepoint_per_cell = np.zeros(
+            (self.num_cells, unique_undrawn_timesteps.shape[0], self.num_nodes, 2),
+            dtype=np.float64,
+        )
+        centroid_coords_per_cell_per_timepoint = np.zeros((unique_undrawn_timesteps.shape[0], self.num_cells, 2), dtype=np.float64)
+        centroid_type_per_cell_per_timepoint = np.zeros((unique_undrawn_timesteps.shape[0], self.num_cells), dtype=np.uint8)
+        polarization_vector_per_cell_per_timepoint = np.zeros((unique_undrawn_timesteps.shape[0], self.num_cells, 2), dtype=np.float64)
+        velocity_per_cell_per_timepoint = np.zeros(
+            (
+                unique_undrawn_timesteps.shape[0],
+                self.num_cells,
+                2,
+            ),
+            dtype=np.float64,
+        )
+
+        for cell_index in range(self.num_cells):
+            L, T = self.cell_Ls[cell_index], self.cell_Ts[cell_index]
+            this_cell_polygon_coords_per_timestep = (
+                    L
+                    * hardio.get_node_coords_for_all_tsteps(
+                cell_index, self.storefile_path
+            )
+            )
+
+            polygon_coords_per_timepoint_per_cell[
+            cell_index, :, :, :
+            ] = this_cell_polygon_coords_per_timestep[unique_undrawn_timesteps]
+
+            centroid_coords_per_timepoint, velocity_per_timepoint, polarization_vector_per_timepoint = cu.calculate_polarization_information_until_timestep(cell_index, this_cell_polygon_coords_per_timestep, self.storefile_path, T)
+            centroid_coords_per_cell_per_timepoint[:, cell_index, :] = centroid_coords_per_timepoint[unique_undrawn_timesteps, :]
+            velocity_per_cell_per_timepoint[:, cell_index, :] = velocity_per_timepoint[unique_undrawn_timesteps, :]
+            polarization_vector_per_cell_per_timepoint[:, cell_index, :] = 0.5*polarization_vector_per_timepoint[unique_undrawn_timesteps, :]
+
+        centroid_types_per_cell_per_timepoint, delaunay_neighbours_per_cell_per_timestep = cu.determine_spatial_location_type_of_cells_using_cell_centroid_info(centroid_coords_per_cell_per_timepoint)
+
+        if not self.show_polarization_velocity:
+            velocity_per_cell_per_timepoint = None
+
+        print("Done gathering visualization data.")
+        return (
+            polygon_coords_per_timepoint_per_cell,
+            centroid_coords_per_cell_per_timepoint,
+            centroid_types_per_cell_per_timepoint,
+            delaunay_neighbours_per_cell_per_timestep,
+            polarization_vector_per_cell_per_timepoint,
+            velocity_per_cell_per_timepoint,
         )
 
     # ---------------------------------------------------------------------
@@ -2335,6 +2176,7 @@ class EnvironmentAnimation:
                 show_coa = False
                 show_chemoattractant = False
                 show_protrusion_existence = False
+                show_polarization_velocity = False
             else:
                 show_velocities = self.show_velocities
                 show_rgtpase = self.show_rgtpase
@@ -2342,6 +2184,7 @@ class EnvironmentAnimation:
                 show_coa = self.show_coa
                 show_chemoattractant = self.show_chemoattractant
                 show_protrusion_existence = self.show_protrusion_existence
+                show_polarization_velocity = self.show_polarization_velocity
 
             polygon_edge_and_vertex_color = (
                 self.default_cell_polygon_edge_and_vertex_color
@@ -2361,6 +2204,7 @@ class EnvironmentAnimation:
                 colors.color_list20[cell_index % 20],
                 self.coa_color,
                 self.chemoattractant_dot_color,
+                self.polarization_vector_color,
                 hidden,
                 show_rgtpase,
                 show_velocities,
@@ -2368,12 +2212,14 @@ class EnvironmentAnimation:
                 show_coa,
                 show_chemoattractant,
                 show_protrusion_existence,
+                show_polarization_velocity,
                 self.polygon_line_width,
                 self.rgtpase_line_width,
                 self.velocity_line_width,
                 self.centroid_line_width,
                 self.coa_line_width,
                 self.chemoattractant_line_width,
+                self.polygon_line_width
             )
 
             animation_cells.append(animation_cell)
@@ -2381,6 +2227,86 @@ class EnvironmentAnimation:
         return animation_cells
 
     # ---------------------------------------------------------------------
+    def draw_specific_timesteps(self, save_dir, image_format):
+        local_image_name_format_str = None
+        timesteps_to_draw = np.array(self.specific_timesteps_to_draw)
+
+        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, group_centroid_coords_per_timepoint, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, chemoattractant_line_coords_per_timepoint_per_cell, protrusion_existence_per_timepoint_per_cell = self.gather_data(
+            self.max_num_timepoints, timesteps_to_draw
+        )
+
+        animation_cells = self.create_animation_cells()
+
+        timestep_length = self.timestep_length
+        font_color = self.font_color
+        font_size = self.font_size
+        global_scale = self.global_scale
+        plate_width = self.plate_width_in_micrometers
+        plate_height = self.plate_height_in_micrometers
+        image_width_in_pixels = self.image_width_in_pixels
+        image_height_in_pixels = self.image_height_in_pixels
+        transform_matrix = self.transform_matrix
+        space_physical_bdry_polygon = self.space_physical_bdry_polygon
+        space_migratory_bdry_polygon = self.space_migratory_bdry_polygon
+        chemoattractant_source_location = self.chemoattractant_source_location
+        chemotaxis_target_radius = self.chemotaxis_target_radius
+
+        background_color = self.background_color
+        migratory_bdry_color = self.migratory_bdry_color
+        physical_bdry_color = self.physical_bdry_color
+        chemoattractant_dot_color = self.chemoattractant_dot_color
+
+        image_prep_st = time.time()
+        st = time.time()
+        print("Drawing undrawn images....")
+
+        drawing_tasks = []
+        for i, t in enumerate(timesteps_to_draw):
+            self.image_drawn_array[t] = 1
+
+            drawing_tasks.append(
+                (
+                    i,
+                    t,
+                    timestep_length,
+                    font_color,
+                    font_size,
+                    global_scale,
+                    plate_width,
+                    plate_height,
+                    image_height_in_pixels,
+                    image_width_in_pixels,
+                    transform_matrix,
+                    animation_cells,
+                    polygon_coords_per_timepoint_per_cell,
+                    rgtpase_line_coords_per_label_per_timepoint_per_cell,
+                    rac_random_spike_info_per_timepoint_per_cell,
+                    velocity_line_coords_per_label_per_timepoint_per_cell,
+                    centroid_coords_per_timepoint_per_cell,
+                    group_centroid_coords_per_timepoint,
+                    coa_line_coords_per_timepoint_per_cell,
+                    space_physical_bdry_polygon,
+                    space_migratory_bdry_polygon,
+                    chemoattractant_source_location,
+                    chemotaxis_target_radius,
+                    chemoattractant_line_coords_per_timepoint_per_cell,
+                    protrusion_existence_per_timepoint_per_cell,
+                    background_color,
+                    migratory_bdry_color,
+                    physical_bdry_color,
+                    chemoattractant_dot_color,
+                    timesteps_to_draw,
+                    save_dir,
+                    "",
+                    image_format,
+                )
+            )
+
+        for task in drawing_tasks:
+            draw_animation_frame(task)
+
+        et = time.time()
+        print("Time taken to draw images: {} s".format(np.round(et - st, decimals=3)))
 
     def create_animation_from_data(
         self,
@@ -2409,76 +2335,57 @@ class EnvironmentAnimation:
 
         num_frames = duration * self.fps
 
-        if len(self.specific_timesteps_to_draw_as_svg) == 0:
-            unique_timesteps = np.sort(
-                np.array(
-                    [
-                        x
-                        for x in list(
-                            set(
-                                np.linspace(
-                                    0,
-                                    timestep_to_draw_till,
-                                    num=num_frames,
-                                    endpoint=False,
-                                    dtype=np.int64,
-                                )
+        unique_timesteps = np.sort(
+            np.array(
+                [
+                    x
+                    for x in list(
+                        set(
+                            np.linspace(
+                                0,
+                                timestep_to_draw_till,
+                                num=num_frames,
+                                endpoint=False,
+                                dtype=np.int64,
                             )
                         )
-                    ]
-                )
+                    )
+                ]
             )
-            num_unique_timesteps = unique_timesteps.shape[0]
+        )
+        num_unique_timesteps = unique_timesteps.shape[0]
 
-            unique_undrawn_timesteps = np.array(
-                [x for x in unique_timesteps if self.image_drawn_array[x] == 0]
-            )
-            image_format = ".png"
+        unique_undrawn_timesteps = np.array(
+            [x for x in unique_timesteps if self.image_drawn_array[x] == 0]
+        )
+        image_format = ".png"
 
-            local_image_dir = os.path.join(
-                animation_save_folder_path,
-                "images_n={}_fps={}_t={}".format(
-                    num_unique_timesteps, self.fps, duration
-                ),
-            )
+        local_image_dir = os.path.join(
+            animation_save_folder_path,
+            "images_n={}_fps={}_t={}".format(
+                num_unique_timesteps, self.fps, duration
+            ),
+        )
 
-            if not os.path.exists(local_image_dir):
-                os.makedirs(local_image_dir)
-            else:
-                shutil.rmtree(local_image_dir)
-                os.makedirs(local_image_dir)
-
-            max_local_image_number_length = len(str(num_unique_timesteps))
-            local_image_name_format_str = "img{{:0>{}}}.png".format(
-                max_local_image_number_length
-            )
-
-            global_image_dir = self.global_image_dir
-
-            max_global_image_number_length = len(str(self.max_num_timepoints))
-            global_image_name_format_str = "global_img{{:0>{}}}.png".format(
-                max_global_image_number_length
-            )
+        if not os.path.exists(local_image_dir):
+            os.makedirs(local_image_dir)
         else:
-            local_image_dir = None
-            image_format = ".svg"
-            local_image_name_format_str = None
-            unique_undrawn_timesteps = np.array(self.specific_timesteps_to_draw_as_svg)
-            unique_timesteps = np.arange(0, timestep_to_draw_till)
-            global_image_dir = self.global_image_dir + "-svg"
+            shutil.rmtree(local_image_dir)
+            os.makedirs(local_image_dir)
 
-            if not os.path.exists(global_image_dir):
-                os.makedirs(global_image_dir)
-            else:
-                shutil.rmtree(global_image_dir)
-                os.makedirs(global_image_dir)
+        max_local_image_number_length = len(str(num_unique_timesteps))
+        local_image_name_format_str = "img{{:0>{}}}.png".format(
+            max_local_image_number_length
+        )
 
-            max_global_image_number_length = len(str(self.max_num_timepoints))
-            global_image_name_format_str = "global_img{{:0>{}}}.svg".format(
-                max_global_image_number_length
-            )
+        global_image_dir = self.global_image_dir
 
-        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, group_centroid_coords_per_timepoint, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, polarization_vectors_per_timepoint_per_cell, coa_grid_points, coa_data_per_grid_point_per_timepoint, chemoattractant_line_coords_per_timepoint_per_cell, protrusion_existence_per_timepoint_per_cell = self.gather_data(
+        max_global_image_number_length = len(str(self.max_num_timepoints))
+        global_image_name_format_str = "global_img{{:0>{}}}.png".format(
+            max_global_image_number_length
+        )
+
+        polygon_coords_per_timepoint_per_cell, centroid_coords_per_timepoint_per_cell, group_centroid_coords_per_timepoint, velocity_line_coords_per_label_per_timepoint_per_cell, rgtpase_line_coords_per_label_per_timepoint_per_cell, rac_random_spike_info_per_timepoint_per_cell, coa_line_coords_per_timepoint_per_cell, chemoattractant_line_coords_per_timepoint_per_cell, protrusion_existence_per_timepoint_per_cell = self.gather_data(
             timestep_to_draw_till, unique_undrawn_timesteps
         )
 
@@ -2497,8 +2404,6 @@ class EnvironmentAnimation:
         space_migratory_bdry_polygon = self.space_migratory_bdry_polygon
         chemoattractant_source_location = self.chemoattractant_source_location
         chemotaxis_target_radius = self.chemotaxis_target_radius
-        coa_overlay_color = self.coa_overlay_color
-        coa_overlay_resolution = self.coa_overlay_resolution
 
         background_color = self.background_color
         migratory_bdry_color = self.migratory_bdry_color
@@ -2511,10 +2416,6 @@ class EnvironmentAnimation:
 
         drawing_tasks = []
         for i, t in enumerate(unique_undrawn_timesteps):
-            this_image_coa_data = None
-            if self.show_coa_overlay:
-                this_image_coa_data = coa_data_per_grid_point_per_timepoint[i]
-
             self.image_drawn_array[t] = 1
 
             drawing_tasks.append(
@@ -2538,17 +2439,12 @@ class EnvironmentAnimation:
                     centroid_coords_per_timepoint_per_cell,
                     group_centroid_coords_per_timepoint,
                     coa_line_coords_per_timepoint_per_cell,
-                    polarization_vectors_per_timepoint_per_cell,
                     space_physical_bdry_polygon,
                     space_migratory_bdry_polygon,
                     chemoattractant_source_location,
                     chemotaxis_target_radius,
                     chemoattractant_line_coords_per_timepoint_per_cell,
                     protrusion_existence_per_timepoint_per_cell,
-                    coa_overlay_color,
-                    coa_overlay_resolution,
-                    coa_grid_points,
-                    this_image_coa_data,
                     background_color,
                     migratory_bdry_color,
                     physical_bdry_color,
@@ -2569,7 +2465,7 @@ class EnvironmentAnimation:
         et = time.time()
         print("Time taken to draw images: {} s".format(np.round(et - st, decimals=3)))
 
-        if len(self.specific_timesteps_to_draw_as_svg) == 0:
+        if len(self.specific_timesteps_to_draw) == 0:
             st = time.time()
             copying_tasks = []
             print("Copying pre-drawn images...")
@@ -2613,7 +2509,255 @@ class EnvironmentAnimation:
 
             if (
                 self.string_together_into_animation == True
-                and len(self.specific_timesteps_to_draw_as_svg) == 0
+                and len(self.specific_timesteps_to_draw) == 0
+            ):
+                animation_output_path = os.path.join(
+                    animation_save_folder_path, animation_file_name
+                )
+
+                print("Stringing together pictures...")
+
+                command = [
+                    "ffmpeg",
+                    "-y",  # (optional) overwrite output file if it exists,
+                    "-framerate",
+                    str(float(num_unique_timesteps) / duration),
+                    "-i",
+                    os.path.join(
+                        local_image_dir,
+                        "img%0{}d.png".format(max_local_image_number_length),
+                    ),
+                    "-r",
+                    str(self.fps),  # frames per second
+                    "-an",  # Tells FFMPEG not to expect any audio
+                    "-threads",
+                    str(4),
+                    "-vcodec",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    animation_output_path,
+                ]
+
+                subprocess.call(command)
+
+    def create_polarization_animation_from_data(
+        self,
+        animation_save_folder_path,
+        animation_file_name,
+        timestep_to_draw_till=None,
+        duration=None,
+        num_threads=8,
+    ):
+        if timestep_to_draw_till == None:
+            timestep_to_draw_till = self.environment.num_timepoints
+
+        if duration == None or duration == "auto":
+            if (
+                timestep_to_draw_till * self.timestep_length
+                < self.short_video_length_definition
+            ):
+                duration = self.short_video_duration
+            else:
+                duration = (
+                    timestep_to_draw_till
+                    * self.timestep_length
+                    / self.short_video_length_definition
+                ) * self.short_video_duration
+
+        num_frames = duration * self.fps
+
+        if len(self.specific_timesteps_to_draw) == 0:
+            unique_timesteps = np.sort(
+                np.array(
+                    [
+                        x
+                        for x in list(
+                            set(
+                                np.linspace(
+                                    0,
+                                    timestep_to_draw_till,
+                                    num=num_frames,
+                                    endpoint=False,
+                                    dtype=np.int64,
+                                )
+                            )
+                        )
+                    ]
+                )
+            )
+            num_unique_timesteps = unique_timesteps.shape[0]
+
+            unique_undrawn_timesteps = np.array(
+                [x for x in unique_timesteps if self.image_drawn_array[x] == 0]
+            )
+            image_format = ".png"
+
+            local_image_dir = os.path.join(
+                animation_save_folder_path,
+                "polarization_images_n={}_fps={}_t={}".format(
+                    num_unique_timesteps, self.fps, duration
+                ),
+            )
+
+            if not os.path.exists(local_image_dir):
+                os.makedirs(local_image_dir)
+            else:
+                shutil.rmtree(local_image_dir)
+                os.makedirs(local_image_dir)
+
+            max_local_image_number_length = len(str(num_unique_timesteps))
+            local_image_name_format_str = "img{{:0>{}}}.png".format(
+                max_local_image_number_length
+            )
+
+            global_image_dir = self.global_image_dir_polarization
+
+            max_global_image_number_length = len(str(self.max_num_timepoints))
+            global_image_name_format_str = "global_img{{:0>{}}}.png".format(
+                max_global_image_number_length
+            )
+        else:
+            local_image_dir = None
+            image_format = ".svg"
+            local_image_name_format_str = None
+            unique_undrawn_timesteps = np.array(self.specific_timesteps_to_draw)
+            unique_timesteps = np.arange(0, timestep_to_draw_till)
+            global_image_dir = self.global_image_dir + "-svg"
+
+            if not os.path.exists(global_image_dir):
+                os.makedirs(global_image_dir)
+            else:
+                shutil.rmtree(global_image_dir)
+                os.makedirs(global_image_dir)
+
+            max_global_image_number_length = len(str(self.max_num_timepoints))
+            global_image_name_format_str = "global_img{{:0>{}}}.svg".format(
+                max_global_image_number_length
+            )
+
+        polygon_coords_per_timepoint_per_cell, centroids_per_cell_per_timepoint, centroid_type_per_cell_per_timepoint, delaunay_neighbours_per_cell_per_timestep,  polarization_vector_per_cell_per_timepoint, velocity_per_cell_per_timepoint = self.gather_data_for_polarization_animation(
+            timestep_to_draw_till, unique_undrawn_timesteps
+        )
+
+        animation_cells = self.create_animation_cells()
+
+        timestep_length = self.timestep_length
+        font_color = self.font_color
+        font_size = self.font_size
+        global_scale = self.global_scale
+        plate_width = self.plate_width_in_micrometers
+        plate_height = self.plate_height_in_micrometers
+        image_width_in_pixels = self.image_width_in_pixels
+        image_height_in_pixels = self.image_height_in_pixels
+        transform_matrix = self.transform_matrix
+        space_physical_bdry_polygon = self.space_physical_bdry_polygon
+        space_migratory_bdry_polygon = self.space_migratory_bdry_polygon
+        chemoattractant_source_location = self.chemoattractant_source_location
+        chemotaxis_target_radius = self.chemotaxis_target_radius
+
+        background_color = self.background_color
+        migratory_bdry_color = self.migratory_bdry_color
+        physical_bdry_color = self.physical_bdry_color
+        chemoattractant_dot_color = self.chemoattractant_dot_color
+
+        image_prep_st = time.time()
+        st = time.time()
+        print("Drawing undrawn images....")
+
+        drawing_tasks = []
+        for i, t in enumerate(unique_undrawn_timesteps):
+            self.image_drawn_array[t] = 1
+
+            drawing_tasks.append(
+                (
+                    i,
+                    t,
+                    timestep_length,
+                    font_color,
+                    font_size,
+                    global_scale,
+                    plate_width,
+                    plate_height,
+                    image_height_in_pixels,
+                    image_width_in_pixels,
+                    transform_matrix,
+                    animation_cells,
+                    polygon_coords_per_timepoint_per_cell,
+                    centroids_per_cell_per_timepoint,
+                    centroid_type_per_cell_per_timepoint,
+                    delaunay_neighbours_per_cell_per_timestep,
+                    polarization_vector_per_cell_per_timepoint,
+                    velocity_per_cell_per_timepoint,
+                    space_physical_bdry_polygon,
+                    space_migratory_bdry_polygon,
+                    chemoattractant_source_location,
+                    chemotaxis_target_radius,
+                    background_color,
+                    migratory_bdry_color,
+                    physical_bdry_color,
+                    chemoattractant_dot_color,
+                    unique_timesteps,
+                    global_image_dir,
+                    global_image_name_format_str,
+                    image_format,
+                )
+            )
+
+        #        pool = ProcessPool(nodes=4)
+        #        pool.map(draw_animation_frame, drawing_tasks)
+
+        for task in drawing_tasks:
+            draw_polarization_animation_frame(task)
+
+        et = time.time()
+        print("Time taken to draw images: {} s".format(np.round(et - st, decimals=3)))
+
+        if len(self.specific_timesteps_to_draw) == 0:
+            st = time.time()
+            copying_tasks = []
+            print("Copying pre-drawn images...")
+            for i, t in enumerate(unique_timesteps):
+                assert self.image_drawn_array[t] == 1
+                copying_tasks.append(
+                    (
+                        os.path.join(
+                            global_image_dir, global_image_name_format_str.format(t)
+                        ),
+                        os.path.join(
+                            local_image_dir, local_image_name_format_str.format(i)
+                        ),
+                    )
+                )
+
+            num_tasks = len(copying_tasks)
+            chunklen = (num_tasks + num_threads - 1) // num_threads
+            # Create argument tuples for each input chunk
+            chunks = []
+            for i in range(num_threads):
+                chunks.append(copying_tasks[i * chunklen : (i + 1) * chunklen])
+
+            threads = [threading.Thread(target=copy_worker, args=(c,)) for c in chunks]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+            et = time.time()
+            print(
+                "Time taken to copy images: {} s".format(np.round(et - st, decimals=3))
+            )
+
+            image_prep_et = time.time()
+
+            print(
+                "Done preparing images. Total time taken: {}s".format(
+                    np.round(image_prep_et - image_prep_st, decimals=3)
+                )
+            )
+
+            if (
+                self.string_together_into_animation == True
+                and len(self.specific_timesteps_to_draw) == 0
             ):
                 animation_output_path = os.path.join(
                     animation_save_folder_path, animation_file_name

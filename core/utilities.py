@@ -100,6 +100,38 @@ def calculate_cell_speeds_until_tstep(cell_index, max_tstep, storefile_path, T, 
 # ==============================================================================
 
 
+def calculate_polarization_information_until_timestep(
+    cell_index, node_coords_per_tstep, storefile_path, T, max_tstep=None,
+):
+    centroid_per_tstep = calculate_centroids_per_tstep(node_coords_per_tstep)
+
+    velocity_per_timestep = calculate_velocities(centroid_per_tstep, T)
+
+    _, _, _, polarization_vector_per_timestep = collate_protrusion_data_for_cell(
+        cell_index, T, storefile_path, max_tstep=max_tstep
+    )
+
+    return centroid_per_tstep, velocity_per_timestep, polarization_vector_per_timestep
+
+
+# @nb.jit()
+def determine_centroid_types_per_timestep(centroid_coords_per_cell_per_timepoint):
+    centroid_types_per_timestep = np.zeros(
+        (
+            centroid_coords_per_cell_per_timepoint.shape[0],
+            centroid_coords_per_cell_per_timepoint.shape[1],
+        ),
+        dtype=np.uint8,
+    )
+
+    for ti in range(centroid_coords_per_cell_per_timepoint.shape[0]):
+        this_tstep_centroids = centroid_coords_per_cell_per_timepoint[ti]
+        convex_hull_vertices = space.ConvexHull(this_tstep_centroids).vertices
+        centroid_types_per_timestep[ti, convex_hull_vertices] = 1
+
+    return centroid_types_per_timestep
+
+
 @nb.jit(nopython=True)
 def calculate_polarization_rating_old(
     rac_membrane_active, rho_membrane_active, num_nodes
@@ -1344,7 +1376,10 @@ def analyze_single_cell_motion(
 
     if net_distance > 0.0:
         if not no_randomization:
-            positive_ns, positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
+            (
+                positive_ns,
+                positive_das,
+            ) = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
                 cell_centroid_displacements
             )
             persistence_time, positive_ts = estimate_persistence_time(
@@ -1405,7 +1440,10 @@ def analyze_cell_motion(
         if net_distance > 0.0:
             persistence_ratio = net_displacement_mag / net_distance
             this_cell_centroid_displacements = cell_centroids[1:] - cell_centroids[:-1]
-            this_cell_positive_ns, this_cell_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
+            (
+                this_cell_positive_ns,
+                this_cell_positive_das,
+            ) = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
                 this_cell_centroid_displacements
             )
             persistence_time, this_cell_positive_ts = estimate_persistence_time(
@@ -1442,9 +1480,10 @@ def analyze_cell_motion(
                 for t in range(all_cell_centroids.shape[1])
             ]
         )
-        min_x_centroid_per_timestep, max_x_centroid_per_timestep = get_min_max_x_centroid_per_timestep(
-            all_cell_centroid_xs
-        )
+        (
+            min_x_centroid_per_timestep,
+            max_x_centroid_per_timestep,
+        ) = get_min_max_x_centroid_per_timestep(all_cell_centroid_xs)
         group_centroid_x_per_timestep = group_centroid_per_timestep[:, 0]
 
         init_group_centroid_per_timestep = group_centroid_per_timestep[0]
@@ -1470,7 +1509,10 @@ def analyze_cell_motion(
         )
         group_persistence_ratio = group_net_displacement_mag / group_net_distance
 
-        group_positive_ns, group_positive_das = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
+        (
+            group_positive_ns,
+            group_positive_das,
+        ) = calculate_direction_autocorr_coeffs_for_persistence_time_parallel(
             group_centroid_displacements_per_timestep
         )
         group_persistence_time, group_positive_ts = estimate_persistence_time(
@@ -1691,7 +1733,7 @@ def determine_protrusion_existence_and_direction(
 
 @nb.jit(nopython=True)
 def determine_protrusion_node_index_and_tpoint_start_ends(
-    protrusion_existence_per_tstep
+    protrusion_existence_per_tstep,
 ):
     num_tpoints = protrusion_existence_per_tstep.shape[0]
     num_nodes = protrusion_existence_per_tstep.shape[1]
@@ -1837,6 +1879,26 @@ def determine_num_nodes_in_protrusion_group(
 
 
 @nb.jit(nopython=True)
+def determine_nodes_in_protrusion_group(
+    num_nodes_in_cell, left_boundary, right_boundary, protrusion_existence
+):
+    if left_boundary > right_boundary:
+        num_nodes_right = right_boundary + 1
+        num_nodes_left = num_nodes_in_cell - left_boundary
+
+        num_nodes_in_protrusion_group = num_nodes_right + num_nodes_left
+    else:
+        num_nodes_in_protrusion_group = (right_boundary - left_boundary) + 1
+
+    nodes_in_protrusion_group = np.zeros(num_nodes_in_protrusion_group, dtype=np.int64)
+    for xi in range(num_nodes_in_protrusion_group):
+        protrusive_node = (left_boundary + xi) % num_nodes_in_cell
+        nodes_in_protrusion_group[xi] = protrusive_node
+
+    return nodes_in_protrusion_group
+
+
+@nb.jit(nopython=True)
 def determine_if_protrusion_group_is_same_as_focus_protrusion_group(group, focus_group):
     if group[0] == focus_group[0] and group[1] == focus_group[1]:
         return True
@@ -1969,9 +2031,32 @@ def determine_protrusion_group_direction(
         raise Exception("calculated central nodes are not protrusive!")
 
     if lc == rc:
-        return protrusion_directions[lc]
+        return num_nodes_in_protrusion_group, protrusion_directions[lc]
     else:
-        return (protrusion_directions[lc] + protrusion_directions[rc]) / 2
+        return num_nodes_in_protrusion_group, (protrusion_directions[lc] + protrusion_directions[rc]) / 2
+
+
+@nb.jit(nopython=True)
+def determine_protrusion_group_direction_old(
+    num_nodes_in_cell,
+    protrusion_directions,
+    protrusion_existence,
+    left_boundary,
+    right_boundary,
+):
+    nodes_in_protrusion_group = determine_nodes_in_protrusion_group(
+        num_nodes_in_cell, left_boundary, right_boundary, protrusion_existence
+    )
+    num_nodes_in_protrusion_group = nodes_in_protrusion_group.shape[0]
+
+    avg_protrusion_direction = np.zeros(2, dtype=np.float64)
+
+    for ni in nodes_in_protrusion_group:
+        avg_protrusion_direction += (
+            protrusion_directions[ni] / num_nodes_in_protrusion_group
+        )
+
+    return avg_protrusion_direction
 
 
 # @nb.jit(nopython=True)
@@ -2075,10 +2160,116 @@ def determine_protrusion_group_direction(
 #
 #    return protrusion_group_lifetimes_and_directions
 
+@nb.jit(nopython=True)
+def determine_polarization_vectors_of_cells(protrusion_existence_per_cell, protrusion_directions_per_cell):
+    num_cells = protrusion_existence_per_cell.shape[0]
+    num_nodes_in_cell = protrusion_existence_per_cell.shape[1]
+    max_num_protrusion_groups = int(num_nodes_in_cell / 2)
+
+    num_protrusion_groups_per_cell = np.zeros(num_cells, dtype=np.int64)
+    protrusion_group_boundaries_per_cell = np.zeros((num_cells, max_num_protrusion_groups, 2), dtype=np.int64)
+
+    for ci in range(num_cells):
+        pe = protrusion_existence_per_cell[ci]
+        num_pgs, pgs = determine_protrusion_groups(pe)
+        num_protrusion_groups_per_cell[ci] = num_pgs
+        protrusion_group_boundaries_per_cell[ci] = pgs
+
+    polarization_vectors_per_cell = np.zeros((num_cells, 2), dtype=np.float64)
+
+    for ci in range(num_cells):
+        num_protrusion_groups = num_protrusion_groups_per_cell[ci]
+        relevant_protrusion_groups = protrusion_group_boundaries_per_cell[ci][
+                                     :num_protrusion_groups
+                                     ]
+        relevant_protrusion_directions = protrusion_directions_per_cell[ci]
+        relevant_protrusion_existence = protrusion_existence_per_cell[ci]
+
+        protrusion_group_direction_vectors = np.zeros(
+            (num_protrusion_groups, 2), dtype=np.float64
+        )
+        for gi in range(num_protrusion_groups):
+            pg = relevant_protrusion_groups[gi]
+            num_nodes_in_protrusion_group, protrusion_direction_vector = determine_protrusion_group_direction(
+                num_nodes_in_cell,
+                relevant_protrusion_directions,
+                relevant_protrusion_existence,
+                pg[0],
+                pg[1],
+            )
+            protrusion_group_direction = geometry.calculate_2D_vector_direction(
+                protrusion_direction_vector
+            )
+            protrusion_group_direction_vectors[gi] = (
+                                                                 num_nodes_in_protrusion_group / num_nodes_in_cell) * protrusion_direction_vector
+
+        polarization_vectors_per_cell[ci] = np.sum(
+            protrusion_group_direction_vectors, axis=0
+        )
+
+    return polarization_vectors_per_cell
+
+# def determine_spatial_location_type_of_cells_using_all_node_info(node_positions_per_cell):
+#     num_cells = node_positions_per_cell.shape[0]
+#     num_nodes = node_positions_per_cell.shape[1]
+#
+#     flattened_node_positions_per_cell = node_positions_per_cell.reshape((num_cells*num_nodes, 2))
+#
+#     classified_cells = np.zeros(num_cells, dtype=np.int64)
+#     cell_classifications = np.zeros(num_cells, dtype=np.int64)
+#
+#     dtri = space.Delaunay(flattened_node_positions_per_cell)
+#     chull = space.ConvexHull(flattened_node_positions_per_cell)
+#
+#     for x in chull.vertices:
+#         ci = x % num_cells
+#         ni = (x - ci)
+
+def get_delaunay_neighbours(ix, dtri):
+    helper = dtri.vertex_neighbor_vertices
+    index_pointers = helper[0]
+    indices = helper[1]
+
+    return indices[index_pointers[ix]:index_pointers[ix+1]]
+
+def determine_spatial_location_type_of_cells_using_cell_centroid_info(centroid_positions_per_cell_per_timestep):
+    num_timesteps = centroid_positions_per_cell_per_timestep.shape[0]
+    num_cells = centroid_positions_per_cell_per_timestep.shape[1]
+
+    cell_classifications_per_cell_per_timestep = np.zeros((num_timesteps, num_cells), dtype=np.int64)
+    delaunay_neighbours_per_cell_per_timestep = np.zeros((num_timesteps, num_cells, num_cells), dtype=np.int64)
+
+    for ti in range(num_timesteps):
+        cell_classifications_per_cell = np.zeros(num_cells, dtype=np.int64)
+        centroid_positions_per_cell = centroid_positions_per_cell_per_timestep[ti]
+        dtri = space.Delaunay(centroid_positions_per_cell)
+        chull = space.ConvexHull(centroid_positions_per_cell)
+
+        delaunay_neighbours_per_cell = np.zeros((num_cells, num_cells), dtype=np.int64)
+
+        for ci in range(num_cells):
+            this_cell_delaunay_neighbours = get_delaunay_neighbours(ci, dtri)
+            num_delaunay_neighbours = this_cell_delaunay_neighbours.shape[0]
+            delaunay_neighbours_per_cell[ci][0] = num_delaunay_neighbours
+            delaunay_neighbours_per_cell[ci][1:(num_delaunay_neighbours + 1)] = this_cell_delaunay_neighbours
+
+        for i in chull.vertices:
+            neighbours = delaunay_neighbours_per_cell[i]
+            relative_position_vectors = centroid_positions_per_cell[neighbours] - centroid_positions_per_cell[i]
+            distance_to_neighbours = np.linalg.norm(relative_position_vectors, axis=1)
+            closest = np.argmin(distance_to_neighbours)
+
+            cell_classifications_per_cell[i] = 1
+            cell_classifications_per_cell[neighbours] = 1
+
+        cell_classifications_per_cell_per_timestep[ti] = cell_classifications_per_cell
+        delaunay_neighbours_per_cell_per_timestep[ti] = delaunay_neighbours_per_cell
+
+    return cell_classifications_per_cell_per_timestep, delaunay_neighbours_per_cell_per_timestep
 
 @nb.jit(nopython=True)
-def determine_protrusion_group_directions(
-    T, protrusion_existence_per_tstep, protrusion_directions_per_tstep
+def determine_polarization_vectors_and_protrusion_group_directions(
+    protrusion_existence_per_tstep, protrusion_directions_per_tstep
 ):
     num_timesteps = protrusion_existence_per_tstep.shape[0]
 
@@ -2095,7 +2286,9 @@ def determine_protrusion_group_directions(
         num_protrusion_groups_per_timestep[ti] = num_pgs
         protrusion_groups_per_timestep[ti] = pgs
 
-    protrusion_group_directions = np.zeros(
+    polarization_vectors_per_timestep = np.zeros((num_timesteps, 2), dtype=np.float64)
+
+    all_protrusion_group_directions = np.zeros(
         num_timesteps * max_num_protrusion_groups, dtype=np.float64
     )
     num_protrusion_group_directions = 0
@@ -2107,21 +2300,35 @@ def determine_protrusion_group_directions(
         relevant_protrusion_directions = protrusion_directions_per_tstep[ti]
         relevant_protrusion_existence = protrusion_existence_per_tstep[ti]
 
+        protrusion_group_direction_vectors = np.zeros(
+            (num_protrusion_groups, 2), dtype=np.float64
+        )
         for gi in range(num_protrusion_groups):
             pg = relevant_protrusion_groups[gi]
-            protrusion_direction_vector = determine_protrusion_group_direction(
+            num_nodes_in_protrusion_group, protrusion_direction_vector = determine_protrusion_group_direction(
                 num_nodes_in_cell,
                 relevant_protrusion_directions,
                 relevant_protrusion_existence,
                 pg[0],
                 pg[1],
             )
-            protrusion_group_directions[
+            protrusion_group_direction = geometry.calculate_2D_vector_direction(
+                protrusion_direction_vector
+            )
+            protrusion_group_direction_vectors[gi] = num_nodes_in_protrusion_group*protrusion_direction_vector
+            all_protrusion_group_directions[
                 num_protrusion_group_directions
-            ] = geometry.calculate_2D_vector_direction(protrusion_direction_vector)
+            ] = protrusion_group_direction
             num_protrusion_group_directions += 1
 
-    return protrusion_group_directions[:num_protrusion_group_directions]
+        polarization_vectors_per_timestep[ti] = np.sum(
+            protrusion_group_direction_vectors, axis=0
+        )
+
+    return (
+        all_protrusion_group_directions[:num_protrusion_group_directions],
+        polarization_vectors_per_timestep,
+    )
 
 
 # @nb.jit(nopython=True)
@@ -2264,7 +2471,11 @@ def determine_likely_protrusion_start_end_causes(
 
 
 def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=None):
-    rac_membrane_active_per_tstep, rho_membrane_active_per_tstep, uivs_per_node_per_timestep = hardio.get_multiple_data_until_timestep(
+    (
+        rac_membrane_active_per_tstep,
+        rho_membrane_active_per_tstep,
+        uivs_per_node_per_timestep,
+    ) = hardio.get_multiple_data_until_timestep(
         cell_index,
         max_tstep,
         ["rac_membrane_active", "rho_membrane_active", "unit_in_vec"],
@@ -2275,7 +2486,10 @@ def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=No
     normalized_rac_membrane_active_per_tstep = normalize_rgtpase_data_per_tstep(
         rac_membrane_active_per_tstep
     )
-    protrusion_existence_per_tstep, protrusion_directions_per_tstep = determine_protrusion_existence_and_direction(
+    (
+        protrusion_existence_per_tstep,
+        protrusion_directions_per_tstep,
+    ) = determine_protrusion_existence_and_direction(
         normalized_rac_membrane_active_per_tstep,
         rac_membrane_active_per_tstep,
         rho_membrane_active_per_tstep,
@@ -2289,14 +2503,18 @@ def collate_protrusion_data_for_cell(cell_index, T, storefile_path, max_tstep=No
         T, protrusion_node_index_and_tpoint_start_ends, protrusion_directions_per_tstep
     )
 
-    protrusion_group_directions = determine_protrusion_group_directions(
-        T, protrusion_existence_per_tstep, protrusion_directions_per_tstep
+    (
+        all_protrusion_group_directions,
+        polarization_vectors_per_timestep,
+    ) = determine_polarization_vectors_and_protrusion_group_directions(
+        protrusion_existence_per_tstep, protrusion_directions_per_tstep
     )
 
     return (
         protrusion_existence_per_tstep,
         protrusion_lifetime_and_average_directions,
-        protrusion_group_directions,
+        all_protrusion_group_directions,
+        polarization_vectors_per_timestep,
     )
 
 
@@ -2306,7 +2524,12 @@ def collate_protrusion_data(num_cells, T, storefile_path, max_tstep=None):
     protrusion_group_directions_per_cell = []
 
     for cell_index in range(num_cells):
-        protrusion_existence_per_tstep, protrusion_lifetime_and_average_directions, protrusion_group_directions, = collate_protrusion_data_for_cell(
+        (
+            protrusion_existence_per_tstep,
+            protrusion_lifetime_and_average_directions,
+            protrusion_group_directions,
+            _,
+        ) = collate_protrusion_data_for_cell(
             cell_index, T, storefile_path, max_tstep=max_tstep
         )
         protrusion_lifetime_and_average_directions_per_cell.append(
@@ -2533,9 +2756,10 @@ def calculate_simple_intercellular_separations_and_subgroups_per_timestep(
     subgroups_per_timestep = []
     for ti in range(num_timepoints):
         relevant_cell_centroids = all_cell_centroids_per_tstep[ti]
-        intercellular_separations_per_timestep[
-            ti
-        ], subgroups = calculate_simple_intercellular_separations_and_subgroups(
+        (
+            intercellular_separations_per_timestep[ti],
+            subgroups,
+        ) = calculate_simple_intercellular_separations_and_subgroups(
             init_cell_group_separation, relevant_cell_centroids
         )
         subgroups_per_timestep.append(subgroups)
@@ -2649,13 +2873,19 @@ def calculate_normalized_group_area_and_average_cell_separation_over_time(
                     init_delaunay_success = True
             except:
                 delaunay_triangulations_per_tstep.append(None)
-                separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(
+                (
+                    separations,
+                    subgroups,
+                ) = calculate_simple_intercellular_separations_and_subgroups(
                     initial_intercellular_separation, cell_centroids
                 )
                 simple_intercellular_separations_per_tstep.append(separations)
 
             if not init_delaunay_success and get_subgroups:
-                separations, subgroups = calculate_simple_intercellular_separations_and_subgroups(
+                (
+                    separations,
+                    subgroups,
+                ) = calculate_simple_intercellular_separations_and_subgroups(
                     initial_intercellular_separation, cell_centroids
                 )
                 cell_subgroups_per_timestep.append(copy.deepcopy(subgroups))
@@ -3014,7 +3244,7 @@ def calculate_mean_and_deviation(data):
 
 @nb.jit(nopython=True)
 def calculate_cluster_centroid_x_per_tstep_given_all_cell_centroids_per_tstep(
-    all_cell_centroids_per_tstep
+    all_cell_centroids_per_tstep,
 ):
     num_cells = all_cell_centroids_per_tstep.shape[0]
     num_tsteps = all_cell_centroids_per_tstep.shape[1]
@@ -3575,7 +3805,10 @@ def calculate_num_interactions_per_cell_per_tstep(
         ti = relevant_tsteps[xti]
         all_cell_node_positions = all_cell_node_positions_per_tstep[:, ti, :, :]
         all_cell_centroids = all_cell_centroids_per_tstep[:, ti, :]
-        this_tstep_cil_interaction_matrix, this_tstep_coa_interaction_matrix = determine_intercellular_interactions_between_cells(
+        (
+            this_tstep_cil_interaction_matrix,
+            this_tstep_coa_interaction_matrix,
+        ) = determine_intercellular_interactions_between_cells(
             all_cell_node_positions, all_cell_centroids, cil_cutoff, coa_cutoff
         )
 

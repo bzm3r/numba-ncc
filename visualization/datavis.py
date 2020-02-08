@@ -35,7 +35,7 @@ def write_lines_to_file(fp, lines):
 
 
 def show_or_save_fig(
-    fig, figsize, save_dir, base_name, extra_label, figtype="eps", bbox_inches="tight"
+    fig, figsize, save_dir, base_name, extra_label, figtype="pdf", bbox_inches="tight"
 ):
     if save_dir == None:
         plt.show()
@@ -44,17 +44,17 @@ def show_or_save_fig(
         if extra_label != "":
             extra_label = "_{}".format(extra_label)
 
-        if figtype == "eps":
+        if figtype != "png":
             save_path = os.path.join(
-                save_dir, "{}{}".format(base_name, extra_label) + ".eps"
+                save_dir, "{}{}".format(base_name, extra_label) + ".{}".format(figtype)
             )
             print("save_path: ", save_path)
             fig.savefig(
-                save_path, format="eps", forward=True, bbox_inches="tight", dpi=1000
+                save_path, format=figtype, forward=True, bbox_inches="tight", dpi=1000
             )
             plt.close(fig)
             plt.close("all")
-        elif figtype == "png":
+        else:
             save_path = os.path.join(
                 save_dir, "{}{}".format(base_name, extra_label) + ".png"
             )
@@ -752,7 +752,13 @@ def graph_centroid_related_data(
                     marker=".",
                 )
 
-                this_cell_save_dir = os.path.join(save_dir, "cell_{}".format(ci))
+                this_cell_save_dir = os.path.join(
+                    save_dir, "cell_{}".format(ci)
+                )
+
+                if not os.path.exists(this_cell_save_dir):
+                    os.makedirs(this_cell_save_dir)
+
                 show_or_save_fig(
                     fig, (12, 8), this_cell_save_dir, "persistence_time_estimation", ""
                 )
@@ -4774,17 +4780,17 @@ def generate_x_axis_titles_and_labels_for_varying_parameters(
                         if dl in ["COA", "CIL"]:
                             if data == 0.0:
                                 x_labels_components[vi].append("{}{}".format(dl, "-"))
-                            elif data == 1.0:
-                                x_labels_components[vi].append("{}{}".format(dl, "+"))
+                            # elif data == 1.0:
+                            #     x_labels_components[vi].append("{}{}".format(dl, "+"))
                             else:
-                                x_labels_components[vi].append("{}={}".format(dl, data))
+                                x_labels_components[vi].append("{}".format(data))
                         else:
                             x_labels_components[vi].append("{}".format(data))
                             x_axis_title_components.append("{}".format(dl))
                     except:
                         pass
 
-    # x_axis_title = "(" + ", ".join(x_axis_title_components) + ")"
+    x_axis_title = "(" + ", ".join(x_axis_title_components) + ")"
     if len(x_axis_title_components) > 0:
         x_axis_title = x_axis_title_components[0]
     else:
@@ -4860,7 +4866,6 @@ def generate_x_axis_titles_and_labels_for_varying_randomization_parameters(
 
 def graph_simple_chemotaxis_efficiency_data(
     test_variants,
-    test_slope,
     chemotaxis_successes_per_variant_per_num_cells,
     num_experiment_repeats,
     num_cells,
@@ -5273,7 +5278,6 @@ def graph_chemotaxis_group_persistence_time_data(
 
 def graph_chemotaxis_cell_persistence_time_data(
     test_variants,
-    test_slope,
     chemotaxis_cell_persistence_times_per_variant_per_num_cells,
     chemotaxis_cell_persistence_times_std_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -5400,10 +5404,536 @@ def graph_chemotaxis_cell_persistence_time_data(
         "",
     )
 
+def graph_chemotaxis_cell_persistence_time_data_standard_error(
+    test_variants,
+    num_chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+    chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+    chemotaxis_cell_persistence_times_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+            chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+            chemotaxis_cell_persistence_times_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_cpt_per_variant, cpt_per_variant, cpt_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(cpt_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=(cpt_std_per_variant/num_cpt_per_variant),
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("cell persistence times (min.)")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
+    else:
+        ax.set_xticklabels(x_labels)
+    ax.set_xlabel(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_cell_persistence_times_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+        
+def graph_chemotaxis_group_persistence_time_data(
+    test_variants,
+    chemotaxis_group_persistence_times_per_variant_per_num_cells,
+    chemotaxis_group_persistence_times_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        per_variant_space = 0.75 * per_variant_space / 5
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            chemotaxis_group_persistence_times_per_variant_per_num_cells,
+            chemotaxis_group_persistence_times_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        gpt_per_variant, gpt_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(gpt_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            gpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=gpt_std_per_variant,
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("$\mathrm{T_p}$\n(min.)")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
+    else:
+        ax.set_xticklabels(x_labels)
+        ax.legend(
+            loc="upper center",
+            ncol=len(num_cells),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.5),
+        )
+        ax.set_xlabel(x_axis_title)
+    # ax.set_title(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_group_persistence_time_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+def graph_chemotaxis_group_persistence_time_data_standard_error(
+    test_variants,
+    num_group_persistence_time_per_variant_per_num_cells,
+    chemotaxis_group_persistence_times_per_variant_per_num_cells,
+    chemotaxis_group_persistence_times_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        per_variant_space = 0.75 * per_variant_space / 5
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_group_persistence_time_per_variant_per_num_cells,
+            chemotaxis_group_persistence_times_per_variant_per_num_cells,
+            chemotaxis_group_persistence_times_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_gpt_per_variant, gpt_per_variant, gpt_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(gpt_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            gpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_gpt_per_variant, gpt_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("$\mathrm{T_p}$\n(min.)")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
+    else:
+        ax.set_xticklabels(x_labels)
+        ax.legend(
+            loc="upper center",
+            ncol=len(num_cells),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.5),
+        )
+        ax.set_xlabel(x_axis_title)
+    # ax.set_title(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_group_persistence_time_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+
+def graph_chemotaxis_cell_persistence_time_data_standard_error(
+    test_variants,
+    num_chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+    chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+    chemotaxis_cell_persistence_times_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+            chemotaxis_cell_persistence_times_per_variant_per_num_cells,
+            chemotaxis_cell_persistence_times_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_cpt_per_variant, cpt_per_variant, cpt_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(cpt_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cpt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_cpt_per_variant, cpt_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("cell persistence times (min.)")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
+    else:
+        ax.set_xticklabels(x_labels)
+    ax.set_xlabel(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_cell_persistence_times_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
 
 def graph_chemotaxis_protrusion_lifetime_data(
     test_variants,
-    test_slope,
     chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
     chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -5526,16 +6056,138 @@ def graph_chemotaxis_protrusion_lifetime_data(
         "",
     )
 
-
-def graph_chemotaxis_protrusion_lifetime_data_new(
+def graph_chemotaxis_protrusion_lifetime_data_standard_error(
     test_variants,
-    test_slope,
+    num_chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
     chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
     chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells,
     num_experiment_repeats,
     num_cells,
     box_width,
     box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    # matplotlib.rc('text', usetex=True)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
+            chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
+            chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_plt_per_variant, plt_per_variant, plt_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(plt_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            plt_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_plt_per_variant, plt_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("$\mathrm{T_{pr}}$\n(min.)", rotation=0, labelpad=0)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
+    else:
+        ax.set_xticklabels(x_labels)
+        ax.set_xlabel(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_protrusion_lifetime_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+def graph_chemotaxis_protrusion_lifetime_data_new(
+    test_variants,
+    num_chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
+    chemotaxis_protrusion_lifetime_per_variant_per_num_cells,
+    chemotaxis_protrusion_lifetime_std_per_variant_per_num_cells,
+    num_cells,
     save_dir=None,
     fontsize=22,
     info_tag="",
@@ -5853,17 +6505,8 @@ def graph_chemotaxis_cell_velocity_data_changing_cil_coa_variants(
 
 def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
     test_variants,
-    test_slope,
-    num_cells,
-    group_speed_per_variant,
-    group_speed_std_per_variant,
-    group_x_velocity_per_variant,
-    group_x_velocity_std_per_variant,
     group_speeds_fp_per_variant,
     group_x_velocities_fp_per_variant,
-    num_experiment_repeats,
-    box_width,
-    box_height,
     save_dir=None,
     fontsize=22,
     info_tag="",
@@ -5871,121 +6514,144 @@ def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
     font = {"family": "normal", "size": fontsize}
     matplotlib.rc("font", **font)
     # matplotlib.rc('text', usetex=True)
-    fig, ax = plt.subplots()
-    fig_difference, ax_difference = plt.subplots()
     fig_bar, ax_bar = plt.subplots()
+    fig_bar_only_velocity, ax_bar_only_velocity = plt.subplots()
+    fig_bar_only_velocity_no_single_cell, ax_bar_only_velocity_no_single_cell = plt.subplots()
     fig_bar_difference, ax_bar_difference = plt.subplots()
+    fig_bar_difference_only_velocity, ax_bar_difference_only_velocity = plt.subplots()
 
-    # ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
-    xticks = np.array([x for x in range(len(test_variants) + 1)])
-    bar_xticks = np.array([2*(x + 2) for x in range(len(test_variants) + 1)])
     x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
         test_variants
     )
-    bar_x_labels = ["$N_c = 1$"] + x_labels
-    
-    single_group_x_velocity_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_x_velocities_over_all_repeats.npy"
-    single_group_speed_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\all_cell_speeds_over_all_repeats.npy"
-    
-    group_x_velocities_per_variant = np.array([np.load(single_group_x_velocity_fp)] + [np.load(fp) for fp in group_x_velocities_fp_per_variant])
-    group_speeds_per_variant = np.array([np.load(single_group_speed_fp)] + [np.load(fp) for fp in group_speeds_fp_per_variant])
-    
-    destring = lambda x: float(x)
-    destring_vectorized = np.vectorize(destring)
-    group_x_velocity_per_variant = destring_vectorized(group_x_velocity_per_variant)
-    group_x_velocity_std_per_variant = destring_vectorized(group_x_velocity_std_per_variant)
-    group_speed_per_variant = destring_vectorized(group_speed_per_variant)
-    group_speed_std_per_variant = destring_vectorized(group_speed_std_per_variant)
-    
-    ax.errorbar(
-        xticks - 0.1,
-        [np.average(x) for x in group_x_velocities_per_variant],
-        yerr=[np.std(x) for x in group_x_velocities_per_variant],
-        label="$\mathrm{v}_x$",
-        markersize=10,
-        linewidth=3,
-        marker="o",
-        capsize=10,
-        capthick=3,
-        ls="",
+
+    extended_x_labels =  ["$N_c = 1$"] + x_labels
+
+    variant_indices = np.arange(len(test_variants) + 1)
+
+    single_cell_velocity_per_cell_per_timestep_per_repeat_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\cell_velocities_per_cell_per_timestep_per_repeat.npy"
+    single_cell_velocity_per_cell_per_timestep_per_repeat = np.load(single_cell_velocity_per_cell_per_timestep_per_repeat_fp)
+    single_cell_velocity_per_timestep_per_repeat = np.average(single_cell_velocity_per_cell_per_timestep_per_repeat, axis=1)
+    grouped_single_cell_velocity_per_timestep_over_all_repeats = np.average(single_cell_velocity_per_timestep_per_repeat, axis=0)
+    group_x_velocities_per_variant = [np.load(fp) for fp in group_x_velocities_fp_per_variant]
+    group_speeds_per_variant = [np.load(fp) for fp in group_speeds_fp_per_variant]
+
+    group_x_velocities_per_variant_extended = [grouped_single_cell_velocity_per_timestep_over_all_repeats[:, 0]] + [x for x in group_x_velocities_per_variant]
+
+    group_speeds_per_variant_extended = [np.linalg.norm(grouped_single_cell_velocity_per_timestep_over_all_repeats, axis=1)] + [x for x in group_speeds_per_variant]
+
+    avg_group_x_velocities_per_variant_extended = [np.average(x) for x in group_x_velocities_per_variant_extended]
+    std_group_x_velocities_per_variant_extended = [np.std(x) for x in group_x_velocities_per_variant_extended]
+
+    avg_group_speed_per_variant_extended = [np.average(x) for x in group_speeds_per_variant_extended]
+    std_group_speed_per_variant_extended = [np.std(x) for x in group_speeds_per_variant_extended]
+
+    avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x - avg_group_x_velocities_per_variant_extended[0] for x in avg_group_x_velocities_per_variant_extended[1:]]
+    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [np.sqrt(x**2 + std_group_x_velocities_per_variant_extended[0]) for x in std_group_x_velocities_per_variant_extended[1:]]
+
+    avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant = [x - avg_group_speed_per_variant_extended[0] for x in avg_group_speed_per_variant_extended[1:]]
+    std_group_speed_difference_wrt_grouped_single_cells_per_variant = [
+        np.sqrt(x ** 2 + std_group_speed_per_variant_extended[0]) for x in
+        std_group_speed_per_variant_extended[1:]]
+
+    data_per_variant = 2 # speed and velocity
+    per_variant_space = 2.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
     )
-    
-    ax.errorbar(
-        xticks + 0.1,
-        [np.average(x) for x in group_speeds_per_variant],
-        yerr=[np.std(x) for x in group_speeds_per_variant],
-        label="$\mid \mathrm{v} \mid$",
-        markersize=10,
-        linewidth=3,
-        marker="o",
-        capsize=10,
-        capthick=3,
-        ls="",
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
     )
-    
-    ax_difference.errorbar(
-        (xticks - 0.1)[:-1],
-        [np.average(x - np.average(group_x_velocities_per_variant[0])) for x in group_x_velocities_per_variant[1:]],
-        yerr=[np.std(x - np.average(group_x_velocities_per_variant[0])) for x in group_x_velocities_per_variant[1:]],
-        label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
-        markersize=10,
-        linewidth=3,
-        marker="o",
-        capsize=10,
-        capthick=3,
-        ls="",
+
+    speed_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 1
     )
-    
-    ax_difference.errorbar(
-        (xticks + 0.1)[:-1],
-        [np.average(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]],
-        yerr=[np.std(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]],
-        label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid$",
-        markersize=10,
-        linewidth=3,
-        marker="o",
-        capsize=10,
-        capthick=3,
-        ls="",
+
+    velocity_locations = [
+                velocity_data_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    speed_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    speed_difference_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    ax_bar.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width, yerr=std_group_x_velocities_per_variant_extended, color='r', label="$v_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    ax_bar.bar(speed_locations, avg_group_speed_per_variant_extended, width=bar_width, yerr=std_group_speed_per_variant_extended, color='b', label="$\mid v \mid$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+
+    ax_bar_difference.bar(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='r', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    ax_bar_difference.bar(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_speed_difference_wrt_grouped_single_cells_per_variant, color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+
+    ax_bar.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
     )
-    
-#    bp1 = ax_box.boxplot([x for x in group_x_velocities_per_variant], positions=(box_xticks - 0.5), showfliers=False)
-#    bp2 = ax_box.boxplot([x for x in group_speeds_per_variant], positions=(box_xticks + 0.5), showfliers=False)
-    ax_bar.bar(bar_xticks - 0.5, [np.average(x) for x in group_x_velocities_per_variant], yerr=[np.std(x) for x in group_x_velocities_per_variant], color='r', label="$v_x$")
-    ax_bar.bar(bar_xticks + 0.5, [np.average(x) for x in group_speeds_per_variant], yerr=[np.std(x) for x in group_speeds_per_variant], color='b', label="$\mid v \mid$")
-    
-    ax_bar_difference.bar((bar_xticks - 0.5)[:-1], [np.average(x - np.average(group_x_velocities_per_variant[0]) ) for x in group_x_velocities_per_variant[1:]], yerr=[np.std(x) - np.std(group_x_velocities_per_variant[0] - np.average(group_x_velocities_per_variant[0]) ) for x in group_x_velocities_per_variant[1:]], color='r', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$")
-    ax_bar_difference.bar((bar_xticks + 0.5)[:-1], [np.average(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]], yerr=[np.std(x - np.average(group_speeds_per_variant[0])) for x in group_speeds_per_variant[1:]], color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $")
-    
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(bar_x_labels)
-    ax_difference.set_xticks(xticks)
-    ax_difference.set_xticklabels(bar_x_labels[1:])
-    
-    ax.set_xlabel(x_axis_title)
-    ax_difference.set_xlabel(x_axis_title)
-    
-    ax.set_ylabel("($\mu$m/min.)")
-    ax_difference.set_ylabel("($\mu$m/min.)")
-    
-    ax_bar.set_xticks(bar_xticks)
-    ax_bar.set_xticklabels(bar_x_labels)
-    ax_bar.set_title("group")
-    
-    ax_bar_difference.set_xticks(bar_xticks[:-1])
-    ax_bar_difference.set_xticklabels(bar_x_labels[1:])
-    ax_bar_difference.set_title("group (difference)")
-    
+
+    ax_bar_difference.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar.set_xticklabels(extended_x_labels)
+    ax_bar.tick_params(axis='x', which='major', labelsize=fontsize*0.8)
+    ax_bar_difference.set_xticklabels(x_labels)
+    ax_bar_difference.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    top = 2.0
+    ax_bar.set_ylim(bottom=bottom, top=top)
+    ytick_spacing = 0.5
+    ax_bar.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
+    bottom = -2.0
+    top = 2.0
+    ax_bar_difference.set_ylim(bottom=bottom, top=top)
+    ytick_spacing=0.5
+    ax_bar_difference.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
     ax_bar.set_ylabel("($\mu$m/min.)")
     ax_bar.set_xlabel(x_axis_title)
 
-    # ax.set_ylim(bottom=0.0)
+    ax_bar_difference.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference.set_xlabel(x_axis_title)
 
-    ##ax.grid(b=True, which="major", axis="y")
-    ax.legend(loc="best")
-    ax_difference.legend(loc="best")
-    #ax_bar.legend(loc="best")
-    #ax_box.legend([bp1["medians"][0], bp2["medians"][0]], ['$v_x$', '$\mid v \mid$'], loc='best')
+    ax_bar.legend(loc="best")
+    ax_bar_difference.legend(loc="best")
 
     current_time = datetime.datetime.now()
 
@@ -5994,42 +6660,8 @@ def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
         info_tag_dash = "-"
 
     show_or_save_fig(
-        fig,
-        (11, 8),
-        save_dir,
-        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
-            info_tag,
-            info_tag_dash,
-            current_time.year,
-            current_time.month,
-            current_time.day,
-            current_time.hour,
-            current_time.minute,
-            current_time.second,
-        ),
-        "",
-    )
-        
-    show_or_save_fig(
-        fig_difference,
-        (11, 8),
-        save_dir,
-        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_{}-{}-{}-{}-{}-{}".format(
-            info_tag,
-            info_tag_dash,
-            current_time.year,
-            current_time.month,
-            current_time.day,
-            current_time.hour,
-            current_time.minute,
-            current_time.second,
-        ),
-        "",
-    )
-        
-    show_or_save_fig(
         fig_bar,
-        (11, 8),
+        (12, 8),
         save_dir,
         "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
             info_tag,
@@ -6043,10 +6675,10 @@ def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
         ),
         "",
     )
-        
+
     show_or_save_fig(
         fig_bar_difference,
-        (11, 8),
+        (12, 8),
         save_dir,
         "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_{}-{}-{}-{}-{}-{}".format(
             info_tag,
@@ -6061,37 +6693,1303 @@ def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
         "",
     )
 
-    with open(
-        os.path.join(
-            save_dir,
-            "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_text_output_{}-{}-{}-{}-{}-{}.txt".format(
-                info_tag,
-                info_tag_dash,
-                current_time.year,
-                current_time.month,
-                current_time.day,
-                current_time.hour,
-                current_time.minute,
-                current_time.second,
-            ),
+    # ===============================================================
+
+    data_per_variant = 1  # only velocity
+    per_variant_space = 1.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    velocity_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended, color='r', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    ax_bar_only_velocity_no_single_cell.bar(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:],
+                             width=bar_width,
+                             yerr=std_group_x_velocities_per_variant_extended[1:], color='r', label="$v_x$",
+                             capsize=10,
+                             error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='r', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                          capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+
+    ax_bar_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_only_velocity_no_single_cell.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ][:-1]
+    )
+
+    ax_bar_difference_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar_only_velocity.set_xticklabels(extended_x_labels)
+    ax_bar_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_difference_only_velocity.set_xticklabels(extended_x_labels[1:])
+    ax_bar_difference_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_only_velocity_no_single_cell.set_xticklabels(extended_x_labels[1:])
+    ax_bar_only_velocity_no_single_cell.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    # top = 2.5
+    ax_bar_only_velocity.set_ylim(bottom=bottom)
+    # ytick_spacing = 0.5
+    # ax_bar_only_velocity.set_yticks(
+    #     bottom + ytick_spacing * np.arange(int((bottom - top) / ytick_spacing) + 1))
+
+    bottom = 0.0
+    # top = 2.0
+    ax_bar_only_velocity_no_single_cell.set_ylim(bottom=bottom)
+    # ytick_spacing = 0.5
+    # ax_bar_only_velocity_no_single_cell.set_yticks(
+    #     bottom + ytick_spacing * np.arange(int((bottom - top) / ytick_spacing) + 1))
+
+    bottom = -1.5
+    top = 1.5
+    ax_bar_difference_only_velocity.set_ylim(bottom=-1.5, top=1.5)
+    ytick_spacing = 0.5
+    ax_bar_difference_only_velocity.set_yticks(
+        -1.5 + 0.5 * np.arange(int(3 / 0.5) + 1))
+
+    ax_bar_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity_no_single_cell.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity_no_single_cell.set_xlabel(x_axis_title)
+
+    ax_bar_difference_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity.legend(loc="best")
+    ax_bar_only_velocity_no_single_cell.legend(loc="best")
+    ax_bar_difference_only_velocity.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
         ),
-        "w",
-    ) as f:
-        f.write(
-            "(variant, group speed): {}".format(
-                [
-                    e
-                    for e in zip(
-                        test_variants, [np.round(e, 2) for e in group_x_velocity_per_variant]
-                    )
-                ]
-            )
-            + "\n"
-        )
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_only_velocity_no_single_cell,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_no_single_cells{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_only_velocity_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_standard_error(
+    test_variants,
+    group_speeds_fp_per_variant,
+    group_x_velocities_fp_per_variant,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig_bar, ax_bar = plt.subplots()
+    fig_bar_only_velocity, ax_bar_only_velocity = plt.subplots()
+    fig_bar_only_velocity_no_single_cell, ax_bar_only_velocity_no_single_cell = plt.subplots()
+    fig_bar_difference, ax_bar_difference = plt.subplots()
+    fig_bar_difference_only_velocity, ax_bar_difference_only_velocity = plt.subplots()
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    extended_x_labels =  ["$N_c = 1$"] + x_labels
+
+    variant_indices = np.arange(len(test_variants) + 1)
+
+    single_cell_velocity_per_cell_per_timestep_per_repeat_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\cell_velocities_per_cell_per_timestep_per_repeat.npy"
+    single_cell_velocity_per_cell_per_timestep_per_repeat = np.load(single_cell_velocity_per_cell_per_timestep_per_repeat_fp)
+    single_cell_velocity_per_timestep_per_repeat = np.average(single_cell_velocity_per_cell_per_timestep_per_repeat, axis=1)
+    grouped_single_cell_velocity_per_timestep_over_all_repeats = np.average(single_cell_velocity_per_timestep_per_repeat, axis=0)
+    group_x_velocities_per_variant = [np.load(fp) for fp in group_x_velocities_fp_per_variant]
+    group_speeds_per_variant = [np.load(fp) for fp in group_speeds_fp_per_variant]
+
+    group_x_velocities_per_variant_extended = [grouped_single_cell_velocity_per_timestep_over_all_repeats[:, 0]] + [x for x in group_x_velocities_per_variant]
+
+    num_group_x_velocities_per_variant_extended = [x.shape[0] for x in group_x_velocities_per_variant_extended]
+
+    group_speeds_per_variant_extended = [np.linalg.norm(grouped_single_cell_velocity_per_timestep_over_all_repeats, axis=1)] + [x for x in group_speeds_per_variant]
+
+    num_group_speed_per_variant_extended = [x.shape[0] for x in group_speeds_per_variant_extended]
+
+    avg_group_x_velocities_per_variant_extended = [np.average(x) for x in group_x_velocities_per_variant_extended]
+    std_group_x_velocities_per_variant_extended = [np.std(x) for x in group_x_velocities_per_variant_extended]
+
+    avg_group_speed_per_variant_extended = [np.average(x) for x in group_speeds_per_variant_extended]
+    std_group_speed_per_variant_extended = [np.std(x) for x in group_speeds_per_variant_extended]
+
+    num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x for x in num_group_x_velocities_per_variant_extended[1:]]
+    avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x - avg_group_x_velocities_per_variant_extended[0] for x in avg_group_x_velocities_per_variant_extended[1:]]
+    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [np.sqrt(x**2 + std_group_x_velocities_per_variant_extended[0]) for x in std_group_x_velocities_per_variant_extended[1:]]
+
+    num_group_speed_difference_wrt_grouped_single_cells_per_variant = [x.shape[0] for x in group_speeds_per_variant_extended[1:]]
+    avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant = [x - avg_group_speed_per_variant_extended[0] for x in avg_group_speed_per_variant_extended[1:]]
+    std_group_speed_difference_wrt_grouped_single_cells_per_variant = [
+        np.sqrt(x ** 2 + std_group_speed_per_variant_extended[0]) for x in
+        std_group_speed_per_variant_extended[1:]]
+
+    data_per_variant = 2 # speed and velocity
+    per_variant_space = 2.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    speed_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 1
+    )
+
+    velocity_locations = [
+                velocity_data_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    speed_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    speed_difference_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    # =========================================
+    ax_bar.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended,
+               color='#ff7d0cff', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=0.0, yerr=[2.576*y/np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended, std_group_x_velocities_per_variant_extended)], color='#ff7d0cff', label="$v_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'},)
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[i]/np.sqrt(num_group_x_velocities_per_variant_extended[i])))
+    # =========================================
+    ax_bar.bar(speed_locations, avg_group_speed_per_variant_extended, width=bar_width, yerr=std_group_speed_per_variant_extended, color='#1e75b3ff', label="$\mid v \mid$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar.bar(speed_locations, avg_group_speed_per_variant_extended, width=0.0, yerr=[2.576*y / np.sqrt(x) for x, y in
+                                                                                             zip(
+                                                                                                 num_group_speed_per_variant_extended,
+                                                                                                 std_group_speed_per_variant_extended)],
+               color='#1e75b3ff', label="$\mid v \mid$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+    for i, x_y in enumerate(zip(speed_locations, avg_group_speed_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y, "N={}".format(num_group_speed_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(speed_locations, avg_group_speed_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y + 0.3, "SE={0:.3g}".format(std_group_speed_per_variant_extended[i]/np.sqrt(num_group_speed_per_variant_extended[i])))
+    # =========================================
+    ax_bar_difference.bar(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar_difference.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=0.0,
+                          yerr=[2.576*y / np.sqrt(x) for x, y in
+                                zip(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+                                    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)],
+                          color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$", capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y, "N={}".format(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+    ax_bar_difference.bar(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_speed_difference_wrt_grouped_single_cells_per_variant, color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar_difference.bar(speed_difference_locations,
+                          avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant, width=0.0,
+                          yerr=[2.576*y / np.sqrt(x) for x, y in
+                                zip(num_group_speed_difference_wrt_grouped_single_cells_per_variant,
+                                    std_group_speed_difference_wrt_grouped_single_cells_per_variant)], color='b',
+                          label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $", capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y, "N={}".format(num_group_speed_difference_wrt_grouped_single_cells_per_variant[i]))
+
+    for i, x_y in enumerate(zip(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y + 0.3, "SE={0:.3g}".format(std_group_speed_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_speed_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+
+    ax_bar.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_difference.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar.set_xticklabels(extended_x_labels)
+    ax_bar.tick_params(axis='x', which='major', labelsize=fontsize*0.8)
+    ax_bar_difference.set_xticklabels(x_labels)
+    ax_bar_difference.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    top = 2.0
+    ax_bar.set_ylim(bottom=bottom, top=top)
+    ytick_spacing = 0.5
+    ax_bar.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
+    bottom = -2.0
+    top = 2.0
+    ax_bar_difference.set_ylim(bottom=bottom, top=top)
+    ytick_spacing=0.5
+    ax_bar_difference.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    ax_bar_difference.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference.set_xlabel(x_axis_title)
+
+    ax_bar.legend(loc="best")
+    ax_bar_difference.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    # ===============================================================
+
+    data_per_variant = 1  # only velocity
+    per_variant_space = 1.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    velocity_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    # =========================================
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended, color='#ff7d0cff', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=0.0,
+                             yerr=[2.576*y / np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended,
+                                                                  std_group_x_velocities_per_variant_extended)],
+                             color='#ff7d0cff', label="$v_x$", capsize=10,
+                             error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar_only_velocity.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar_only_velocity.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[i]/np.sqrt(num_group_x_velocities_per_variant_extended[i])))
+    # =========================================
+    ax_bar_only_velocity_no_single_cell.bar(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:],
+                             width=bar_width,
+                             yerr=std_group_x_velocities_per_variant_extended[1:], color='#ff7d0cff', label="$v_x$",
+                             capsize=10,
+                             error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_only_velocity_no_single_cell.bar(velocity_difference_locations,
+                                            avg_group_x_velocities_per_variant_extended[1:],
+                                            width=0.0,
+                                            yerr=[2.576*y/np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended[1:], std_group_x_velocities_per_variant_extended[1:])],
+                                            color='#ff7d0cff', label="$v_x$",
+                                            capsize=10,
+                                            error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:])):
+        x, y = x_y
+        ax_bar_only_velocity_no_single_cell.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[1:][i]))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:])):
+        x, y = x_y
+        ax_bar_only_velocity_no_single_cell.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[1:][i]/np.sqrt(num_group_x_velocities_per_variant_extended[1:][i])))
+    # =========================================
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                          capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                                        avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+                                        width=0.0, yerr=[2.576*y / np.sqrt(x) for x, y in zip(
+            num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+            std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)], color='#ff7d0cff',
+                                        label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                                        capsize=10,
+                                        error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference_only_velocity.text(x, y, "N={}".format(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference_only_velocity.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+
+    ax_bar_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_only_velocity_no_single_cell.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ][:-1]
+    )
+
+    ax_bar_difference_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar_only_velocity.set_xticklabels(extended_x_labels)
+    ax_bar_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_difference_only_velocity.set_xticklabels(extended_x_labels[1:])
+    ax_bar_difference_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_only_velocity_no_single_cell.set_xticklabels(extended_x_labels[1:])
+    ax_bar_only_velocity_no_single_cell.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    ax_bar_only_velocity.set_ylim(bottom=bottom)
+    bottom = 0.0
+    ax_bar_only_velocity_no_single_cell.set_ylim(bottom=bottom)
+
+    ax_bar_difference_only_velocity.set_ylim(bottom=-1.5, top=1.5)
+    ax_bar_difference_only_velocity.set_yticks(
+        -1.5 + 0.5 * np.arange(int(3 / 0.5) + 1))
+
+    ax_bar_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity_no_single_cell.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity_no_single_cell.set_xlabel(x_axis_title)
+
+    ax_bar_difference_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity.legend(loc="best")
+    ax_bar_only_velocity_no_single_cell.legend(loc="best")
+    ax_bar_difference_only_velocity.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_only_velocity_no_single_cell,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_no_single_cells_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_only_velocity_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_standard_error(
+    test_variants,
+    group_speeds_fp_per_variant,
+    group_x_velocities_fp_per_variant,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig_bar, ax_bar = plt.subplots()
+    fig_bar_only_velocity, ax_bar_only_velocity = plt.subplots()
+    fig_bar_only_velocity_no_single_cell, ax_bar_only_velocity_no_single_cell = plt.subplots()
+    fig_bar_difference, ax_bar_difference = plt.subplots()
+    fig_bar_difference_only_velocity, ax_bar_difference_only_velocity = plt.subplots()
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    extended_x_labels =  ["$N_c = 1$"] + x_labels
+
+    variant_indices = np.arange(len(test_variants) + 1)
+
+    single_cell_velocity_per_cell_per_timestep_per_repeat_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\cell_velocities_per_cell_per_timestep_per_repeat.npy"
+    single_cell_velocity_per_cell_per_timestep_per_repeat = np.load(single_cell_velocity_per_cell_per_timestep_per_repeat_fp)
+    single_cell_velocity_per_timestep_per_repeat = np.average(single_cell_velocity_per_cell_per_timestep_per_repeat, axis=1)
+    grouped_single_cell_velocity_per_timestep_over_all_repeats = np.average(single_cell_velocity_per_timestep_per_repeat, axis=0)
+    group_x_velocities_per_variant = [np.load(fp) for fp in group_x_velocities_fp_per_variant]
+    group_speeds_per_variant = [np.load(fp) for fp in group_speeds_fp_per_variant]
+
+    group_x_velocities_per_variant_extended = [grouped_single_cell_velocity_per_timestep_over_all_repeats[:, 0]] + [x for x in group_x_velocities_per_variant]
+
+    num_group_x_velocities_per_variant_extended = [x.shape[0] for x in group_x_velocities_per_variant_extended]
+
+    group_speeds_per_variant_extended = [np.linalg.norm(grouped_single_cell_velocity_per_timestep_over_all_repeats, axis=1)] + [x for x in group_speeds_per_variant]
+
+    num_group_speed_per_variant_extended = [x.shape[0] for x in group_speeds_per_variant_extended]
+
+    avg_group_x_velocities_per_variant_extended = [np.average(x) for x in group_x_velocities_per_variant_extended]
+    std_group_x_velocities_per_variant_extended = [np.std(x) for x in group_x_velocities_per_variant_extended]
+
+    avg_group_speed_per_variant_extended = [np.average(x) for x in group_speeds_per_variant_extended]
+    std_group_speed_per_variant_extended = [np.std(x) for x in group_speeds_per_variant_extended]
+
+    num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x for x in num_group_x_velocities_per_variant_extended[1:]]
+    avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x - avg_group_x_velocities_per_variant_extended[0] for x in avg_group_x_velocities_per_variant_extended[1:]]
+    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [np.sqrt(x**2 + std_group_x_velocities_per_variant_extended[0]) for x in std_group_x_velocities_per_variant_extended[1:]]
+
+    num_group_speed_difference_wrt_grouped_single_cells_per_variant = [x.shape[0] for x in group_speeds_per_variant_extended[1:]]
+    avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant = [x - avg_group_speed_per_variant_extended[0] for x in avg_group_speed_per_variant_extended[1:]]
+    std_group_speed_difference_wrt_grouped_single_cells_per_variant = [
+        np.sqrt(x ** 2 + std_group_speed_per_variant_extended[0]) for x in
+        std_group_speed_per_variant_extended[1:]]
+
+    data_per_variant = 2 # speed and velocity
+    per_variant_space = 2.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    speed_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 1
+    )
+
+    velocity_locations = [
+                velocity_data_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    speed_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    speed_difference_locations = [
+        speed_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    # =========================================
+    ax_bar.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended,
+               color='#ff7d0cff', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=0.0, yerr=[2.576*y/np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended, std_group_x_velocities_per_variant_extended)], color='#ff7d0cff', label="$v_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'},)
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[i]/np.sqrt(num_group_x_velocities_per_variant_extended[i])))
+    # =========================================
+    ax_bar.bar(speed_locations, avg_group_speed_per_variant_extended, width=bar_width, yerr=std_group_speed_per_variant_extended, color='#1e75b3ff', label="$\mid v \mid$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar.bar(speed_locations, avg_group_speed_per_variant_extended, width=0.0, yerr=[2.576*y / np.sqrt(x) for x, y in
+                                                                                             zip(
+                                                                                                 num_group_speed_per_variant_extended,
+                                                                                                 std_group_speed_per_variant_extended)],
+               color='#1e75b3ff', label="$\mid v \mid$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+    for i, x_y in enumerate(zip(speed_locations, avg_group_speed_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y, "N={}".format(num_group_speed_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(speed_locations, avg_group_speed_per_variant_extended)):
+        x, y = x_y
+        ax_bar.text(x, y + 0.3, "SE={0:.3g}".format(std_group_speed_per_variant_extended[i]/np.sqrt(num_group_speed_per_variant_extended[i])))
+    # =========================================
+    ax_bar_difference.bar(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar_difference.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=0.0,
+                          yerr=[2.576*y / np.sqrt(x) for x, y in
+                                zip(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+                                    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)],
+                          color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$", capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y, "N={}".format(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+    ax_bar_difference.bar(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_speed_difference_wrt_grouped_single_cells_per_variant, color='b', label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $", capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},)
+    # ---------------------
+    ax_bar_difference.bar(speed_difference_locations,
+                          avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant, width=0.0,
+                          yerr=[2.576*y / np.sqrt(x) for x, y in
+                                zip(num_group_speed_difference_wrt_grouped_single_cells_per_variant,
+                                    std_group_speed_difference_wrt_grouped_single_cells_per_variant)], color='b',
+                          label="$\mid \mathrm{v} \mid - \mid \mathrm{v}^{N_c = 1} \mid $", capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y, "N={}".format(num_group_speed_difference_wrt_grouped_single_cells_per_variant[i]))
+
+    for i, x_y in enumerate(zip(speed_difference_locations, avg_group_speed_difference_wrt_to_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference.text(x, y + 0.3, "SE={0:.3g}".format(std_group_speed_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_speed_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+
+    ax_bar.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_difference.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar.set_xticklabels(extended_x_labels)
+    ax_bar.tick_params(axis='x', which='major', labelsize=fontsize*0.8)
+    ax_bar_difference.set_xticklabels(x_labels)
+    ax_bar_difference.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    top = 2.0
+    ax_bar.set_ylim(bottom=bottom, top=top)
+    ytick_spacing = 0.5
+    ax_bar.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
+    bottom = -2.0
+    top = 2.0
+    ax_bar_difference.set_ylim(bottom=bottom, top=top)
+    ytick_spacing=0.5
+    ax_bar_difference.set_yticks(bottom + ytick_spacing*np.arange(int((top - bottom)/ytick_spacing) + 1))
+
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    ax_bar_difference.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference.set_xlabel(x_axis_title)
+
+    ax_bar.legend(loc="best")
+    ax_bar_difference.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    # ===============================================================
+
+    data_per_variant = 1  # only velocity
+    per_variant_space = 1.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    velocity_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    # =========================================
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended, color='#ff7d0cff', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=0.0,
+                             yerr=[2.576*y / np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended,
+                                                                  std_group_x_velocities_per_variant_extended)],
+                             color='#ff7d0cff', label="$v_x$", capsize=10,
+                             error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar_only_velocity.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[i]))
+
+    for i, x_y in enumerate(zip(velocity_locations, avg_group_x_velocities_per_variant_extended)):
+        x, y = x_y
+        ax_bar_only_velocity.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[i]/np.sqrt(num_group_x_velocities_per_variant_extended[i])))
+    # =========================================
+    ax_bar_only_velocity_no_single_cell.bar(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:],
+                             width=bar_width,
+                             yerr=std_group_x_velocities_per_variant_extended[1:], color='#ff7d0cff', label="$v_x$",
+                             capsize=10,
+                             error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_only_velocity_no_single_cell.bar(velocity_difference_locations,
+                                            avg_group_x_velocities_per_variant_extended[1:],
+                                            width=0.0,
+                                            yerr=[2.576*y/np.sqrt(x) for x, y in zip(num_group_x_velocities_per_variant_extended[1:], std_group_x_velocities_per_variant_extended[1:])],
+                                            color='#ff7d0cff', label="$v_x$",
+                                            capsize=10,
+                                            error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:])):
+        x, y = x_y
+        ax_bar_only_velocity_no_single_cell.text(x, y, "N={}".format(num_group_x_velocities_per_variant_extended[1:][i]))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocities_per_variant_extended[1:])):
+        x, y = x_y
+        ax_bar_only_velocity_no_single_cell.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocities_per_variant_extended[1:][i]/np.sqrt(num_group_x_velocities_per_variant_extended[1:][i])))
+    # =========================================
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                          capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                                        avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+                                        width=0.0, yerr=[2.576*y / np.sqrt(x) for x, y in zip(
+            num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+            std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)], color='#ff7d0cff',
+                                        label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                                        capsize=10,
+                                        error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference_only_velocity.text(x, y, "N={}".format(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant))
+
+    for i, x_y in enumerate(zip(velocity_difference_locations, avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant)):
+        x, y = x_y
+        ax_bar_difference_only_velocity.text(x, y + 0.3, "SE={0:.3g}".format(std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]/np.sqrt(num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i])))
+    # =========================================
+
+    ax_bar_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_only_velocity_no_single_cell.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ][:-1]
+    )
+
+    ax_bar_difference_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar_only_velocity.set_xticklabels(extended_x_labels)
+    ax_bar_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_difference_only_velocity.set_xticklabels(extended_x_labels[1:])
+    ax_bar_difference_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_only_velocity_no_single_cell.set_xticklabels(extended_x_labels[1:])
+    ax_bar_only_velocity_no_single_cell.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    ax_bar_only_velocity.set_ylim(bottom=bottom)
+    bottom = 0.0
+    ax_bar_only_velocity_no_single_cell.set_ylim(bottom=bottom)
+
+    ax_bar_difference_only_velocity.set_ylim(bottom=-1.5, top=1.5)
+    ax_bar_difference_only_velocity.set_yticks(
+        -1.5 + 0.5 * np.arange(int(3 / 0.5) + 1))
+
+    ax_bar_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity_no_single_cell.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity_no_single_cell.set_xlabel(x_axis_title)
+
+    ax_bar_difference_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity.legend(loc="best")
+    ax_bar_only_velocity_no_single_cell.legend(loc="best")
+    ax_bar_difference_only_velocity.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_only_velocity_no_single_cell,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_no_single_cells_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_only_velocity_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+def determine_bootstrap_mean_ci(sample, c, num_bootstraps=1000):
+    bootstrap_means = np.zeros(num_bootstraps, dtype=np.float64)
+    sample_mean = np.average(sample)
+
+    for ni in range(num_bootstraps):
+        bootstrap_sample = np.random.choice(sample, size=sample.shape[0], replace=True)
+        bootstrap_means[ni] = np.average(bootstrap_sample) - sample_mean
+
+    dc = 0.5*(1.0 - c)
+    ci = np.quantile(bootstrap_means, [dc, 1.0 - dc])
+
+    return ci
+
+def graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_standard_error_bootstrap(
+    test_variants,
+    group_x_velocities_fp_per_variant,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+    c=0.95,
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig_bar_only_velocity, ax_bar_only_velocity = plt.subplots()
+    fig_bar_difference_only_velocity, ax_bar_difference_only_velocity = plt.subplots()
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    extended_x_labels =  ["$N_c = 1$"] + x_labels
+
+    variant_indices = np.arange(len(test_variants) + 1)
+
+    single_cell_velocity_per_cell_per_timestep_per_repeat_fp = r"B:\numba-ncc\output\2019_FEB_26\SET=1\ch_0_NC=(1, 1, 1, 0.5)_COA=24.0_CIL=60.0-CS=L-625.0-7.5-0.0005-COAd=0.0-Shield=False_S=None-rand-m-(t=40.0-tv=0.1-mag=10.0-np=0.25)\cell_velocities_per_cell_per_timestep_per_repeat.npy"
+    single_cell_velocity_per_cell_per_timestep_per_repeat = np.load(single_cell_velocity_per_cell_per_timestep_per_repeat_fp)
+    single_cell_velocity_per_timestep_per_repeat = np.average(single_cell_velocity_per_cell_per_timestep_per_repeat, axis=1)
+    grouped_single_cell_velocity_per_timestep_over_all_repeats = np.average(single_cell_velocity_per_timestep_per_repeat, axis=0)
+    group_x_velocities_per_variant = [np.load(fp) for fp in group_x_velocities_fp_per_variant]
+
+    group_x_velocities_per_variant_extended = [grouped_single_cell_velocity_per_timestep_over_all_repeats[:, 0]] + [x for x in group_x_velocities_per_variant]
+    avg_grouped_single_cell_x_velocity = np.average(group_x_velocities_per_variant_extended[0])
+    group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant = [x - avg_grouped_single_cell_x_velocity for x in group_x_velocities_per_variant]
+
+    std_err_group_x_velocities_per_variant_extended = [determine_bootstrap_mean_ci(x, 0.99, num_bootstraps=10000) for x in group_x_velocities_per_variant_extended]
+    std_err_group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant = np.array([determine_bootstrap_mean_ci(x, 0.99, num_bootstraps=10000) for x in group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant])
+
+    num_group_x_velocities_per_variant_extended = [x.shape[0] for x in group_x_velocities_per_variant_extended]
+
+    avg_group_x_velocities_per_variant_extended = [np.average(x) for x in group_x_velocities_per_variant_extended]
+    std_group_x_velocities_per_variant_extended = [np.std(x) for x in group_x_velocities_per_variant_extended]
+
+    num_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x for x in num_group_x_velocities_per_variant_extended[1:]]
+    avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [x - avg_group_x_velocities_per_variant_extended[0] for x in avg_group_x_velocities_per_variant_extended[1:]]
+    std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant = [np.sqrt(x**2 + std_group_x_velocities_per_variant_extended[0]) for x in std_group_x_velocities_per_variant_extended[1:]]
+
+    # ===============================================================
+
+    data_per_variant = 1  # only velocity
+    per_variant_space = 1.0
+    between_variant_space = 0.4
+    within_variant_total_bar_space = 0.75 * per_variant_space
+
+    bar_width = within_variant_total_bar_space / data_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+            data_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    velocity_data_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * 0
+    )
+
+    velocity_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices
+    ]
+
+    velocity_difference_locations = [
+        velocity_data_initial_offset
+        + (per_variant_space + between_variant_space) * j
+        for j in variant_indices[:-1]
+    ]
+
+    # =========================================
+    ax_bar_only_velocity.bar(velocity_locations, avg_group_x_velocities_per_variant_extended, width=bar_width,
+               yerr=std_group_x_velocities_per_variant_extended, color='#ff7d0cff', label="$v_x$", capsize=10,
+               error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+
+    # =========================================
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                          avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, width=bar_width, yerr=std_group_x_velocity_difference_wrt_grouped_single_cells_per_variant, color='#ff7d0cff', label="$\mathrm{v}_x - \mathrm{v}^{N_c = 1}_x$",
+                          capsize=10,
+                          error_kw={"elinewidth": 2.0, "capthick": 2.0}, )
+    # ---------------------
+    ax_bar_difference_only_velocity.bar(velocity_difference_locations,
+                                        avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant,
+                                        width=0.0, yerr=[std_err_group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant[:,0], std_err_group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant[:,1]], color='#ff7d0cff',
+                                        capsize=10,
+                                        error_kw={"elinewidth": 2.0, "capthick": 2.0, "ecolor": 'r'}, )
+
+    for i, std_err in enumerate(std_err_group_x_velocity_differences_wrt_avg_grouped_single_cells_per_variant):
+        x = velocity_difference_locations[i]
+        y = avg_group_x_velocity_difference_wrt_grouped_single_cells_per_variant[i]
+        ax_bar_difference_only_velocity.text(x, y + 0.3, "CI=[{}, {}]".format(std_err[0], std_err[1]))
+    # =========================================
+
+    ax_bar_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices
+        ]
+    )
+
+    ax_bar_difference_only_velocity.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in variant_indices[:-1]
+        ]
+    )
+    ax_bar_only_velocity.set_xticklabels(extended_x_labels)
+    ax_bar_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    ax_bar_difference_only_velocity.set_xticklabels(extended_x_labels[1:])
+    ax_bar_difference_only_velocity.tick_params(axis='x', which='major', labelsize=fontsize * 0.8)
+
+    bottom = 0.0
+    ax_bar_only_velocity.set_ylim(bottom=bottom)
+    bottom = 0.0
+
+    ax_bar_difference_only_velocity.set_ylim(bottom=-1.5, top=1.5)
+    ax_bar_difference_only_velocity.set_yticks(
+        -1.5 + 0.5 * np.arange(int(3 / 0.5) + 1))
+
+    ax_bar_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_difference_only_velocity.set_ylabel("($\mu$m/min.)")
+    ax_bar_difference_only_velocity.set_xlabel(x_axis_title)
+
+    ax_bar_only_velocity.legend(loc="best")
+    ax_bar_difference_only_velocity.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig_bar_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_bars_only_velocity_SE_bootstrap_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar_difference_only_velocity,
+        (12, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_difference_data_changing_cil_coa_variants_bars_only_velocity_SE_bootstrap_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
 
 def graph_chemotaxis_group_velocity_data_changing_num_cells(
 	test_variants,
-	test_slope,
 	num_cells,
     group_speed_per_num_cells,
     group_speed_std_per_num_cells,
@@ -6099,9 +7997,6 @@ def graph_chemotaxis_group_velocity_data_changing_num_cells(
     group_x_velocity_std_per_num_cells,
     group_speeds_fp_per_num_cells,
     group_x_velocities_fp_per_num_cells,
-    num_experiment_repeats,
-    box_width,
-    box_height,
     save_dir=None,
     fontsize=22,
     info_tag="",
@@ -6114,7 +8009,7 @@ def graph_chemotaxis_group_velocity_data_changing_num_cells(
 
     # ax.plot(num_cells, group_speed_per_num_cells, marker=".", label="group speed")
     xticks = np.array([x for x in range(len(num_cells))])
-    bar_xticks = np.array([2*(x + 2) for x in range(len(num_cells) + 1)])
+    bar_xticks = np.array([2*(x + 2) for x in range(len(num_cells))])
     x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
         test_variants
     )
@@ -6248,9 +8143,131 @@ def graph_chemotaxis_group_velocity_data_changing_num_cells(
             + "\n"
         )
 
+
+def graph_chemotaxis_group_velocity_data_changing_num_cells_standard_error(
+        test_variants,
+        num_cells,
+        num_group_speed_per_num_cells,
+        group_speed_per_num_cells,
+        group_speed_std_per_num_cells,
+        num_group_x_velocity_per_num_cells,
+        group_x_velocity_per_num_cells,
+        group_x_velocity_std_per_num_cells,
+        group_speeds_fp_per_num_cells,
+        group_x_velocities_fp_per_num_cells,
+        save_dir=None,
+        fontsize=22,
+        info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+    fig_bar, ax_bar = plt.subplots()
+
+    xticks = np.array([x for x in range(len(num_cells))])
+    bar_xticks = np.array([2 * (x + 2) for x in range(len(num_cells))])
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(x_labels)
+
+    group_x_velocities_per_num_cells = np.array([np.load(fp) for fp in group_x_velocities_fp_per_num_cells])
+    group_speeds_per_num_cells = np.array([np.load(fp) for fp in group_speeds_fp_per_num_cells])
+
+    destring = lambda x: float(x)
+    destring_vectorized = np.vectorize(destring)
+    group_x_velocity_per_num_cells = destring_vectorized(group_x_velocity_per_num_cells)
+    group_x_velocity_std_per_num_cells = destring_vectorized(group_x_velocity_std_per_num_cells)
+    group_speed_per_num_cells = destring_vectorized(group_speed_per_num_cells)
+    group_speed_std_per_num_cells = destring_vectorized(group_speed_std_per_num_cells)
+
+    ax.errorbar(
+        xticks,
+        group_x_velocity_per_num_cells,
+        yerr=[y/np.sqrt(x) for x, y in zip(num_group_x_velocity_per_num_cells, group_x_velocity_std_per_num_cells)],
+        label="$\mathrm{v}_x$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+
+    ax.errorbar(
+        xticks,
+        group_speed_per_num_cells,
+        yerr=[y/np.sqrt(x) for x, y in zip(num_group_speed_per_num_cells, group_speed_std_per_num_cells)],
+        label="$\mid \mathrm{v} \mid$",
+        markersize=10,
+        linewidth=3,
+        marker="o",
+        capsize=10,
+        capthick=3,
+        ls="",
+    )
+
+    ax_bar.bar(bar_xticks - 0.5, [np.average(x) for x in group_x_velocities_per_num_cells],
+               yerr=[np.std(x) for x in group_x_velocities_per_num_cells], color='r', label="$v_x$")
+    ax_bar.bar(bar_xticks + 0.5, [np.average(x) for x in group_speeds_per_num_cells],
+               yerr=[np.std(x) for x in group_speeds_per_num_cells], color='b', label="$\mid v \mid$")
+
+    ax_bar.set_xticks(bar_xticks)
+    ax_bar.set_xticklabels(x_labels)
+    ax_bar.set_title("group")
+
+    ax.set_ylabel("($\mu$m/min.)")
+    ax.set_xlabel(x_axis_title)
+
+    ax_bar.set_ylabel("($\mu$m/min.)")
+    ax_bar.set_xlabel(x_axis_title)
+
+    ax.legend(loc="best")
+
+    current_time = datetime.datetime.now()
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+
+    show_or_save_fig(
+        fig,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_num_cells_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
+    show_or_save_fig(
+        fig_bar,
+        (11, 8),
+        save_dir,
+        "{}{}graph_chemotaxis_group_velocity_data_changing_num_cells_bars_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            current_time.year,
+            current_time.month,
+            current_time.day,
+            current_time.hour,
+            current_time.minute,
+            current_time.second,
+        ),
+        "",
+    )
+
 def graph_chemotaxis_group_persistence_ratio_data(
     test_variants,
-    test_slope,
     group_persistence_ratio_per_variant_per_num_cells,
     group_persistence_ratio_std_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -6263,7 +8280,6 @@ def graph_chemotaxis_group_persistence_ratio_data(
 ):
     font = {"family": "normal", "size": fontsize}
     matplotlib.rc("font", **font)
-    # matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots()
 
     per_variant_space = 1.0
@@ -6383,10 +8399,140 @@ def graph_chemotaxis_group_persistence_ratio_data(
         "",
     )
 
+def graph_chemotaxis_group_persistence_ratio_data_standard_error(
+    test_variants,
+    num_group_persistence_ratio_per_variant_per_num_cells,
+    group_persistence_ratio_per_variant_per_num_cells,
+    group_persistence_ratio_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        per_variant_space = 0.75 * per_variant_space / 5
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_group_persistence_ratio_per_variant_per_num_cells,
+            group_persistence_ratio_per_variant_per_num_cells,
+            group_persistence_ratio_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_gpr_per_variant, gpr_per_variant, gpr_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(gpr_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            if group_index == 0:
+                label = "$\mathrm{N_c}$=" + "{}".format(nc)
+            else:
+                label = "{}".format(nc)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            gpr_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_gpr_per_variant, gpr_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("$\mathrm{R_p}$", rotation=0, labelpad=50)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+        ax.set_xlabel("$\mathrm{N_c}$")
+    else:
+        ax.set_xticklabels(x_labels)
+        ax.legend(
+            loc="upper center",
+            ncol=len(num_cells),
+            fontsize=fontsize,
+            bbox_to_anchor=(0.5, 1.5),
+        )
+        ax.set_xlabel(x_axis_title)
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_group_persistence_ratio_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
 
 def graph_chemotaxis_cell_persistence_ratio_data(
     test_variants,
-    test_slope,
     cell_persistence_ratio_per_variant_per_num_cells,
     cell_persistence_ratio_std_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -6513,10 +8659,137 @@ def graph_chemotaxis_cell_persistence_ratio_data(
         "",
     )
 
+def graph_chemotaxis_cell_persistence_ratio_data_standard_error(
+    test_variants,
+    num_cell_persistence_ratio_per_variant_per_num_cells,
+    cell_persistence_ratio_per_variant_per_num_cells,
+    cell_persistence_ratio_std_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_cell_persistence_ratio_per_variant_per_num_cells,
+            cell_persistence_ratio_per_variant_per_num_cells,
+            cell_persistence_ratio_std_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_cpr_per_variant, cpr_per_variant, cpr_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(cpr_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cpr_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_cpr_per_variant, cpr_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("cell persistence ratio")
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["$N_c$={}".format(nc) for nc in num_cells])
+    else:
+        ax.set_xticklabels(x_labels)
+    ax.set_xlabel(x_axis_title)
+
+    # ax.grid(b=True, which="major", axis="y")
+
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_cell_persistence_ratio_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
 
 def graph_chemotaxis_cil_interaction_frequency_data(
     test_variants,
-    test_slope,
     avg_interaction_frequency_per_variant_per_num_cells,
     std_interaction_frequency_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -6560,7 +8833,7 @@ def graph_chemotaxis_cil_interaction_frequency_data(
 
         if_per_variant, if_std_per_variant, nr, nc, bw, bh = setup_data
 
-        requested_color = colors.color_list20[group_index]
+        requested_color = colors.color_list20[int(np.sqrt(nc))]
 
         variant_indices = np.arange(len(if_per_variant))
 
@@ -6618,11 +8891,13 @@ def graph_chemotaxis_cil_interaction_frequency_data(
         ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
     else:
         ax.set_xticklabels(x_labels)
-    ax.set_xlabel("$\mathrm{N_c}$")
+    ax.set_xlabel(x_axis_title)
 
     # ax.grid(b=True, which="major", axis="y")
 
     # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
+
+    ax.tick_params(axis='x', which='major', labelsize=fontsize * 0.7)
 
     info_tag_dash = ""
     if info_tag != "":
@@ -6638,10 +8913,130 @@ def graph_chemotaxis_cil_interaction_frequency_data(
         "",
     )
 
+def graph_chemotaxis_cil_interaction_frequency_data_standard_error(
+    test_variants,
+    num_interaction_frequency_per_variant_per_num_cells,
+    avg_interaction_frequency_per_variant_per_num_cells,
+    std_interaction_frequency_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_interaction_frequency_per_variant_per_num_cells,
+            avg_interaction_frequency_per_variant_per_num_cells,
+            std_interaction_frequency_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_if_per_variant, if_per_variant, if_std_per_variant, nr, nc, bw, bh = setup_data
+
+        requested_color = colors.color_list20[int(np.sqrt(nc))]
+
+        variant_indices = np.arange(len(if_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        ax.bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            if_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_if_per_variant, if_std_per_variant)],
+            capsize=10,
+            error_kw={"elinewidth": 2.0, "capthick": 2.0},
+        )
+
+    ax.set_ylabel("$\omega_I$\n(hr.${}^{-1}$)", rotation=0, labelpad=50)
+    ax.set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    ax.set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        ax.set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        ax.set_xticklabels(["{}".format(nc) for nc in num_cells])
+    else:
+        ax.set_xticklabels(x_labels)
+    ax.set_xlabel(x_axis_title)
+
+    ax.tick_params(axis='x', which='major', labelsize=fontsize * 0.7)
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_interaction_frequency_SE_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
 
 def graph_chemotaxis_velocity_alignment_data(
     test_variants,
-    test_slope,
     max_num_closest_neighbours,
     time_deltas,
     avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
@@ -6802,14 +9197,11 @@ def graph_chemotaxis_velocity_alignment_data(
         "",
     )
 
-
-def graph_specific_chemotaxis_velocity_alignment_data(
+def graph_chemotaxis_velocity_alignment_data_standard_error(
     test_variants,
-    test_slope,
-    focus_num_closest_neighbours,
-    focus_time_delta,
     max_num_closest_neighbours,
     time_deltas,
+    num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
     avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
     std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
     num_experiment_repeats,
@@ -6825,14 +9217,170 @@ def graph_specific_chemotaxis_velocity_alignment_data(
     font = {"family": "normal", "size": fontsize}
     matplotlib.rc("font", **font)
     # matplotlib.rc('text', usetex=True)
-    fig, ax = plt.subplots()
-    # fig.subplots_adjust(left=0.15, right=0.9, bottom=0.2, top=0.9, wspace=0.3, hspace=0.3)
+    fig, axs = plt.subplots(num_mncns, num_tds, sharex=True, sharey=True)
+    fig.subplots_adjust(
+        left=0.15, right=0.9, bottom=0.2, top=0.9, wspace=0.3, hspace=0.3
+    )
 
-    # global_ax = fig.add_subplot(111, frameon=False)
+    global_ax = fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axes
-    # global_ax.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    global_ax.tick_params(
+        labelcolor="none", top="off", bottom="off", left="off", right="off"
+    )
     # global_ax.set_ylabel("$a$", rotation=0, labelpad=20)
     # global_ax.set_xlabel("$\mathrm{N_c}$")
+
+    for xi in range(num_mncns):
+        for yi in range(num_tds):
+            ax = axs[xi][yi]
+            per_variant_space = 1.0
+
+            if len(test_variants) == 1:
+                between_variant_space = 0.0
+            else:
+                between_variant_space = 0.4
+
+            num_cell_groups_per_variant = len(num_cells)
+            within_variant_total_bar_space = 0.75 * per_variant_space
+            bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+            between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+                num_cell_groups_per_variant + 1
+            )
+            within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+            for group_index, setup_data in enumerate(
+                zip(
+                    num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                    num_experiment_repeats,
+                    num_cells,
+                    box_width,
+                    box_height,
+                )
+            ):
+
+                num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, nr, nc, bw, bh = (
+                    setup_data
+                )
+
+                requested_color = colors.color_list20[(group_index + 1)]
+
+                variant_indices = np.arange(len(test_variants))
+
+                this_group_initial_offset = (
+                    0.5 * between_variant_space
+                    + within_variant_initial_offset
+                    + (bar_width + between_bar_space) * group_index
+                )
+
+                if len(test_variants) == 1:
+                    label = None
+                else:
+                    label = "nc={}, nr={}".format(nc, nr)
+
+                num_va_data = [
+                    va_data[xi][yi]
+                    for va_data in num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                ]
+                avg_va_data = [
+                    va_data[xi][yi]
+                    for va_data in avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                ]
+                std_va_data = [
+                    va_data[xi][yi]
+                    for va_data in std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                ]
+                ax.bar(
+                    [
+                        this_group_initial_offset
+                        + (per_variant_space + between_variant_space) * j
+                        for j in variant_indices
+                    ],
+                    avg_va_data,
+                    bar_width,
+                    label=label,
+                    color=requested_color,
+                    yerr=[y/np.sqrt(x) for x, y in zip(num_va_data, std_va_data)],
+                    capsize=10,
+                    error_kw={"elinewidth": 2.0, "capthick": 2.0},
+                )
+
+            ax.set_xticks(
+                [
+                    0.5 * between_variant_space
+                    + 0.5 * per_variant_space
+                    + i * (per_variant_space + between_variant_space)
+                    for i in range(len(test_variants))
+                ]
+            )
+
+            x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+                test_variants
+            )
+
+            ax.set_ylim(bottom=0.0, top=1.1)
+
+            if len(test_variants) == 1:
+                ax.set_xticks(
+                    [
+                        0.5 * between_variant_space
+                        + within_variant_initial_offset
+                        + (bar_width + between_bar_space) * i
+                        for i in range(len(num_cells[1:]))
+                    ]
+                )
+                ax.set_xticklabels(["{}".format(nc) for nc in num_cells[1:]])
+            else:
+                ax.set_xticklabels(x_labels)
+
+            if xi == yi == 0:
+                global_ax.set_xlabel(x_axis_title, labelpad=30)
+            ax.set_title(
+                "$\mathrm{N_{VA}}$="
+                + "{}, ".format(max_num_closest_neighbours[xi])
+                + "$\mathrm{T_{VA}}$="
+                + "{} min.".format(time_deltas[yi])
+            )
+            ax.set_ylabel("a", rotation=0, labelpad=20)
+            if xi != 0:
+                ax.set_xlabel("$\mathrm{N_c}$")
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_velocity_alignment_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+def graph_specific_chemotaxis_velocity_alignment_data_standard_error(
+    test_variants,
+    focus_num_closest_neighbours,
+    focus_time_delta,
+    max_num_closest_neighbours,
+    time_deltas,
+    num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    num_mncns = max_num_closest_neighbours.shape[0]
+    num_tds = time_deltas.shape[0]
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
 
     for xi in range(num_mncns):
         for yi in range(num_tds):
@@ -6857,7 +9405,170 @@ def graph_specific_chemotaxis_velocity_alignment_data(
 
                 for group_index, setup_data in enumerate(
                     zip(
-                        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                        num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells, avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+                        num_experiment_repeats,
+                        num_cells,
+                        box_width,
+                        box_height,
+                    )
+                ):
+
+                    num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant, nr, nc, bw, bh = (
+                        setup_data
+                    )
+
+                    if nc > 2:
+                        color_index = int(np.sqrt(nc))
+                    else:
+                        color_index = nc - 1
+
+                    requested_color = colors.color_list20[color_index]
+
+                    variant_indices = np.arange(len(test_variants))
+
+                    this_group_initial_offset = (
+                        0.5 * between_variant_space
+                        + within_variant_initial_offset
+                        + (bar_width + between_bar_space) * group_index
+                    )
+
+                    if len(test_variants) == 1:
+                        label = None
+                    else:
+                        label = "nc={}, nr={}".format(nc, nr)
+
+                    num_va_data = [va_data[xi][yi] for va_data in num_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant]
+                    avg_va_data = [
+                        va_data[xi][yi]
+                        for va_data in avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                    ]
+                    std_va_data = [
+                        va_data[xi][yi]
+                        for va_data in std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant
+                    ]
+                    ax.bar(
+                        [
+                            this_group_initial_offset
+                            + (per_variant_space + between_variant_space) * j
+                            for j in variant_indices
+                        ],
+                        avg_va_data,
+                        bar_width,
+                        label=label,
+                        color=requested_color,
+                        yerr=[y/np.sqrt(x) for x, y in zip(num_va_data, std_va_data)],
+                        capsize=10,
+                        error_kw={"elinewidth": 2.0, "capthick": 2.0},
+                    )
+
+                ax.set_xticks(
+                    [
+                        0.5 * between_variant_space
+                        + 0.5 * per_variant_space
+                        + i * (per_variant_space + between_variant_space)
+                        for i in range(len(test_variants))
+                    ]
+                )
+
+                x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+                    test_variants
+                )
+
+                ax.set_ylim(bottom=0.0, top=1.1)
+
+                if len(test_variants) == 1:
+                    ax.set_xticks(
+                        [
+                            0.5 * between_variant_space
+                            + within_variant_initial_offset
+                            + (bar_width + between_bar_space) * (i + 1)
+                            for i in range(len(num_cells[1:]))
+                        ]
+                    )
+                    ax.set_xticklabels(["{}".format(nc) for nc in num_cells[1:]])
+                else:
+                    ax.set_xticklabels(x_labels)
+
+                ax.set_xlabel(x_axis_title, labelpad=30)
+                ax.set_title(
+                    "$\mathrm{N_{VA}}$="
+                    + "{}, ".format(max_num_closest_neighbours[xi])
+                    + "$\mathrm{T_{VA}}$="
+                    + "{} min.".format(time_deltas[yi])
+                )
+                ax.set_ylabel("$\mathrm{R_v}$", rotation=0, labelpad=20)
+                if xi != 0:
+                    ax.set_xlabel("$\mathrm{N_c}$")
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_velocity_alignment_specific_MNCN={}-TD={}_SE_-{}-{}-{}-{}-{}-{}".format(
+            info_tag,
+            info_tag_dash,
+            focus_num_closest_neighbours,
+            int(focus_time_delta * 10),
+            x.year,
+            x.month,
+            x.day,
+            x.hour,
+            x.minute,
+            x.second,
+        ),
+        "",
+    )
+
+def graph_specific_chemotaxis_velocity_alignment_data(
+    test_variants,
+    focus_num_closest_neighbours,
+    focus_time_delta,
+    max_num_closest_neighbours,
+    time_deltas,avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    num_mncns = max_num_closest_neighbours.shape[0]
+    num_tds = time_deltas.shape[0]
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, ax = plt.subplots()
+
+    for xi in range(num_mncns):
+        for yi in range(num_tds):
+            if (
+                max_num_closest_neighbours[xi] == focus_num_closest_neighbours
+                and time_deltas[yi] == focus_time_delta
+            ):
+                per_variant_space = 1.0
+
+                if len(test_variants) == 1:
+                    between_variant_space = 0.0
+                else:
+                    between_variant_space = 0.4
+
+                num_cell_groups_per_variant = len(num_cells)
+                within_variant_total_bar_space = 0.75 * per_variant_space
+                bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+                between_bar_space = (
+                    per_variant_space - within_variant_total_bar_space
+                ) / (num_cell_groups_per_variant + 1)
+                within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+                for group_index, setup_data in enumerate(
+                    zip(avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
                         std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
                         num_experiment_repeats,
                         num_cells,
@@ -6913,7 +9624,6 @@ def graph_specific_chemotaxis_velocity_alignment_data(
                         error_kw={"elinewidth": 2.0, "capthick": 2.0},
                     )
 
-                # ax.set_ylabel("velocity alignment")
                 ax.set_xticks(
                     [
                         0.5 * between_variant_space
@@ -6953,10 +9663,6 @@ def graph_specific_chemotaxis_velocity_alignment_data(
                 if xi != 0:
                     ax.set_xlabel("$\mathrm{N_c}$")
 
-            # ax.grid(b=True, which="major", axis="y")
-
-    # ax.legend(loc="upper center", ncol=int(len(num_cells)/2), fontsize=fontsize, bbox_to_anchor=(0.5, 1.25))
-
     info_tag_dash = ""
     if info_tag != "":
         info_tag_dash = "-"
@@ -6984,9 +9690,7 @@ def graph_specific_chemotaxis_velocity_alignment_data(
 
 def graph_chemotaxis_protrusion_production_data(
     test_variants,
-    test_slope,
     protrusion_production_per_variant_per_num_cells,
-    protrusion_production_std_per_variant_per_num_cells,
     num_experiment_repeats,
     num_cells,
     box_width,
@@ -7018,7 +9722,6 @@ def graph_chemotaxis_protrusion_production_data(
     for group_index, setup_data in enumerate(
         zip(
             protrusion_production_per_variant_per_num_cells,
-            protrusion_production_std_per_variant_per_num_cells,
             num_experiment_repeats,
             num_cells,
             box_width,
@@ -7026,7 +9729,7 @@ def graph_chemotaxis_protrusion_production_data(
         )
     ):
 
-        pp_per_variant, pp_std_per_variant, nr, nc, bw, bh = setup_data
+        pp_per_variant, nr, nc, bw, bh = setup_data
 
         requested_color = colors.color_list20[group_index]
 
@@ -7053,7 +9756,6 @@ def graph_chemotaxis_protrusion_production_data(
             bar_width,
             label=label,
             color=requested_color,
-            yerr=pp_std_per_variant,
             capsize=10,
             error_kw={"elinewidth": 2.0, "capthick": 2.0},
         )
@@ -7332,6 +10034,235 @@ def graph_chemotaxis_interaction_quantification_data(
         (12, 8),
         save_dir,
         "{}{}chemotaxis_interaction_quantification_{}-{}-{}-{}-{}-{}".format(
+            info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
+        ),
+        "",
+    )
+
+def graph_chemotaxis_interaction_quantification_data_standard_error(
+    test_variants,
+    num_num_interactions_per_variant_per_num_cells,
+    avg_num_interactions_per_variant_per_num_cells,
+    std_num_interactions_per_variant_per_num_cells,
+    num_num_cil_interactions_per_variant_per_num_cells,
+    avg_num_cil_interactions_per_variant_per_num_cells,
+    std_num_cil_interactions_per_variant_per_num_cells,
+    num_num_coa_only_interactions_per_variant_per_num_cells,
+    avg_num_coa_only_interactions_per_variant_per_num_cells,
+    std_num_coa_only_interactions_per_variant_per_num_cells,
+    num_experiment_repeats,
+    num_cells,
+    box_width,
+    box_height,
+    save_dir=None,
+    fontsize=22,
+    info_tag="",
+):
+    font = {"family": "normal", "size": fontsize}
+    matplotlib.rc("font", **font)
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, sharey=True)
+
+    per_variant_space = 1.0
+
+    if len(test_variants) == 1:
+        between_variant_space = 0.0
+    else:
+        between_variant_space = 0.4
+
+    num_cell_groups_per_variant = len(num_cells)
+    within_variant_total_bar_space = 0.75 * per_variant_space
+    bar_width = within_variant_total_bar_space / num_cell_groups_per_variant
+    between_bar_space = (per_variant_space - within_variant_total_bar_space) / (
+        num_cell_groups_per_variant + 1
+    )
+    within_variant_initial_offset = between_bar_space + 0.5 * bar_width
+
+    for group_index, setup_data in enumerate(
+        zip(
+            num_num_interactions_per_variant_per_num_cells,
+            avg_num_interactions_per_variant_per_num_cells,
+            std_num_interactions_per_variant_per_num_cells,
+            num_num_cil_interactions_per_variant_per_num_cells,
+            avg_num_cil_interactions_per_variant_per_num_cells,
+            std_num_cil_interactions_per_variant_per_num_cells,
+            num_num_coa_only_interactions_per_variant_per_num_cells,
+            avg_num_coa_only_interactions_per_variant_per_num_cells,
+            std_num_coa_only_interactions_per_variant_per_num_cells,
+            num_experiment_repeats,
+            num_cells,
+            box_width,
+            box_height,
+        )
+    ):
+
+        num_iq_per_variant, iq_per_variant, iq_std_per_variant, num_cil_iq_per_variant, cil_iq_per_variant, cil_iq_std_per_variant, num_coa_iq_per_variant, coa_iq_per_variant, coa_iq_std_per_variant, nr, nc, bw, bh = (
+            setup_data
+        )
+
+        requested_color = colors.color_list20[group_index]
+
+        variant_indices = np.arange(len(iq_per_variant))
+
+        this_group_initial_offset = (
+            0.5 * between_variant_space
+            + within_variant_initial_offset
+            + (bar_width + between_bar_space) * group_index
+        )
+
+        if len(test_variants) == 1:
+            label = None
+        else:
+            label = "nc={}, nr={}".format(nc, nr)
+
+        axes[0].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_iq_per_variant, iq_std_per_variant)],
+        )
+
+        axes[1].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            cil_iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_cil_iq_per_variant, cil_iq_std_per_variant)],
+        )
+
+        axes[2].bar(
+            [
+                this_group_initial_offset
+                + (per_variant_space + between_variant_space) * j
+                for j in variant_indices
+            ],
+            coa_iq_per_variant,
+            bar_width,
+            label=label,
+            color=requested_color,
+            yerr=[y/np.sqrt(x) for x, y in zip(num_coa_iq_per_variant, coa_iq_std_per_variant)],
+        )
+
+    axes[0].set_ylabel("total")
+    axes[1].set_ylabel("CIL")
+    axes[2].set_ylabel("COA only")
+
+    axes[0].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+    axes[1].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+    axes[2].set_xticks(
+        [
+            0.5 * between_variant_space
+            + 0.5 * per_variant_space
+            + i * (per_variant_space + between_variant_space)
+            for i in range(len(test_variants))
+        ]
+    )
+
+    x_axis_title, x_labels = generate_x_axis_titles_and_labels_for_varying_parameters(
+        test_variants
+    )
+
+    axes[0].set_ylim(bottom=0.0)
+    axes[1].set_ylim(bottom=0.0)
+    axes[2].set_ylim(bottom=0.0)
+
+    if len(test_variants) == 1:
+        axes[0].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[1].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[2].set_xticks(
+            [
+                0.5 * between_variant_space
+                + within_variant_initial_offset
+                + (bar_width + between_bar_space) * i
+                for i in range(num_cell_groups_per_variant)
+            ]
+        )
+        axes[0].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        axes[1].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+        axes[2].set_xticklabels(["nc={}".format(nc) for nc in num_cells])
+    else:
+        axes[0].set_xticklabels(x_labels)
+        axes[1].set_xticklabels(x_labels)
+        axes[2].set_xticklabels(x_labels)
+
+    axes[0].set_yticks([0, 2, 4, 9, 16])
+    axes[1].set_yticks([0, 2, 4, 9, 16])
+    axes[2].set_yticks([0, 2, 4, 9, 16])
+
+    axes[0].set_xlabel(x_axis_title)
+    axes[1].set_xlabel(x_axis_title)
+    axes[2].set_xlabel(x_axis_title)
+
+    axes[0].grid(b=True, which="major", axis="y")
+    axes[1].grid(b=True, which="major", axis="y")
+    axes[2].grid(b=True, which="major", axis="y")
+
+    axes[0].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+    axes[1].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+    axes[2].legend(
+        loc="upper center",
+        ncol=int(len(num_cells) / 2),
+        fontsize=fontsize,
+        bbox_to_anchor=(0.5, 1.25),
+    )
+
+    info_tag_dash = ""
+    if info_tag != "":
+        info_tag_dash = "-"
+    x = datetime.datetime.now()
+    show_or_save_fig(
+        fig,
+        (12, 8),
+        save_dir,
+        "{}{}chemotaxis_interaction_quantification_SE_{}-{}-{}-{}-{}-{}".format(
             info_tag, info_tag_dash, x.year, x.month, x.day, x.hour, x.minute, x.second
         ),
         "",
