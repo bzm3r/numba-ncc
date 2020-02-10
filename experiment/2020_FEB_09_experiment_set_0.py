@@ -144,16 +144,9 @@ if __name__ == "__main__":
     parameter_dict.update(standard_rps)
 
     a, b = 2, 3
-    test_chemotaxis_magnitudes = [0.0, 5.0, 7.5, 10.0][a:b]
+    test_chemotaxis_magnitudes = [0.0]#[0.0, 5.0, 7.5, 10.0][a:b]
     c, d = 1, 2
     test_randomization_parameters = [
-        [
-            ("randomization_scheme", "m"),
-            ("randomization_time_mean", 40.0),
-            ("randomization_time_variance_factor", 0.1),
-            ("randomization_magnitude", 5.0),
-            ("randomization_node_percentage", 0.25),
-        ],
         [
             ("randomization_scheme", "m"),
             ("randomization_time_mean", 40.0),
@@ -161,37 +154,23 @@ if __name__ == "__main__":
             ("randomization_magnitude", 10.0),
             ("randomization_node_percentage", 0.25),
         ],
-        [
-            ("randomization_scheme", "m"),
-            ("randomization_time_mean", 40.0),
-            ("randomization_time_variance_factor", 0.1),
-            ("randomization_magnitude", 20.0),
-            ("randomization_node_percentage", 0.25),
-        ],
-        [
-            ("randomization_scheme", "m"),
-            ("randomization_time_mean", 160.0),
-            ("randomization_time_variance_factor", 0.1),
-            ("randomization_magnitude", 5.0),
-            ("randomization_node_percentage", 0.25),
-        ],
         [("randomization_scheme", None)],
     ][c:d]
     e, f = 0, 1
     test_num_cells_responsive_to_chemoattractant = [-1][e:f]
 
-    x, y = 4, 5
+    x, y = 0, 1
     test_cell_group_sizes = [1, 2, 4, 9, 16, 25, 36, 49][x:y]
     test_cell_group_widths = [1, 2, 2, 3, 4, 5, 6, 7][x:y]
     test_cell_group_heights = [1, 1, 2, 3, 4, 5, 6, 7][x:y]
     num_experiment_repeats = [50, 20, 20, 20, 20, 20, 20, 1][x:y]
-    #intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
-    intercellular_interaction_knockdown_cases = [
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (0.0, 1.0),
-        (1.0, 1.0),
-    ]
+    intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
+    # intercellular_interaction_knockdown_cases = [
+    #     (0.0, 0.0),
+    #     (1.0, 0.0),
+    #     (0.0, 1.0),
+    #     (1.0, 1.0),
+    # ]
     #intercellular_interaction_knockdown_cases = [(0.0, 1.0), (0.1, 1.0), (0.15, 1.0), (0.2, 1.0), (0.25, 1.0), (0.5, 1.0), (0.75, 1.0), (1.0, 1.0)]
     # intercellular_interaction_knockdown_cases = cil_knockdown + [(1.0, 1.0), (1.0, 0.75), (1.0, 0.5), (1.0, 0.25), (1.0, 0.0)]
     # intercellular_interaction_knockdown_cases =
@@ -200,6 +179,9 @@ if __name__ == "__main__":
 
     #        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\numba-ncc\\output\\", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
 
+    integration_params["method"] = "euler"
+    integration_params["num_int_steps"] = 1
+    seed = 496930
     ets.chemotaxis_no_corridor_tests(
         date_str,
         experiment_number,
@@ -208,12 +190,12 @@ if __name__ == "__main__":
         no_randomization=False,
         uniform_initial_polarization=uniform_initial_polarization,
         base_output_dir="B:\\numba-ncc\\output\\",
-        total_time_in_hours=10,
+        total_time_in_hours=2,
         timestep_length=2,
         verbose=True,
         integration_params=integration_params,
         max_timepoints_on_ram=max_timepoints_on_ram,
-        seed=None,
+        seed=seed,
         allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
         test_x_offset_in_corridor=x_offset_in_corrdior,
         test_chemotaxis_magnitudes=test_chemotaxis_magnitudes,
@@ -238,10 +220,10 @@ if __name__ == "__main__":
             "protrusion bias": True,
         },
         specific_timesteps_to_draw=[], #[0, 8999, 17999],
-        produce_animation=False,
+        produce_animation=True,
         full_print=False,
         delete_and_rerun_experiments_without_stored_env=True,
-        run_experiments=False,
+        run_experiments=True,
         remake_graphs={
             "cell specific": False,
             "all cell speeds": False,

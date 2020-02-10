@@ -25,7 +25,7 @@ remake_graphs = False
 do_final_analysis = True
 
 default_cil = 60.0
-integration_params = {'rtol': 1e-4}
+integration_params = {'method': 'odeint', 'rtol': 1e-4}
 
 base_output_dir = "B:\\numba-ncc\\output" 
 

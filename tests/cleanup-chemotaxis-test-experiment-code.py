@@ -202,7 +202,7 @@ def chemotaxis_no_corridor_tests(
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
-    integration_params={"rtol": 1e-4},
+    integration_params={"method": "odeint", "rtol": 1e-4},
     max_timepoints_on_ram=10,
     seed=None,
     allowed_drift_before_geometry_recalc=1.0,

@@ -1705,13 +1705,18 @@ class Cell:
                 chemoattractant_signal_on_nodes,
             )
 
-            output_array = scint.odeint(
-                dynamics.cell_dynamics,
-                state_array,
-                [0, 1],
-                args=rhs_args,
-                **self.integration_params
-            )
+            int_method = self.integration_params["method"]
+            del self.integration_params["method"]
+            if int_method == "euler":
+                output_array = dynamics.eulerint(dynamics.cell_dynamics, state_array, [0, 1], rhs_args, self.integration_params["num_int_steps"])
+            elif int_method == "odeint":
+                output_array = scint.odeint(
+                    dynamics.cell_dynamics,
+                    state_array,
+                    [0, 1],
+                    args=rhs_args,
+                    **self.integration_params
+                )
 
             next_state_array = output_array[1]
 
