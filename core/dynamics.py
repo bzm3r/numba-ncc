@@ -62,9 +62,31 @@ def calculate_sum(num_elements, sequence):
 
 
 # ----------------------------------------------------------------------------------------
+def eulerint(f, current_state, tpoints, args, num_int_steps):
+    num_tpoint_pairs = tpoints.shape[0] - 1
+    tpoint_pairs = np.zeros((num_tpoint_pairs, 2), dtype=np.float64)
+    states = np.zeros((tpoints.shape[0], current_state.shape[0]), dtype=np.float64)
 
+    states[0] = current_state
 
-@nb.jit()
+    for i in range(num_tpoint_pairs):
+        j = 2*i
+        tpoint_pairs[i] = tpoints[j:j+2]
+
+    for i in range(tpoint_pairs.shape[0]):
+        init_t, end_t = tpoint_pairs[i]
+        done = False
+        current_state = states[i]
+        dt = (end_t - init_t)/num_int_steps
+
+        for j in range(num_int_steps):
+            current_state = current_state + dt*f(current_state, 0, *args)
+
+        states[i + 1] = current_state
+
+    return states
+
+#@nb.jit()
 def cell_dynamics(
     state_array,
     t0,
@@ -219,13 +241,6 @@ def cell_dynamics(
         closeness_dist_criteria,
     )
 
-    #    print "rac_membrane_actives: ", rac_membrane_actives
-    #    print "F: ", F
-    #    print "EF: ", EFplus + EFminus
-    #    print "F_rgtpase: ", F_rgtpase
-    #    print "F_cytoplasmic: ", F_cytoplasmic
-    #    print "F_adhesion: ", F_adhesion
-
     F_x = F[:, 0]
     F_y = F[:, 1]
 
@@ -245,9 +260,6 @@ def cell_dynamics(
     conc_rac_membrane_actives = chemistry.calculate_concentrations(
         num_nodes, rac_membrane_actives, avg_edge_lengths
     )
-
-    # print "(dynamics) randomization_rac_kgtp_multipliers:",  randomization_rac_kgtp_multipliers
-    # input("Press Enter to continue...")
 
     kgtps_rac = chemistry.calculate_kgtp_rac(
         conc_rac_membrane_actives,
@@ -364,50 +376,66 @@ def cell_dynamics(
         new_node_coords[ni][0] = old_coord[0] + F_x[ni] / eta
         new_node_coords[ni][1] = old_coord[1] + F_y[ni] / eta
 
-    # calculate volume exclusion effects
-    num_bisection_iterations = 2
-    max_movement_mag = max_force_rac / eta
-    success_condition_stay_out = 0
-    success_condition_stay_in = 1
+    # # calculate volume exclusion effects
+    # num_bisection_iterations = 2
+    # max_movement_mag = max_force_rac / eta
+    # success_condition_stay_out = 0
+    # success_condition_stay_in = 1
+    #
+    # are_new_nodes_inside_other_cell = np.zeros(num_nodes, dtype=np.int64)
+    # for other_ci in range(num_cells):
+    #     if other_ci != this_cell_index:
+    #         are_new_nodes_inside_other_cell = geometry.are_points_inside_polygon(
+    #             new_node_coords, all_cells_node_coords[other_ci]
+    #         )
+    #
+    #         for ni in range(num_nodes):
+    #             if are_new_nodes_inside_other_cell[ni] != success_condition_stay_out:
+    #                 new_node_coords[ni] = determine_volume_exclusion_effects(
+    #                     node_coords[ni],
+    #                     new_node_coords[ni],
+    #                     unit_inside_pointing_vectors[ni],
+    #                     all_cells_node_coords[other_ci],
+    #                     num_bisection_iterations,
+    #                     max_movement_mag,
+    #                     success_condition_stay_out,
+    #                 )
+    #
+    # if exists_space_physical_bdry_polygon == 1:
+    #     are_new_nodes_inside_space_physical_bdry_polygon = geometry.are_points_inside_polygon(
+    #         new_node_coords, space_physical_bdry_polygon
+    #     )
+    #
+    #     for ni in range(num_nodes):
+    #         if (
+    #             are_new_nodes_inside_space_physical_bdry_polygon[ni]
+    #             != success_condition_stay_in
+    #         ):
+    #             new_node_coords[ni] = determine_volume_exclusion_effects(
+    #                 node_coords[ni],
+    #                 new_node_coords[ni],
+    #                 unit_inside_pointing_vectors[ni],
+    #                 space_physical_bdry_polygon,
+    #                 num_bisection_iterations,
+    #                 max_movement_mag,
+    #                 success_condition_stay_in,
+    #             )
 
-    are_new_nodes_inside_other_cell = np.zeros(num_nodes, dtype=np.int64)
-    for other_ci in range(num_cells):
-        if other_ci != this_cell_index:
-            are_new_nodes_inside_other_cell = geometry.are_points_inside_polygon(
-                new_node_coords, all_cells_node_coords[other_ci]
-            )
-
-            for ni in range(num_nodes):
-                if are_new_nodes_inside_other_cell[ni] != success_condition_stay_out:
-                    new_node_coords[ni] = determine_volume_exclusion_effects(
-                        node_coords[ni],
-                        new_node_coords[ni],
-                        unit_inside_pointing_vectors[ni],
-                        all_cells_node_coords[other_ci],
-                        num_bisection_iterations,
-                        max_movement_mag,
-                        success_condition_stay_out,
-                    )
-
-    if exists_space_physical_bdry_polygon == 1:
-        are_new_nodes_inside_space_physical_bdry_polygon = geometry.are_points_inside_polygon(
-            new_node_coords, space_physical_bdry_polygon
-        )
-
-        for ni in range(num_nodes):
-            if (
-                are_new_nodes_inside_space_physical_bdry_polygon[ni]
-                != success_condition_stay_in
-            ):
-                new_node_coords[ni] = determine_volume_exclusion_effects(
-                    node_coords[ni],
-                    new_node_coords[ni],
-                    unit_inside_pointing_vectors[ni],
-                    space_physical_bdry_polygon,
-                    num_bisection_iterations,
-                    max_movement_mag,
-                    success_condition_stay_in,
-                )
+    print("++++++++++++++++++++++++++++++")
+    print("vertex_coords: ", [list(x) for x in node_coords])
+    print("rac_acts: ", list(rac_membrane_actives))
+    print("rac_inacts: ", list(rac_membrane_inactives))
+    print("rho_acts: ", list(rho_membrane_actives))
+    print("rho_inacts: ", list(rho_membrane_inactives))
+    print("tot_forces: ", [list([x, y]) for x, y in zip(F_x, F_y)])
+    print("rgtp_forces: ", [list(x) for x in F_rgtpase])
+    print("edge_forces: ", [list(x) for x in EFplus])
+    print("cyto_forces: ", [list(x) for x in F_cytoplasmic])
+    print("kgtps_rac: ", list(kgtps_rac))
+    print("kdgtps_rac: ", list(kdgtps_rac))
+    print("kgtps_rho: ", list(kgtps_rho))
+    print("kdgtps_rho: ", list(kdgtps_rho))
+    print("++++++++++++++++++++++++++++++")
 
     for ni in range(num_nodes):
         new_coord = new_node_coords[ni]
@@ -466,11 +494,6 @@ def cell_dynamics(
 
         ode_array[i + 5 * num_nodes] = delta_nodal_y[i]
 
-    #    print_array = np.array([x for x in np.abs([delta_nodal_x, delta_nodal_y]).flatten() if x > 0.0])
-    #    print_array_average = np.average(print_array)
-    #    print_max, print_min = np.max(print_array), np.min(print_array)
-    #
-    #    print "ode_array: ", print_max, print_min, print_max/print_array_average, print_min/print_array_average
     return ode_array
 
 

@@ -856,9 +856,6 @@ class Environment:
                     else:
                         print("=" * 40)
 
-                    print("centroid_drift: ", centroid_drifts[ci])
-                    if recalc_geometry[ci]:
-                        print("**GEOMETRY RECALC IN PROGRESS**")
                     print("Time step: {}/{}".format(t, self.num_timesteps))
                     print("Executing dyanmics for cell: ", ci)
 
@@ -1443,7 +1440,6 @@ class Environment:
                             if not os.path.exists(data_save_dir):
                                 os.makedirs(data_save_dir)
 
-                            print("Doing intermediate analysis...")
                             self.do_data_analysis_and_make_visuals(
                                 t,
                                 data_save_dir,

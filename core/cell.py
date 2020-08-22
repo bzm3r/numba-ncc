@@ -243,21 +243,12 @@ class Cell:
         eta_with_dimensions = parameters_dict["eta"] / self.num_nodes
         self.L = 1e-6  # 0.1*T*max_velocity_with_dimensions
         self.T = T
-        self.ML_T2 = max_velocity_with_dimensions * eta_with_dimensions
+        self.ML_T2 = 1e-9 # max_velocity_with_dimensions * eta_with_dimensions
 
         self.max_protrusive_nodal_velocity = max_velocity_with_dimensions * (
             self.T / self.L
         )
         self.eta = eta_with_dimensions / (self.ML_T2 / (self.L / self.T))
-
-        #        print "*********************************"
-        #        print "cell_index: {}".format(cell_index)
-        #        print "L: {}".format(self.L)
-        #        print "T: {}".format(self.T)
-        #        print "ML_T2: {}".format(self.ML_T2)
-        #        print "*********************************"
-
-        # ======================================================
 
         if parameters_dict["init_node_coords"].shape[0] != self.num_nodes:
             raise Exception(
@@ -267,6 +258,7 @@ class Cell:
             )
 
         self.curr_node_coords = parameters_dict["init_node_coords"] / self.L
+        print("init vertex coords: ", self.curr_node_coords)
         self.radius_resting = parameters_dict["init_cell_radius"] / self.L
         self.length_edge_resting = parameters_dict["length_edge_resting"] / self.L
         edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.curr_node_coords)
@@ -452,37 +444,37 @@ class Cell:
         self.randomization_time_variance_factor = parameters_dict[
             "randomization_time_variance_factor"
         ]
-        self.next_randomization_event_tpoint = None
+        self.next_randomization_event_tpoint = 1200
         self.randomization_magnitude = parameters_dict["randomization_magnitude"]
-        self.randomization_rac_kgtp_multipliers = np.ones(
-            self.num_nodes, dtype=np.float64
-        )
+        self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(
+                0
+            )
         self.randomization_node_percentage = parameters_dict[
             "randomization_node_percentage"
         ]
 
-        randomization_scheme = parameters_dict["randomization_scheme"]
-        self.randomization_rac_kgtp_multipliers = np.ones(
-            self.num_nodes, dtype=np.float64
-        )
-        if randomization_scheme == None:
-            self.randomization_scheme = -1
-        elif randomization_scheme == "w":
-            self.randomization_scheme = 0
-        elif randomization_scheme == "m":
-            self.randomization_scheme = 1
-            self.randomization_type = parameters_dict["randomization_type"]
-            self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(
-                self.randomization_type
-            )
-        else:
-            raise Exception(
-                "Unknown randomization scheme given: {}.".format(randomization_scheme)
-            )
-
-        self.randomization_print_string = (
-            "next_randomization_event_tstep ({}): ".format(randomization_scheme) + "{}"
-        )
+        #randomization_scheme = parameters_dict["randomization_scheme"]
+        # self.randomization_rac_kgtp_multipliers = np.ones(
+        #     self.num_nodes, dtype=np.float64
+        # )
+        # if randomization_scheme == None:
+        #     self.randomization_scheme = -1
+        # elif randomization_scheme == "w":
+        #     self.randomization_scheme = 0
+        # elif randomization_scheme == "m":
+        #     self.randomization_scheme = 1
+        #     self.randomization_type = parameters_dict["randomization_type"]
+        #     self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(
+        #         self.randomization_type
+        #     )
+        # else:
+        #     raise Exception(
+        #         "Unknown randomization scheme given: {}.".format(randomization_scheme)
+        #     )
+        #
+        # self.randomization_print_string = (
+        #     "next_randomization_event_tstep: {}"
+        # )
 
         # =============================================================
 
@@ -536,6 +528,9 @@ class Cell:
             init_rho_gtpase_conditions,
         )
 
+        rac_membrane_actives = self.system_history[0,:,parameterorg.rac_membrane_active_index]
+        rho_membrane_actives = self.system_history[0,:,parameterorg.rho_membrane_active_index]
+
         self.last_trim_timestep = -1
 
     # -----------------------------------------------------------------
@@ -584,10 +579,6 @@ class Cell:
             init_rho_gtpase_conditions,
             np.array([np.arctan2(y, x) for x, y in init_node_coords - cell_centroid]),
         )
-
-        # 'rac_membrane_active', 'rac_membrane_inactive', 'rac_cytosolic_gdi_bound', 'rho_membrane_active', 'rho_membrane_inactive', 'rho_cytosolic_gdi_bound'
-        # np.set_printoptions(threshold=np.nan)
-        # print {"rac_membrane_active": self.system_history[access_index, :, parameterorg.rac_membrane_active_index], "rho_membrane_active": self.system_history[access_index, :, parameterorg.rho_membrane_active_index], "rac_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rac_cytosolic_gdi_bound_index], "rho_cytosolic_gdi_bound": self.system_history[access_index, :, parameterorg.rho_cytosolic_gdi_bound_index], "rac_membrane_inactive": self.system_history[access_index, :, parameterorg.rac_membrane_inactive_index], "rho_membrane_inactive": self.system_history[access_index, :, parameterorg.rho_membrane_inactive_index]}
 
         rac_membrane_actives = self.system_history[
             access_index, :, parameterorg.rac_membrane_active_index
@@ -826,17 +817,8 @@ class Cell:
             setattr(self, "cellwide_" + label + "_index", index)
 
     # -----------------------------------------------------------------
-    def calculate_when_randomization_event_occurs(self, mean=None, variance=None):
-        if mean == None:
-            mean = self.randomization_time_mean
-        if variance == None:
-            variance = self.randomization_time_variance_factor * mean
-
-        step_shift = max(1, np.int(np.abs(np.random.normal(loc=mean, scale=variance))))
-
-        next_randomization_event_tpoint = self.curr_tpoint + step_shift
-
-        return next_randomization_event_tpoint
+    def calculate_when_randomization_event_occurs(self):
+        return self.curr_tpoint + 1200
 
     # -----------------------------------------------------------------
     def check_if_randomization_criteria_met(self, t):
@@ -984,6 +966,15 @@ class Cell:
                                     * rgtpase_distrib
                                     / np.sum(rgtpase_distrib)
                                 )
+                        elif distrib_type == "biased nodes":
+                            biased_nodes = bias_direction_range
+                            distrib_factors = np.array([1.0 if x in biased_nodes else 0.0 for x in range(self.num_nodes)])
+                            distrib_factors = distrib_factors / np.sum(distrib_factors)
+                            if rgtpase_label == "rac_":
+                                rgtpase_distrib = frac_factor * distrib_factors
+                            elif rgtpase_label == "rho_":
+                                # rgtpase_distrib = frac_factor*gu.calculate_normalized_randomization_factors(self.num_nodes)
+                                rgtpase_distrib = frac_factor * np.roll(distrib_factors, 8)
                         else:
                             raise Exception(
                                 "Invalid initial rGTPase distribution type provided! ({})".format(
@@ -1005,22 +996,17 @@ class Cell:
 
     # -----------------------------------------------------------------
 
-    def renew_randomization_rac_kgtp_multipliers(self, randomization_type):
-        if randomization_type == "f":
-            rfs = generate_random_multipliers_fixed_number(
-                self.num_nodes,
-                self.randomization_node_percentage,
-                np.random.rand(self.num_nodes),
-                self.randomization_magnitude,
-            )
-        elif randomization_type == "r":
-            rfs = generate_random_multipliers_fixed_number(
-                self.num_nodes,
-                self.randomization_node_percentage,
-                np.random.rand(self.num_nodes),
-                self.randomization_magnitude,
-            )
-        return rfs
+    def renew_randomization_rac_kgtp_multipliers(self, tstep):
+        possible_rfs = np.array(
+            [[1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+             [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+             [0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+             [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0],
+             [0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0],
+             [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0]]
+        )
+        ix = int((tstep/1200) % 6)
+        return possible_rfs[ix] * self.randomization_magnitude
 
     # -----------------------------------------------------------------
     def set_next_state(
@@ -1091,64 +1077,27 @@ class Cell:
             )
 
         # ==================================
-        # RANDOMIZATION
-        if self.randomization_scheme == 0:
-            if self.next_randomization_event_tpoint == None:
-                self.next_randomization_event_tpoint = (
-                    self.calculate_when_randomization_event_occurs()
-                )
+        if self.curr_tpoint == self.next_randomization_event_tpoint:
+            self.next_randomization_event_tpoint += 1200
 
-            if new_tpoint == self.next_randomization_event_tpoint:
-                self.next_randomization_event_tpoint = None
-
-                # run and tumble: cell loses polarity approximately after T seconds
-                self.set_rgtpase_distribution(
-                    self.biased_rgtpase_distrib_defn_for_randomization,
-                    self.init_rgtpase_cytosol_frac,
-                    self.init_rgtpase_membrane_inactive_frac,
-                    self.init_rgtpase_membrane_active_frac,
-                    None,
-                    np.array([np.arctan2(y, x) for x, y in node_coords]),
-                    tpoint=new_tpoint,
-                )
-
-                self.system_history[
-                    next_tstep_system_history_access_index,
-                    0,
-                    parameterorg.randomization_event_occurred_index,
-                ] = 1
-
-        elif self.randomization_scheme == 1:
-            if self.next_randomization_event_tpoint == None:
-                self.next_randomization_event_tpoint = (
-                    self.calculate_when_randomization_event_occurs()
-                )
-
-            if new_tpoint == self.next_randomization_event_tpoint:
-                self.next_randomization_event_tpoint = None
-
-                # randomization event has occurred, so renew Rac kgtp rate multipliers
-                self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(
-                    self.randomization_type
-                )
-
-            # store the Rac randomization factors for this timestep
-            self.system_history[
-                next_tstep_system_history_access_index,
-                :,
-                parameterorg.randomization_rac_kgtp_multipliers_index,
-            ] = self.randomization_rac_kgtp_multipliers
-        else:
-            self.randomization_rac_kgtp_multipliers = np.ones(
-                self.num_nodes, dtype=np.float64
+            # randomization event has occurred, so renew Rac kgtp rate multipliers
+            self.randomization_rac_kgtp_multipliers = self.renew_randomization_rac_kgtp_multipliers(
+                self.curr_tpoint
             )
 
-        if self.verbose == True:
-            print(
-                self.randomization_print_string.format(
-                    self.next_randomization_event_tpoint
-                )
-            )
+        # store the Rac randomization factors for this timestep
+        self.system_history[
+            next_tstep_system_history_access_index,
+            :,
+            parameterorg.randomization_rac_kgtp_multipliers_index,
+        ] = self.randomization_rac_kgtp_multipliers
+
+        # if self.next_randomization_event_tpoint != None:
+        #     print(
+        #         self.randomization_print_string.format(
+        #             self.next_randomization_event_tpoint
+        #         )
+        #     )
 
         # ==================================
         rac_membrane_actives = self.system_history[
@@ -1156,11 +1105,21 @@ class Cell:
             :,
             parameterorg.rac_membrane_active_index,
         ]
+        rac_membrane_inactives = self.system_history[
+                               next_tstep_system_history_access_index,
+                               :,
+                               parameterorg.rac_membrane_inactive_index,
+                               ]
         rho_membrane_actives = self.system_history[
             next_tstep_system_history_access_index,
             :,
             parameterorg.rho_membrane_active_index,
         ]
+        rho_membrane_inactives = self.system_history[
+                               next_tstep_system_history_access_index,
+                               :,
+                               parameterorg.rho_membrane_inactive_index,
+                               ]
 
         random_order_cell_indices = np.arange(num_cells)
         np.random.shuffle(random_order_cell_indices)
@@ -1178,15 +1137,6 @@ class Cell:
             self.closeness_dist_squared_criteria,
             self.coa_intersection_exponent,
         )
-
-        # if self.verbose == True:
-        #     print("max_coa: ", np.max(coa_signals))
-        #     print("min_coa: ", np.min(coa_signals))
-        #     print("min_cil: ", np.min(intercellular_contact_factors))
-        #     # print("max_cil: ", np.max(intercellular_contact_factors))
-        #     print("rfs: ", np.max(self.randomization_rac_kgtp_multipliers))
-        #     print("max_chemo: {}".format(np.max(chemoattractant_signal_on_nodes)))
-        #     print("min_chemo: {}".format(np.min(chemoattractant_signal_on_nodes)))
 
         self.system_history[
             next_tstep_system_history_access_index, :, parameterorg.coa_signal_index
@@ -1237,17 +1187,13 @@ class Cell:
             parameterorg.rho_cytosolic_gdi_bound_index,
         ] = (rho_cytosolic_gdi_bound * insertion_array)
 
-        #        print "num_nodes: ", self.num_nodes
-        #        print "node_coords: ", node_coords
-        #        print "rac_membrane_actives: ", rac_membrane_actives
-        #        print "rho_membrane_actives: ", rho_membrane_actives
-        #        print "length_edge_resting: ", self.length_edge_resting
-        #        print "stiffness_edge: ", self.stiffness_edge
-        #        print "force_rac_mag: ", self.force_rac_max_mag
-        #        print "force_rho_mag: ", self.force_rho_max_mag
-        #        print "force_adh_constant: ", self.force_adh_constant
-        #        print "area_resting: ", self.area_resting
-        #        print "stiffness_cytoplasmic: ", self.stiffness_cytoplasmic
+        print("next_update: ", self.next_randomization_event_tpoint)
+        print("rfs: ", list(self.randomization_rac_kgtp_multipliers))
+        # print("vertex_coords: ", list(node_coords))
+        # print("rac_acts: ", list(rac_membrane_actives))
+        # print("rac_acts: ", list(rac_membrane_inactives))
+        # print("rho_acts: ", list(rho_membrane_actives))
+        # print("rho_inacts: ", list(rho_membrane_actives))
 
         F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vecs = mechanics.calculate_forces(
             self.num_nodes,
@@ -1274,28 +1220,12 @@ class Cell:
             self.closeness_dist_criteria,
         )
 
-        #        printing_efplus = np.round(np.linalg.norm(EFplus, axis=1)*1e6, decimals=2)
-        #        printing_efminus = np.round(np.linalg.norm(EFminus, axis=1)*1e6, decimals=2)
-        #        printing_frgtpase = np.round(np.linalg.norm(F_rgtpase, axis=1)*1e6, decimals=2)
-        # printing_fadh = np.round(np.linalg.norm(F_adhesion, axis=1)*1e6, decimals=2)
-        #        printing_fcyto = np.round(np.linalg.norm(F_cytoplasmic, axis=1)*1e6, decimals=2)
-        #
-        #        current_area = abs(geometry.calculate_polygon_area(num_nodes, node_coords))
-        #        area_strain = (current_area - self.area_resting)/self.area_resting
-
-        #        print "edge_forces_plus: ", np.min(printing_efplus), np.max(printing_efplus)
-        #        print "edge_forces_minus: ", np.min(printing_efminus), np.max(printing_efminus)
-        #        print "F_rgtpase: ", printing_frgtpase
-        # print "F_adh: ", printing_fadh
-        #        printing_frgtpase_fadh_ratio = np.array([x/y for x, y in zip(printing_frgtpase, printing_fadh) if y > 1e-6])
-        #        if printing_frgtpase_fadh_ratio.shape[0] > 0:
-        #            print "F_rgtpase/F_adh: ", np.max(printing_frgtpase_fadh_ratio)
-        #        else:
-        #            print "F_rgtpase/F_adh: infinity"
-        #        print "area_strain: ", area_strain
-        #        print "stiff_cyto: ", self.stiffness_cytoplasmic
-        #        print "F_cytoplasmic: ", np.min(printing_fcyto), np.max(printing_fcyto)
-
+        # print("uivs: ", unit_inside_pointing_vecs)
+        # print("rgtp_forces: ", F_rgtpase)
+        # print("edge_strains: ", local_strains)
+        # print("avg_tens_strain: ", np.average(np.array([0.0 if x < 0.0 else x for x in local_strains])))
+        # print("edge_forces: ", EFplus)
+        # print("cyto_forces: ", F_cytoplasmic)
         self.system_history[
             next_tstep_system_history_access_index, :, parameterorg.local_strains_index
         ] = local_strains
@@ -1308,8 +1238,8 @@ class Cell:
             next_tstep_system_history_access_index, :, parameterorg.kdgdi_rho_index
         ] = self.kdgdi_rho * np.ones(num_nodes, dtype=np.float64)
 
-        if self.verbose == True:
-            print("global strain: ", np.sum(local_strains) / num_nodes)
+        #if self.verbose == True:
+            #print("global strain: ", np.sum(local_strains) / num_nodes)
 
         # local_tension_strains = np.where(local_strains < 0, 0, local_strains)
 
@@ -1355,27 +1285,7 @@ class Cell:
             close_point_smoothness_factors,
         )
 
-        kgtp_rho_per_node = chemistry.calculate_kgtp_rho(
-            self.num_nodes,
-            conc_rho_membrane_actives,
-            intercellular_contact_factors,
-            migr_bdry_contact_factors,
-            self.exponent_rho_autoact,
-            self.threshold_rho_autoact,
-            self.kgtp_rho_baseline,
-            self.kgtp_rho_autoact_baseline,
-        )
-
-        self.system_history[
-            next_tstep_system_history_access_index, :, parameterorg.kgtp_rac_index
-        ] = kgtp_rac_per_node
-        self.system_history[
-            next_tstep_system_history_access_index, :, parameterorg.kgtp_rho_index
-        ] = kgtp_rho_per_node
-
-        self.system_history[
-            next_tstep_system_history_access_index, :, parameterorg.kdgtp_rac_index
-        ] = chemistry.calculate_kdgtp_rac(
+        kdgtps_rac = chemistry.calculate_kdgtp_rac(
             self.num_nodes,
             conc_rho_membrane_actives,
             self.exponent_rho_mediated_rac_inhib,
@@ -1390,9 +1300,7 @@ class Cell:
             np.array([ls if ls > 0 else 0.0 for ls in local_strains]),
         )
 
-        self.system_history[
-            next_tstep_system_history_access_index, :, parameterorg.kdgtp_rho_index
-        ] = chemistry.calculate_kdgtp_rho(
+        kdgtps_rho = chemistry.calculate_kdgtp_rho(
             self.num_nodes,
             conc_rac_membrane_actives,
             self.exponent_rac_mediated_rho_inhib,
@@ -1400,6 +1308,37 @@ class Cell:
             self.kdgtp_rho_baseline,
             self.kdgtp_rac_mediated_rho_inhib_baseline,
         )
+
+        kgtp_rho_per_node = chemistry.calculate_kgtp_rho(
+            self.num_nodes,
+            conc_rho_membrane_actives,
+            intercellular_contact_factors,
+            migr_bdry_contact_factors,
+            self.exponent_rho_autoact,
+            self.threshold_rho_autoact,
+            self.kgtp_rho_baseline,
+            self.kgtp_rho_autoact_baseline,
+        )
+
+        # print("kgtps_rac: ", list(kgtp_rac_per_node))
+        # print("kdgtps_rac: ", list(kdgtps_rac))
+        # print("kgtps_rho: ", list(kgtp_rho_per_node))
+        # print("kdgtps_rho: ", list(kdgtps_rho))
+
+        self.system_history[
+            next_tstep_system_history_access_index, :, parameterorg.kgtp_rac_index
+        ] = kgtp_rac_per_node
+        self.system_history[
+            next_tstep_system_history_access_index, :, parameterorg.kgtp_rho_index
+        ] = kgtp_rho_per_node
+
+        self.system_history[
+            next_tstep_system_history_access_index, :, parameterorg.kdgtp_rac_index
+        ] = kdgtps_rac
+
+        self.system_history[
+            next_tstep_system_history_access_index, :, parameterorg.kdgtp_rho_index
+        ] = kdgtps_rho
 
         # update mechanics parameters
         self.system_history[
@@ -1705,20 +1644,16 @@ class Cell:
                 chemoattractant_signal_on_nodes,
             )
 
-            output_array = scint.odeint(
-                dynamics.cell_dynamics,
-                state_array,
-                [0, 1],
-                args=rhs_args,
-                **self.integration_params
-            )
+            output_array = dynamics.eulerint(dynamics.cell_dynamics, state_array, np.array([0, 1]), rhs_args, 10)
+            # output_array = scint.odeint(
+            #     dynamics.cell_dynamics,
+            #     state_array,
+            #     [0, 1],
+            #     args=rhs_args,
+            #     **self.integration_params
+            # )
 
             next_state_array = output_array[1]
-
-            # print "Integrating..."
-            #            integration_output = scint.solve_ivp(lambda t, y: dynamics.cell_dynamics(y, t, *rhs_args), (0, 1), state_array, method='RK45', **self.integration_params)
-            #            assert(integration_output.success)
-            #            next_state_array = integration_output.y[:,-1]
 
             self.set_next_state(
                 next_state_array,

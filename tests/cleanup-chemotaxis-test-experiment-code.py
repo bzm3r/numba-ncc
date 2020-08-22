@@ -198,7 +198,7 @@ def chemotaxis_no_corridor_tests(
     parameter_dict,
     no_randomization=False,
     uniform_initial_polarization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,

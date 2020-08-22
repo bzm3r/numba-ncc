@@ -11,7 +11,7 @@ import numba as nb
 
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def capped_linear_function(max_x, x):
     if x > max_x:
         return 1.0
@@ -79,7 +79,7 @@ def calculate_local_strains(this_cell_coords, length_edge_resting):
 
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_cytoplasmic_force(
     num_nodes,
     this_cell_coords,
@@ -89,15 +89,12 @@ def calculate_cytoplasmic_force(
 ):
     current_area = abs(geometry.calculate_polygon_area(this_cell_coords))
 
-    if current_area < area_resting:
-        area_strain = (current_area - area_resting) / area_resting
-        force_mag = area_strain * stiffness_cytoplasmic / num_nodes
+    area_strain = (current_area - area_resting) / area_resting
+    force_mag = area_strain * stiffness_cytoplasmic / num_nodes
 
-        return geometry.multiply_vectors_by_scalar(
-            unit_inside_pointing_vectors, force_mag
-        )
-    else:
-        return np.zeros((num_nodes, 2))
+    return geometry.multiply_vectors_by_scalar(
+        unit_inside_pointing_vectors, force_mag
+    )
 
 
 # -----------------------------------------------------------------
@@ -183,7 +180,7 @@ def determine_rac_rho_domination(rac_membrane_actives, rho_membrane_actives):
 # -----------------------------------------------------------------
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_rgtpase_mediated_forces(
     num_nodes,
     this_cell_coords,
@@ -203,9 +200,10 @@ def calculate_rgtpase_mediated_forces(
         rho_activity = rho_membrane_actives[ni]
 
         if rac_activity > rho_activity:
-            force_mag = max_force_rac * capped_linear_function(
+            mag_frac = capped_linear_function(
                 2 * threshold_force_rac_activity, rac_activity - rho_activity
             )
+            force_mag = max_force_rac * mag_frac
         else:
             force_mag = (
                 -1
@@ -394,7 +392,7 @@ def calculate_external_forces(
 
 
 # ----------------------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_forces(
     num_nodes,
     num_cells,

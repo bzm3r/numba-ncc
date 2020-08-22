@@ -3166,7 +3166,6 @@ def calculate_mean_and_deviation(data):
 #
 #    node_coords_per_tstep_per_cell = []
 #    for ci in range(num_cells):
-#        print(("    Analyzing cell {}...".format(ci)))
 #
 #        node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(ci, storefile_path)
 #        node_coords_per_tstep_per_cell.append(copy.deepcopy(node_coords_per_tstep))
@@ -3202,7 +3201,6 @@ def calculate_mean_and_deviation(data):
 #    chemotaxis_score_cutoff_radius,
 # ):
 #    st = time.time()
-#    print("Analyzing chemotaxis data...")
 #    num_cells = relevant_environment.num_cells
 #
 #
@@ -3238,7 +3236,6 @@ def calculate_mean_and_deviation(data):
 #    cell_chemotaxis_scores = [scoring_function(d)/normalized_areas[min_dist_timestep_over_all_cells] for d in dist_of_cells_at_min_dist_timestep]
 #
 #    et = time.time()
-#    print("Done. time taken = {} s".format(np.round(et - st, decimals=2)))
 #    return cell_chemotaxis_scores, sorted_min_distance_and_timestep_per_cell[0][1]
 
 
@@ -3313,8 +3310,6 @@ def analyze_chemotaxis_success_at_cluster_level(
     T,
 ):
     st = time.time()
-    print("=======================================")
-    print("Analyzing chemotaxis data for repeat {}".format(rpt_number))
     num_cells = relevant_environment.num_cells
 
     all_cell_centroids_per_tstep = []
@@ -3366,7 +3361,6 @@ def analyze_chemotaxis_success_at_cluster_level(
     cluster_persistence_ratio = straight_line_dist_to_end / total_dist
 
     et = time.time()
-    print("Done. time taken = {} s".format(np.round(et - st, decimals=2)))
 
     return (
         average_cluster_speed,
@@ -3388,7 +3382,6 @@ def analyze_chemotactic_success_simple(
 
     all_node_coords = np.empty((0, 2), dtype=np.float64)
     for ci in range(num_cells):
-        print(("    Analyzing cell {}...".format(ci)))
 
         node_coords_per_tstep = hardio.get_node_coords_for_all_tsteps(
             ci, storefile_path

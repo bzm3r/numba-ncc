@@ -131,10 +131,6 @@ def calculate_rac_randomization(
             uniform_distribution_width
         )
 
-    #    # ===========
-    #    print "rfs: ", randomization_factors_rac_active
-    #    # ===========
-
     for ni in range(num_nodes):
         nodal_rac_active = rac_actives[ni]
         nodal_rac_inactive = rac_inactives[ni]
@@ -152,18 +148,7 @@ def calculate_rac_randomization(
         )  # + delta_rac_inactive
         randomized_rac_inactives[ni] = (
             nodal_rac_inactive - delta_rac_active
-        )  # - delta_rac_inactive
-
-    #    print "ini_rac_a: ", rac_actives
-    #    print "ini_rac_i: ", rac_inactives
-    #
-    #
-    #    print "fin_rac_a: ", randomized_rac_actives
-    #    print "fin_rac_i: ", randomized_rac_inactives
-    #
-    #
-    #    print "rac_check: ", np.abs((rac_actives + rac_inactives) - (randomized_rac_actives + randomized_rac_inactives)) < 1e-8
-
+        )
     return randomized_rac_actives, randomized_rac_inactives
 
 
@@ -198,7 +183,7 @@ def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(
 
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_kgtp_rac(
     conc_rac_membrane_actives,
     exponent_rac_autoact,
@@ -244,10 +229,8 @@ def calculate_kgtp_rac(
         if kgtp_rac_autoact > 1.25 * kgtp_rac_autoact_baseline:
             kgtp_rac_autoact = 1.25 * kgtp_rac_autoact_baseline
 
-        result[i] = (
-            randomization_factors[i]
-            + chemoattractant_mediated_coa_dampening * coa_signal
-        ) * kgtp_rac_baseline + kgtp_rac_autoact
+        kgtp_rac_base = (1.0 + randomization_factors[i]) * kgtp_rac_baseline
+        result[i] = kgtp_rac_base + kgtp_rac_autoact
 
     return result
 
@@ -314,7 +297,6 @@ def calculate_kdgtp_rac(
     global_tension = np.sum(local_strains) / num_nodes
     if global_tension < 0.0:
         global_tension = 0.0
-
     strain_inhibition = tension_mediated_rac_inhibition_magnitude * hill_function(
         3, tension_mediated_rac_inhibition_half_strain, global_tension
     )
@@ -391,7 +373,7 @@ def calculate_concentrations(num_nodes, species, avg_edge_lengths):
 
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_flux_terms(
     num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths
 ):
@@ -410,7 +392,7 @@ def calculate_flux_terms(
 
 
 # -----------------------------------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_diffusion(
     num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths
 ):

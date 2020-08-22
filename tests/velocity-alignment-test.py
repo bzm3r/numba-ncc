@@ -13,7 +13,7 @@ import numba as nb
 import matplotlib.pyplot as plt
 
 # =================================================================
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_intercellular_distance_matrix(cell_centroid_coordinates):
 
     num_cells = cell_centroid_coordinates.shape[0]
@@ -40,7 +40,7 @@ def calculate_intercellular_distance_matrix(cell_centroid_coordinates):
 
 
 # =================================================================
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def find_snapshot_index(unique_snapshot_timesteps, timestep):
     for i in range(unique_snapshot_timesteps.shape[0]):
         if unique_snapshot_timesteps[i] == timestep:
@@ -48,7 +48,7 @@ def find_snapshot_index(unique_snapshot_timesteps, timestep):
 
 
 # =================================================================
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_velocity_alignments(
     time_deltas, distance_radii, all_cell_centroids_per_tstep, T, L
 ):
@@ -148,7 +148,7 @@ def calculate_velocity_alignments(
     return velocity_alignments, num_data_points_per_case
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_correlation_coefficient(xs, ys):
     avg_xs = np.sum(xs) / xs.shape[0]
     avg_ys = np.sum(ys) / ys.shape[0]
@@ -164,7 +164,7 @@ def calculate_correlation_coefficient(xs, ys):
     return avg_delta_avg / (std_xs * std_ys)
 
 
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 # def calculate_direction_correlations(time_deltas, distance_radii, all_cell_centroids_per_tstep, T, L):
 #    num_drs = distance_radii.shape[0]
 #    num_tds = time_deltas.shape[0]
@@ -248,7 +248,7 @@ def calculate_correlation_coefficient(xs, ys):
 #    return velocity_alignments, num_data_points_per_case
 
 # =================================================================
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def find_index_of_max_element_in_velocity_alignment_matrix(
     num_x, num_y, va_matrix, num_va_data_points
 ):
@@ -273,7 +273,7 @@ def find_index_of_max_element_in_velocity_alignment_matrix(
 
 
 # =================================================================
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def determine_velocity_alignment_max_radii_and_min_times_over_all_repeats(
     velocity_alignment_radii,
     velocity_alignment_times,

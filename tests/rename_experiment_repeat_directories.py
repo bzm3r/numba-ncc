@@ -8,7 +8,7 @@ Created on Thu Jul 27 13:47:52 2017
 import os
 import parse
 
-experiment_set_dir = "B:\\numba-ncc\\output\\2019_FEB_26\\SET=1"
+experiment_set_dir = "C:\\Users\\bhmer\\Desktop\\numba-ncc\\output2019_FEB_26\\SET=1"
 experiment_set_dir_contents = os.listdir(experiment_set_dir)
 
 experiment_set_dir_subdirs = [

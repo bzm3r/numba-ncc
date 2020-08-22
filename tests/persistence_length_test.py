@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import scipy as sp
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
     ax, ay = a
     bx, by = b
@@ -33,7 +33,7 @@ def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
     return ax_ * bx_ + ay_ * by_
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
     N = displacements.shape[0]
 
@@ -62,7 +62,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
     return all_das, all_das[: 2 * first_negative_n]
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def generate_displacements(
     persistence_time,
     num_displacements,
@@ -86,7 +86,7 @@ def generate_displacements(
     return displacements
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_positions(displacements):
     num_displacements = displacements.shape[0]
     positions = np.zeros((num_displacements + 1, 2), dtype=np.float64)

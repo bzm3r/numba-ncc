@@ -18,7 +18,7 @@ import numba as nb
 #    pass
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_prospective_edge_already_counted(prospective_edge, edges):
     for ei in range(edges.shape[0]):
         edge = edges[ei]
@@ -56,7 +56,7 @@ def determine_edges(dt):
     return edges
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_edge_lengths(points, edges):
     edge_lengths = np.zeros(edges.shape[0], dtype=np.float64)
 

@@ -41,7 +41,7 @@ def convert_pycairo_matrix_numpy_array(cairo_matrix):
     return np.array([[xx, xy], [yx, yy], [x0, y0]])
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def float_cartesian_product(xs, ys):
     num_xs = xs.shape[0]
     num_ys = ys.shape[0]
@@ -62,7 +62,7 @@ def copy_worker(tasks):
         shutil.copy(*task)
 
 
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def create_transformation_matrix_entries(
     scale_x,
     scale_y,
@@ -86,7 +86,7 @@ def create_transformation_matrix_entries(
 
 # -------------------------------------
 
-# @nb.jit()
+# #@nb.jit()
 def draw_line_jit(
     p1,
     p2,
@@ -108,7 +108,7 @@ def draw_line_jit(
 
 # -------------------------------------
 
-# @nb.jit()
+# #@nb.jit()
 def draw_polygon_jit(
     polygon_coords,
     polygon_edge_and_vertex_color,
@@ -134,7 +134,7 @@ def draw_polygon_jit(
 # -------------------------------------
 
 
-#@nb.jit()
+##@nb.jit()
 def draw_dot_jit(centre_coords, color, line_width, context):
     context.new_path()
     r, g, b = color
@@ -149,7 +149,7 @@ def draw_dot_jit(centre_coords, color, line_width, context):
 # -------------------------------------
 
 
-#@nb.jit()
+##@nb.jit()
 def draw_circle_jit(
     centre_coords,
     circle_radius,
@@ -168,7 +168,7 @@ def draw_circle_jit(
 # -------------------------------------
 
 
-#@nb.jit()
+##@nb.jit()
 def draw_arrow_jit(
     start_coords,
     relative_end_coords,
@@ -209,7 +209,7 @@ def draw_arrow_jit(
 # -------------------------------------
 
 
-#@nb.jit()
+##@nb.jit()
 def draw_centroid_trail_jit(
     centroid_line_width, centroid_color, centroid_coords, context
 ):
@@ -231,7 +231,7 @@ def draw_centroid_trail_jit(
 
 
 # -------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_gp_adjacency_vector_relative_to_focus(
     focus_index, coa_grid_points, coa_data_per_gridpoint, resolution
 ):
@@ -279,7 +279,7 @@ def get_relative_of_j_around_i_in_polygon_matrix(i, j, ith_gp, jth_gp, i_offset)
 
 
 # --------------------------------------
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def numba_get_data_adjacent_gpis(
     focus_index,
     focus_adjacency_vector,
@@ -455,7 +455,7 @@ def one_tile_greedy_cursor_rotate(cursor_direction, cursor, polygon_matrix):
 
 
 # --------------------------------------
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def convert_polygon_matrix_into_polygon(polygon_matrix, coa_grid_points, resolution):
     cursor_direction = np.array([0, -1], dtype=np.int64)
 
@@ -1276,7 +1276,7 @@ def prepare_protrusion_existence_data(unique_undrawn_timesteps, data_dict_pickle
 
 # -----------------------------------------------------------------
 
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def grid_point_validation_worker(
     space_migratory_bdry_polygon,
     space_physical_bdry_polygon,
@@ -1320,7 +1320,7 @@ def rearrange_data_per_x_per_y_into_data_per_y_per_x(nparray):
 # ------------------------------------------------------------------
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_polygon_bbs(polygon_coords):
     bbs = np.zeros((polygon_coords.shape[0], 4), dtype=np.float64)
     for pi in range(polygon_coords.shape[0]):
@@ -2338,15 +2338,14 @@ class EnvironmentAnimation:
         unique_timesteps = np.sort(
             np.array(
                 [
-                    x
+                    int(x)
                     for x in list(
                         set(
                             np.linspace(
                                 0,
                                 timestep_to_draw_till,
-                                num=num_frames,
+                                num=int(num_frames),
                                 endpoint=False,
-                                dtype=np.int64,
                             )
                         )
                     )
@@ -2577,7 +2576,7 @@ class EnvironmentAnimation:
                                 np.linspace(
                                     0,
                                     timestep_to_draw_till,
-                                    num=num_frames,
+                                    num=timestep_to_draw_till,
                                     endpoint=False,
                                     dtype=np.int64,
                                 )

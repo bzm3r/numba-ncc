@@ -10,7 +10,7 @@ import numba as nb
 nthreads = 8
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def rotate_2D_vector_CCW(vector):
     x, y = vector
 
@@ -22,7 +22,7 @@ def rotate_2D_vector_CCW(vector):
     return result_vector
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def calculate_squared_dist(p1, p2):
     dx = p1[0] - p2[0]
     dy = p1[1] - p2[1]
@@ -30,12 +30,12 @@ def calculate_squared_dist(p1, p2):
     return dx * dx + dy * dy
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def cross_product_2D(a, b):
     return (a[0] * b[1]) - (a[1] * b[0])
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def is_given_vector_between_others(x, alpha, beta):
     cp1 = cross_product_2D(alpha, x)
     cp2 = cross_product_2D(x, beta)
@@ -48,7 +48,7 @@ def is_given_vector_between_others(x, alpha, beta):
         return 0
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_from_node_self_intersects(
     start_coord, end_coord, polygon_coords, start_coord_index
 ):
@@ -76,7 +76,7 @@ def check_if_line_segment_from_node_self_intersects(
         return 0
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, x):
     sx, sy = start
     ex, ey = end
@@ -114,7 +114,7 @@ def check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, x):
             return 1
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y):
 
     if check_if_line_segment_intersects_vertical_line(start, end, min_y, max_y, min_x):
@@ -133,7 +133,7 @@ def check_if_line_segment_intersects_box(start, end, min_x, max_x, min_y, max_y)
     return 0
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_intersects_horizontal_line(start, end, min_x, max_x, y):
     sx, sy = start
     ex, ey = end
@@ -172,7 +172,7 @@ def check_if_line_segment_intersects_horizontal_line(start, end, min_x, max_x, y
             return 1
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_passes_through_any_polygon(
     pi_a, vi_a, pi_b, vi_b, all_polygon_coords, all_polygons_bounding_box_coords
 ):
@@ -224,7 +224,7 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
     return num_intersections
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def is_left(p0, p1, p2):
     """
     Input:  three points P0, P1, and P2
@@ -239,7 +239,7 @@ def is_left(p0, p1, p2):
     return (p1x - p0x) * (p2y - p0y) - (p2x - p0x) * (p1y - p0y)
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def check_if_line_segment_intersects_polygon(
     a, b, normal_to_line_segment, polygon, ignore_vertex_index
 ):
@@ -288,7 +288,7 @@ def check_if_line_segment_intersects_polygon(
 
 
 #
-@nb.jit(
+#@nb.jit(
     "void(float64[:,:,:,:], int64[:,:,:,:], float64[:,:], float64[:,:,:], int64[:,:])",
     nopython=True,
     nogil=True,
@@ -324,7 +324,7 @@ def dist_squared_and_line_segment_calculation_worker(
         line_segment_intersect_matrix[b_ci][b_ni][a_ci][a_ni] = num_intersects
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def create_dist_and_line_segment_interesection_test_args(
     num_cells,
     num_nodes_per_cell,
@@ -427,7 +427,7 @@ def multithread_func(
     return dist_squared_matrix, line_segment_intersect_matrix
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def calculate_polygon_bounding_box(polygon):
     num_vertices = polygon.shape[0]
 

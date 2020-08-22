@@ -447,7 +447,7 @@ def make_curving_migr_polygon(
         #        ax.plot(bottom_curve[:1,0], bottom_curve[:1,1], color='r', marker='.')
         #        ax.plot(top_curve[:1,0], top_curve[:1,1], color='g', marker='.')
         #        ax.legend(loc='best')
-        #        fig.savefig("B:\\numba-ncc\\output\\2018_FEB_10\\SET=0\\top_and_bot-post.png")
+        #        fig.savefig("C:\\Users\\bhmer\\Desktop\\numba-ncc\\output2018_FEB_10\\SET=0\\top_and_bot-post.png")
 
         remaining_corridor = width_corridor - length_within_curve
         if remaining_corridor < 1e-16:
@@ -482,7 +482,7 @@ def make_curving_migr_polygon(
     #
     #        ax.legend(loc='best')
     #        fig.set_size_inches(10, 10)
-    #        fig.savefig("B:\\numba-ncc\\output\\2018_FEB_10\\SET=0\\full_poly.png")
+    #        fig.savefig("C:\\Users\\bhmer\\Desktop\\numba-ncc\\output2018_FEB_10\\SET=0\\full_poly.png")
 
     return full_polygon * 1e-6
 
@@ -628,8 +628,8 @@ def define_group_boxes_and_corridors(
     x_placement_option,
     y_placement_option,
     physical_bdry_polygon_extra=10,
-    origin_x_offset=10,
-    origin_y_offset=10,
+    origin_x_offset=0.0,
+    origin_y_offset=0.0,
     box_x_offsets=[],
     box_y_offsets=[],
     make_only_migratory_corridor=False,
@@ -951,7 +951,7 @@ def single_cell_polarization_test(
     experiment_number,
     sub_experiment_number,
     parameter_dict,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     no_randomization=False,
     total_time_in_hours=3,
     timestep_length=2,
@@ -1268,7 +1268,7 @@ def convergence_test_simple(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -1400,7 +1400,7 @@ def Tr_vs_Tp_test(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -1500,7 +1500,7 @@ def two_cells_cil_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -1769,7 +1769,7 @@ def collision_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -1990,7 +1990,7 @@ def block_coa_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -2237,7 +2237,7 @@ def many_cells_coa_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -2522,7 +2522,7 @@ def many_cells_coa_test(
 
 # =============================================================================
 def make_linear_gradient_function(source_x, source_y, max_value, slope):
-    @nb.jit(nopython=True)
+    #@nb.jit(nopython=True)
     def f(x):
         d = np.sqrt((x[0] - source_x) ** 2 + (x[1] - source_y) ** 2)
         calc_value = max_value * (1 - slope * d)
@@ -2540,7 +2540,7 @@ def make_linear_gradient_function(source_x, source_y, max_value, slope):
 def make_normal_gradient_function(source_x, source_y, gaussian_width, gaussian_height):
     widthsq = gaussian_width * gaussian_width
 
-    @nb.jit(nopython=True)
+    #@nb.jit(nopython=True)
     def f(x):
         dsq = (x[0] - source_x) ** 2 + (x[1] - source_y) ** 2
         return gaussian_height * np.exp(-1 * dsq / (2 * widthsq))
@@ -2578,7 +2578,7 @@ def make_chemoattractant_gradient_function(
 
 
 # ============================================================================
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def sanitize_number_of_interactions(
     num_interactions_per_cell_per_snapshot_per_repeat,
     num_cil_interactions_per_cell_per_snapshot_per_repeat,
@@ -2922,7 +2922,7 @@ def corridor_migration_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -3404,7 +3404,7 @@ def no_corridor_chemoattraction_test(
     num_cells_responsive_to_chemoattractant=-1,
     uniform_initial_polarization=False,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -3854,7 +3854,7 @@ def corridor_migration_symmetric_test(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -4174,6 +4174,7 @@ def corridor_migration_symmetric_test(
 
 
 # =============================================================================
+
 
 
 def setup_initial_rgtpase_bias(uniform_initial_polarization):
@@ -4726,7 +4727,7 @@ def chemotaxis_no_corridor_tests(
     parameter_dict,
     no_randomization=False,
     uniform_initial_polarization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -5102,222 +5103,222 @@ def chemotaxis_no_corridor_tests(
                 base_output_dir, date_str, experiment_number, experiment_name
             )
 
-            data_vals = get_chemotaxis_analysis_data_for_variant(
-                redo_chemotaxis_analysis,
-                experiment_dir,
-                nr,
-                produce_graphs,
-                produce_animation,
-                produce_polarization_animation,
-                environment_wide_variable_defns,
-                total_time_in_hours,
-                source_x,
-                source_y,
-                chemotaxis_target_radius,
-            )
+            # data_vals = get_chemotaxis_analysis_data_for_variant(
+            #     redo_chemotaxis_analysis,
+            #     experiment_dir,
+            #     nr,
+            #     produce_graphs,
+            #     produce_animation,
+            #     produce_polarization_animation,
+            #     environment_wide_variable_defns,
+            #     total_time_in_hours,
+            #     source_x,
+            #     source_y,
+            #     chemotaxis_target_radius,
+            # )
 
-            for arr, val in zip(data_arrays, data_vals[:-2]):
-                arr.append(val)
+            # for arr, val in zip(data_arrays, data_vals[:-2]):
+            #     arr.append(val)
 
-            if type(max_num_closest_neighbours) == type(None):
-                max_num_closest_neighbours, time_deltas = data_vals[-2:]
+            # if type(max_num_closest_neighbours) == type(None):
+            #     max_num_closest_neighbours, time_deltas = data_vals[-2:]
 
         for arr_of_arrs, arr in zip(data_arrays_of_arrays, data_arrays):
             arr_of_arrs.append(copy.deepcopy(arr))
 
     print("=========")
-    datavis.graph_simple_chemotaxis_efficiency_data(
-        test_variants,
-        simple_chemotaxis_success_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-    
-    datavis.graph_chemotaxis_group_persistence_time_data(
-        test_variants,
-        group_persistence_time_per_variant_per_num_cells,
-        group_persistence_time_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-
-    datavis.graph_chemotaxis_cell_persistence_time_data(
-        test_variants,
-        cell_persistence_time_per_variant_per_num_cells,
-        cell_persistence_time_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-
-    datavis.graph_chemotaxis_protrusion_lifetime_data(
-        test_variants,
-        protrusion_lifetime_per_variant_per_num_cells,
-        protrusion_lifetime_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-
-    datavis.graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
-        test_variants,
-        group_speeds_per_variant_per_num_cells[0],
-        group_x_velocities_per_variant_per_num_cells[0],
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-
-    datavis.graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_standard_error_bootstrap(
-        test_variants,
-        group_x_velocities_per_variant_per_num_cells[0],
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-    
-    if len(test_variants) == 1:
-        datavis.graph_chemotaxis_group_velocity_data_changing_num_cells(
-            test_variants,
-            num_cells,
-            [x[0] for x in group_speed_per_variant_per_num_cells],
-            [x[0] for x in group_speed_std_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocity_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocity_std_per_variant_per_num_cells],
-            [x[0] for x in group_speeds_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocities_per_variant_per_num_cells],
-            save_dir=experiment_set_directory,
-            info_tag=info_tag,
-        )
-        
-        datavis.graph_chemotaxis_group_velocity_data_changing_num_cells_standard_error(
-            test_variants,
-            num_cells,
-            [x[0] for x in num_group_speed_per_variant_per_num_cells],
-            [x[0] for x in group_speed_per_variant_per_num_cells],
-            [x[0] for x in group_speed_std_per_variant_per_num_cells],
-            [x[0] for x in num_group_x_velocity_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocity_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocity_std_per_variant_per_num_cells],
-            [x[0] for x in group_speeds_per_variant_per_num_cells],
-            [x[0] for x in group_x_velocities_per_variant_per_num_cells],
-            save_dir=experiment_set_directory,
-            info_tag=info_tag,
-        )
-
-    datavis.graph_chemotaxis_group_persistence_ratio_data(
-        test_variants,
-        group_persistence_ratio_per_variant_per_num_cells,
-        group_persistence_ratio_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-
-    datavis.graph_chemotaxis_cell_persistence_ratio_data(
-        test_variants,
-        cell_persistence_ratio_per_variant_per_num_cells,
-        cell_persistence_ratio_std_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-
-    datavis.graph_chemotaxis_velocity_alignment_data(
-        test_variants,
-        max_num_closest_neighbours,
-        time_deltas,
-        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
-        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-
-    datavis.graph_specific_chemotaxis_velocity_alignment_data(
-        test_variants,
-        4,
-        5.0,
-        max_num_closest_neighbours,
-        time_deltas,
-        avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
-        std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
-
-    datavis.graph_chemotaxis_protrusion_production_data(
-        test_variants,
-        protrusion_production_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-
-    datavis.graph_chemotaxis_interaction_quantification_data(
-        test_variants,
-        test_chemotaxis_slope,
-        avg_num_interactions_per_variant_per_num_cells,
-        std_num_interactions_per_variant_per_num_cells,
-        avg_num_cil_interactions_per_variant_per_num_cells,
-        std_num_cil_interactions_per_variant_per_num_cells,
-        avg_num_coa_only_interactions_per_variant_per_num_cells,
-        std_num_coa_only_interactions_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-    )
-
-    datavis.graph_chemotaxis_cil_interaction_frequency_data(
-        test_variants,
-        avg_interaction_frequency_per_variant_per_num_cells,
-        std_interaction_frequency_per_variant_per_num_cells,
-        num_experiment_repeats,
-        num_cells,
-        box_widths,
-        box_heights,
-        save_dir=experiment_set_directory,
-        info_tag=info_tag,
-        fontsize=48,
-    )
+    # datavis.graph_simple_chemotaxis_efficiency_data(
+    #     test_variants,
+    #     simple_chemotaxis_success_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_group_persistence_time_data(
+    #     test_variants,
+    #     group_persistence_time_per_variant_per_num_cells,
+    #     group_persistence_time_std_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_cell_persistence_time_data(
+    #     test_variants,
+    #     cell_persistence_time_per_variant_per_num_cells,
+    #     cell_persistence_time_std_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    # )
+    #
+    # datavis.graph_chemotaxis_protrusion_lifetime_data(
+    #     test_variants,
+    #     protrusion_lifetime_per_variant_per_num_cells,
+    #     protrusion_lifetime_std_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_group_velocity_data_changing_cil_coa_variants(
+    #     test_variants,
+    #     group_speeds_per_variant_per_num_cells[0],
+    #     group_x_velocities_per_variant_per_num_cells[0],
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_group_velocity_data_changing_cil_coa_variants_standard_error_bootstrap(
+    #     test_variants,
+    #     group_x_velocities_per_variant_per_num_cells[0],
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # if len(test_variants) == 1:
+    #     datavis.graph_chemotaxis_group_velocity_data_changing_num_cells(
+    #         test_variants,
+    #         num_cells,
+    #         [x[0] for x in group_speed_per_variant_per_num_cells],
+    #         [x[0] for x in group_speed_std_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocity_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocity_std_per_variant_per_num_cells],
+    #         [x[0] for x in group_speeds_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocities_per_variant_per_num_cells],
+    #         save_dir=experiment_set_directory,
+    #         info_tag=info_tag,
+    #     )
+    #
+    #     datavis.graph_chemotaxis_group_velocity_data_changing_num_cells_standard_error(
+    #         test_variants,
+    #         num_cells,
+    #         [x[0] for x in num_group_speed_per_variant_per_num_cells],
+    #         [x[0] for x in group_speed_per_variant_per_num_cells],
+    #         [x[0] for x in group_speed_std_per_variant_per_num_cells],
+    #         [x[0] for x in num_group_x_velocity_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocity_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocity_std_per_variant_per_num_cells],
+    #         [x[0] for x in group_speeds_per_variant_per_num_cells],
+    #         [x[0] for x in group_x_velocities_per_variant_per_num_cells],
+    #         save_dir=experiment_set_directory,
+    #         info_tag=info_tag,
+    #     )
+    #
+    # datavis.graph_chemotaxis_group_persistence_ratio_data(
+    #     test_variants,
+    #     group_persistence_ratio_per_variant_per_num_cells,
+    #     group_persistence_ratio_std_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_cell_persistence_ratio_data(
+    #     test_variants,
+    #     cell_persistence_ratio_per_variant_per_num_cells,
+    #     cell_persistence_ratio_std_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    # )
+    #
+    # datavis.graph_chemotaxis_velocity_alignment_data(
+    #     test_variants,
+    #     max_num_closest_neighbours,
+    #     time_deltas,
+    #     avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    #     std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    # )
+    #
+    # datavis.graph_specific_chemotaxis_velocity_alignment_data(
+    #     test_variants,
+    #     4,
+    #     5.0,
+    #     max_num_closest_neighbours,
+    #     time_deltas,
+    #     avg_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    #     std_velocity_alignment_data_per_num_neighbours_per_time_delta_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
+    #
+    # datavis.graph_chemotaxis_protrusion_production_data(
+    #     test_variants,
+    #     protrusion_production_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    # )
+    #
+    # datavis.graph_chemotaxis_interaction_quantification_data(
+    #     test_variants,
+    #     test_chemotaxis_slope,
+    #     avg_num_interactions_per_variant_per_num_cells,
+    #     std_num_interactions_per_variant_per_num_cells,
+    #     avg_num_cil_interactions_per_variant_per_num_cells,
+    #     std_num_cil_interactions_per_variant_per_num_cells,
+    #     avg_num_coa_only_interactions_per_variant_per_num_cells,
+    #     std_num_coa_only_interactions_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    # )
+    #
+    # datavis.graph_chemotaxis_cil_interaction_frequency_data(
+    #     test_variants,
+    #     avg_interaction_frequency_per_variant_per_num_cells,
+    #     std_interaction_frequency_per_variant_per_num_cells,
+    #     num_experiment_repeats,
+    #     num_cells,
+    #     box_widths,
+    #     box_heights,
+    #     save_dir=experiment_set_directory,
+    #     info_tag=info_tag,
+    #     fontsize=48,
+    # )
 
     print("Complete.")
 
@@ -5331,7 +5332,7 @@ def corridor_migration_fixed_cells_vary_coa_cil(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -5502,7 +5503,7 @@ def corridor_migration_fixed_cells_vary_corridor_height(
     sub_experiment_number,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -5683,7 +5684,7 @@ def corridor_migration_collective_tests(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -5829,7 +5830,7 @@ def corridor_migration_coa_tests(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -5970,7 +5971,7 @@ def corridor_migration_cil_tests(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -6110,7 +6111,7 @@ def corridor_migration_vertex_choice_tests(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -6267,7 +6268,7 @@ def corridor_migration_parameter_set_test(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -6425,7 +6426,7 @@ def convergence_test_corridor(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -6574,7 +6575,7 @@ def corridor_migration_init_conditions_tests(
     parameter_dict,
     experiment_set_label="",
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=3,
     timestep_length=2,
     verbose=True,
@@ -6766,7 +6767,7 @@ def corridor_migration_multigroup_experiment(
     baseline_parameter_dict,
     parameter_dict,
     no_randomization=False,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
     total_time_in_hours=6,
     timestep_length=2,
     num_nodes=16,
@@ -7001,7 +7002,7 @@ def non_linear_to_linear_parameter_comparison(
     date_str,
     experiment_number,
     parameter_dicts,
-    base_output_dir="B:\\numba-ncc\\output\\",
+    base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
 ):
     experiment_set_directory = eu.get_experiment_set_directory_path(
         base_output_dir, date_str, experiment_number
@@ -7037,3 +7038,372 @@ def non_linear_to_linear_parameter_comparison(
     )
 
     print("Done.")
+
+# ================================================================
+def rust_comparison_test(
+        date_str,
+        experiment_number,
+        sub_experiment_number,
+        parameter_dict,
+        num_cells_responsive_to_chemoattractant=-1,
+        uniform_initial_polarization=False,
+        no_randomization=False,
+        base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
+        total_time_in_hours=3,
+        timestep_length=2,
+        verbose=True,
+        integration_params={"rtol": 1e-4},
+        max_timepoints_on_ram=10,
+        seed=None,
+        allowed_drift_before_geometry_recalc=1.0,
+        default_coa=0,
+        default_cil=0,
+        num_experiment_repeats=1,
+        timesteps_between_generation_of_intermediate_visuals=None,
+        produce_animation=True,
+        produce_polarization_animation=True,
+        produce_graphs=True,
+        specific_timesteps_to_draw=[],
+        full_print=True,
+        delete_and_rerun_experiments_without_stored_env=True,
+        box_width=4,
+        box_height=4,
+        box_y_placement_factor=0.0,
+        cell_placement_method="",
+        max_placement_distance_factor=1.0,
+        init_random_cell_placement_x_factor=0.25,
+        num_cells=0,
+        run_experiments=True,
+        remake_graphs=False,
+        remake_animation=False,
+        remake_polarization_animation=False,
+        remake_specific_timestep_snapshots=False,
+        do_final_analysis=True,
+        remake_final_analysis_graphs=False,
+        biased_rgtpase_distrib_defn_dict={
+            "default": ["biased nodes", [0, 1, 2, 3], 0.3]
+        },
+        graph_group_centroid_splits=False,
+        global_scale=1,
+        show_coa_overlay=False,
+        coa_overlay_resolution=10,
+        justify_parameters=True,
+        colorscheme="normal",
+        chemotaxis_target_radius=-1.0,
+        show_centroid_trail=False,
+        show_chemoattractant=True,
+        show_protrusion_existence=True,
+):
+    cell_diameter = 2 * parameter_dict["init_cell_radius"] / 1e-6
+
+    if num_cells == 0:
+        raise Exception("No cells!")
+
+    accepted_cell_placement_methods = ["", "r"]
+    if cell_placement_method not in accepted_cell_placement_methods:
+        raise Exception(
+            "Unknown placement method given: {}, expected one of {}".format(
+                cell_placement_method, accepted_cell_placement_methods
+            )
+        )
+
+    if no_randomization:
+        parameter_dict.update([("randomization_scheme", None)])
+
+    experiment_name = "rt_{}_NC=({}, {}, {})COA={}_CIL={}_S={}".format(
+        sub_experiment_number,
+        num_cells,
+        box_width,
+        box_height,
+        np.round(default_coa, decimals=3),
+        np.round(default_cil, decimals=3),
+        seed,
+    ) + stringify_randomization_info(parameter_dict)
+    if uniform_initial_polarization:
+        experiment_name += "-UIP"
+    if not (num_cells_responsive_to_chemoattractant >= num_cells or num_cells_responsive_to_chemoattractant < 0):
+        experiment_name += "-NRESP={}".format(num_cells_responsive_to_chemoattractant)
+
+    experiment_dir = eu.get_template_experiment_directory_path(
+        base_output_dir, date_str, experiment_number, experiment_name
+    )
+
+    total_time = total_time_in_hours * 3600
+    num_timesteps = int(total_time / timestep_length)
+
+    num_boxes = 1
+    num_cells_in_boxes = [num_cells]
+    box_heights = [box_height * cell_diameter]
+    box_widths = [box_width * cell_diameter]
+
+    x_space_between_boxes = []
+
+    plate_width = 5 * box_width
+    initial_x_placement_options = "ORIGIN"
+    box_x_offsets = [0.0]
+    plate_height = plate_width
+
+    origin_y_offset = 0.0
+    initial_y_placement_options = "ORIGIN"
+
+    boxes, box_x_offsets, box_y_offsets, space_migratory_bdry_polygon, space_physical_bdry_polygon = define_group_boxes_and_corridors(
+        [],
+        plate_width,
+        plate_height,
+        num_boxes,
+        num_cells_in_boxes,
+        box_heights,
+        box_widths,
+        x_space_between_boxes,
+        initial_x_placement_options,
+        initial_y_placement_options,
+        origin_y_offset=origin_y_offset,
+        box_x_offsets=box_x_offsets,
+    )
+
+    parameter_dict["space_physical_bdry_polygon"] = space_physical_bdry_polygon
+    parameter_dict["space_migratory_bdry_polygon"] = space_migratory_bdry_polygon
+
+    environment_wide_variable_defns = {
+        "num_timesteps": num_timesteps,
+        "space_physical_bdry_polygon": space_physical_bdry_polygon,
+        "space_migratory_bdry_polygon": space_migratory_bdry_polygon,
+        "T": timestep_length,
+        "verbose": verbose,
+        "integration_params": integration_params,
+        "max_timepoints_on_ram": max_timepoints_on_ram,
+        "seed": seed,
+        "allowed_drift_before_geometry_recalc": allowed_drift_before_geometry_recalc,
+        "cell_placement_method": cell_placement_method,
+        "max_placement_distance_factor": max_placement_distance_factor,
+        "init_random_cell_placement_x_factor": init_random_cell_placement_x_factor,
+        "convergence_test": False,
+        "graph_group_centroid_splits": graph_group_centroid_splits,
+    }
+
+    cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment = [
+        [dict([(x, default_coa) for x in boxes])] * num_boxes
+    ]
+    # intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [{0: {0: default_cil, 1: default_cil}, 1: {0: default_cil, 1: default_cil}}]
+    cil_dict = dict([(n, default_cil) for n in range(num_boxes)])
+    intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment = [
+        dict([(n, cil_dict) for n in range(num_boxes)])
+    ]
+
+    biased_rgtpase_distrib_defn_dicts = [[biased_rgtpase_distrib_defn_dict] * num_boxes]
+    parameter_dict_per_sub_experiment = [[parameter_dict] * num_boxes]
+    experiment_descriptions_per_subexperiment = ["from experiment template: coa test"]
+
+    user_cell_group_defns_per_subexperiment = []
+    user_cell_group_defns = []
+
+    si = 0
+
+    for bi in boxes:
+        this_box_x_offset = box_x_offsets[bi]
+        this_box_y_offset = box_y_offsets[bi]
+        this_box_width = box_widths[bi]
+        this_box_height = box_heights[bi]
+
+        cell_group_dict = {
+            "cell_group_name": bi,
+            "num_cells": num_cells_in_boxes[bi],
+            "num_cells_responsive_to_chemoattractant": num_cells_responsive_to_chemoattractant,
+            "cell_group_bounding_box": np.array(
+                [
+                    this_box_x_offset,
+                    this_box_x_offset + this_box_width,
+                    this_box_y_offset,
+                    this_box_height + this_box_y_offset,
+                ]
+            )
+                                       * 1e-6,
+            "interaction_factors_intercellular_contact_per_celltype":
+                intercellular_contact_factor_magnitudes_defn_dicts_per_sub_experiment[
+                    si
+                ][
+                    bi
+                ],
+            "interaction_factors_coa_per_celltype": cell_dependent_coa_signal_strengths_defn_dicts_per_sub_experiment[
+                si
+            ][
+                bi
+            ],
+            "biased_rgtpase_distrib_defns": biased_rgtpase_distrib_defn_dicts[si][bi],
+            "parameter_dict": parameter_dict_per_sub_experiment[si][bi],
+        }
+
+        user_cell_group_defns.append(cell_group_dict)
+
+    user_cell_group_defns_per_subexperiment.append(user_cell_group_defns)
+
+    cell_dependent_coa_signal_strengths = []
+    for cgi, cgd in enumerate(user_cell_group_defns):
+        signal_strength = cgd["interaction_factors_coa_per_celltype"][cgi]
+        for ci in range(cgd["num_cells"]):
+            cell_dependent_coa_signal_strengths.append(signal_strength)
+
+    if colorscheme == "normal":
+        animation_settings = setup_animation_settings(
+            timestep_length,
+            global_scale,
+            plate_height,
+            plate_width,
+            show_rac_random_spikes=False,
+            space_physical_bdry_polygon=space_physical_bdry_polygon,
+            space_migratory_bdry_polygon=space_migratory_bdry_polygon,
+            string_together_pictures_into_animation=True,
+            show_coa_overlay=show_coa_overlay,
+            coa_too_close_dist_squared=1,
+            coa_distribution_exponent=np.log(
+                parameter_dict["coa_sensing_value_at_dist"]
+            )
+                                      / (parameter_dict["coa_sensing_dist_at_value"] / 1e-6),
+            rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+            coa_intersection_exponent=parameter_dict["coa_intersection_exponent"],
+            coa_overlay_resolution=coa_overlay_resolution,
+            cell_dependent_coa_signal_strengths=cell_dependent_coa_signal_strengths,
+            allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
+            specific_timesteps_to_draw=specific_timesteps_to_draw,
+            show_centroid_trail=show_centroid_trail,
+            show_chemoattractant=show_chemoattractant,
+            show_protrusion_existence=show_protrusion_existence,
+            translation_x=510,
+            show_polarization_velocity=False,
+        )
+    elif colorscheme == "scifi":
+        animation_settings = setup_animation_settings(
+            timestep_length,
+            global_scale,
+            plate_height,
+            plate_width,
+            show_centroid_trail=True,
+            show_rac_random_spikes=False,
+            string_together_pictures_into_animation=True,
+            show_coa_overlay=show_coa_overlay,
+            coa_too_close_dist_squared=1,
+            coa_distribution_exponent=np.log(
+                parameter_dict["coa_sensing_value_at_dist"]
+            )
+                                      / (parameter_dict["coa_sensing_dist_at_value"] / 1e-6),
+            rgtpase_scale_factor=0.75 * np.sqrt(global_scale) * 312.5,
+            coa_intersection_exponent=parameter_dict["coa_intersection_exponent"],
+            background_color=colors.RGB_BLACK,
+            chemoattractant_dot_color=colors.RGB_DARK_GREEN,
+            default_cell_polygon_edge_and_vertex_color=colors.RGB_BLACK,
+            default_cell_polygon_fill_color=colors.RGB_CYAN,
+            rgtpase_colors=[
+                colors.RGB_BRIGHT_BLUE,
+                colors.RGB_LIGHT_BLUE,
+                colors.RGB_BRIGHT_RED,
+                colors.RGB_LIGHT_RED,
+            ],
+            velocity_colors=[
+                colors.RGB_ORANGE,
+                colors.RGB_LIGHT_GREEN,
+                colors.RGB_LIGHT_GREEN,
+                colors.RGB_CYAN,
+                colors.RGB_MAGENTA,
+            ],
+            coa_color=colors.RGB_DARK_GREEN,
+            font_color=colors.RGB_BLACK,
+            coa_overlay_color=colors.RGB_CYAN,
+            rgtpase_background_shine_color=colors.RGB_WHITE,
+            coa_overlay_resolution=coa_overlay_resolution,
+            cell_dependent_coa_signal_strengths=cell_dependent_coa_signal_strengths,
+            show_rgtpase=False,
+            allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
+            specific_timesteps_to_draw=specific_timesteps_to_draw,
+            chemoattractant_source_location=chemoattractant_source_location,
+            chemotaxis_target_radius=chemotaxis_target_radius,
+            show_polarization_velocity=False,
+        )
+    else:
+        raise Exception(
+            "Unknown colorscheme given: {}. Expected one of [{}, {}]".format(
+                colorscheme, "normal", "scifi"
+            )
+        )
+
+    produce_intermediate_visuals = produce_intermediate_visuals_array(
+        num_timesteps, timesteps_between_generation_of_intermediate_visuals
+    )
+
+    eu.run_template_experiments(
+        experiment_dir,
+        parameter_dict,
+        environment_wide_variable_defns,
+        user_cell_group_defns_per_subexperiment,
+        experiment_descriptions_per_subexperiment,
+        num_experiment_repeats=num_experiment_repeats,
+        animation_settings=animation_settings,
+        produce_intermediate_visuals=produce_intermediate_visuals,
+        produce_graphs=produce_graphs,
+        produce_animation=produce_animation,
+        produce_polarization_animation=produce_polarization_animation,
+        full_print=full_print,
+        delete_and_rerun_experiments_without_stored_env=delete_and_rerun_experiments_without_stored_env,
+        extend_simulation=True,
+        run_experiments=run_experiments,
+        new_num_timesteps=num_timesteps,
+        remake_graphs=remake_graphs,
+        remake_animation=remake_animation,
+        remake_polarization_animation=remake_polarization_animation,
+        remake_specific_timestep_snapshots=remake_specific_timestep_snapshots,
+        justify_parameters=justify_parameters,
+    )
+
+    drift_args = None
+    if do_final_analysis:
+        all_cell_centroids_per_repeat, all_cell_persistence_ratios_per_repeat, all_cell_persistence_times_per_repeat, all_cell_speeds_per_repeat, all_cell_protrusion_lifetimes_and_directions_per_repeat, all_cell_protrusion_group_directions_per_repeat, group_centroid_per_timestep_per_repeat, group_centroid_x_per_timestep_per_repeat, min_x_centroid_per_timestep_per_repeat, max_x_centroid_per_timestep_per_repeat, group_speed_per_timestep_per_repeat, group_x_velocities_per_timestep_per_repeat, group_persistence_ratio_per_repeat, group_persistence_time_per_repeat, cell_separations_per_repeat, transient_end_times_per_repeat, areal_strains_per_cell_per_repeat, max_num_closest_neighbours, time_deltas, velocity_alignments_per_num_neighbours_per_time_delta_per_repeat, num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat, num_interactions, num_cil_interactions, num_coa_only_interactions, interaction_frequency_per_cell_per_repeat = collate_final_analysis_data(
+            num_experiment_repeats, experiment_dir
+        )
+
+        print("initial group centroid: ", group_centroid_per_timestep_per_repeat[0])
+
+        time_unit = "min."
+        chemoattraction_source_coords = None
+
+        if remake_final_analysis_graphs or run_experiments:
+            datavis.present_collated_cell_motion_data(
+                time_unit,
+                np.array(all_cell_centroids_per_repeat),
+                np.array(all_cell_persistence_ratios_per_repeat),
+                np.array(all_cell_persistence_times_per_repeat),
+                np.array(all_cell_speeds_per_repeat),
+                all_cell_protrusion_lifetimes_and_directions_per_repeat,
+                all_cell_protrusion_group_directions_per_repeat,
+                np.array(group_centroid_per_timestep_per_repeat),
+                np.array(group_persistence_ratio_per_repeat),
+                np.array(group_persistence_time_per_repeat),
+                max_num_closest_neighbours,
+                time_deltas,
+                velocity_alignments_per_num_neighbours_per_time_delta_per_repeat,
+                num_velocity_alignment_data_points_per_num_neighbours_per_time_delta_per_repeat,
+                experiment_dir,
+                total_time_in_hours,
+                chemoattraction_source_coords=chemoattraction_source_coords,
+            )
+
+        drift_args = (
+            timestep_length,
+            parameter_dict["init_cell_radius"] * 2 / 1e-6,
+            min_x_centroid_per_timestep_per_repeat,
+            max_x_centroid_per_timestep_per_repeat,
+            group_centroid_x_per_timestep_per_repeat,
+            group_x_velocities_per_timestep_per_repeat,
+            experiment_dir,
+            total_time_in_hours,
+        )
+
+        if remake_final_analysis_graphs or run_experiments:
+            datavis.present_collated_group_centroid_drift_data(*drift_args)
+
+    print("Done.")
+
+    return (
+        experiment_name,
+        drift_args,
+        environment_wide_variable_defns,
+    )
+

@@ -10,7 +10,7 @@ import numba as nb
 import matplotlib.pyplot as plt
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def score_function(min_cutoff, max_cutoff, x):
     if x > max_cutoff:
         return 1.0
@@ -25,7 +25,7 @@ def score_function(min_cutoff, max_cutoff, x):
         return (x - min_cutoff) / (max_cutoff - min_cutoff)
 
 
-# @nb.jit(nopython=True)
+# #@nb.jit(nopython=True)
 def calculate_polarization_rating(rac_membrane_active, rho_membrane_active, num_nodes):
 
     max_rac = 0.0

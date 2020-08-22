@@ -55,7 +55,7 @@ def chunkify(given_list, chunk_size):
 # ==============================================================
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def numba_arange(start, stop):
     result = np.empty(stop - start, dtype=np.int64)
     for i in range(start, stop):
@@ -67,7 +67,7 @@ def numba_arange(start, stop):
 # ==============================================================
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def copy_1D_array(num_elements, array):
     new_array = np.empty(num_elements, dtype=np.float64)
 
@@ -80,7 +80,7 @@ def copy_1D_array(num_elements, array):
 # ==============================================================
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def insertion_sort(len_array, unsorted_array, unsorted_array_indices):
     for index in range(1, len_array):
 
@@ -101,7 +101,7 @@ def insertion_sort(len_array, unsorted_array, unsorted_array_indices):
 # ===============================================================
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def make_node_coords_array_given_xs_and_ys(num_nodes, xs, ys):
     node_coords = np.empty((num_nodes, 2), dtype=np.float64)
 

@@ -615,8 +615,6 @@ def create_environment(
     justify_parameters,
     environment_wide_variable_defns,
     user_cell_group_defns,
-    chemoattractant_shielding_effect_length_squared,
-    chemoattractant_signal_fn,
     animation_settings,
 ):
     os.makedirs(environment_dir)
@@ -634,8 +632,6 @@ def create_environment(
         environment_name=environment_name,
         environment_dir=environment_dir,
         user_cell_group_defns=user_cell_group_defns,
-        chemoattractant_shielding_effect_length_squared=chemoattractant_shielding_effect_length_squared,
-        chemoattractant_signal_fn=chemoattractant_signal_fn,
         justify_parameters=justify_parameters,
         **environment_wide_variable_defns
     )
@@ -649,8 +645,6 @@ def run_template_experiments(
     environment_wide_variable_defns,
     user_cell_group_defns_per_subexperiment,
     experiment_descriptions_per_subexperiment,
-    chemoattractant_shielding_effect_length_squared,
-    chemoattractant_signal_fn_per_subexperiment,
     num_experiment_repeats=1,
     elapsed_timesteps_before_producing_intermediate_graphs=2500,
     elapsed_timesteps_before_producing_intermediate_animations=5000,
@@ -670,7 +664,6 @@ def run_template_experiments(
     remake_polarization_animation=False,
     remake_specific_timestep_snapshots=False,
 ):
-
     template_experiment_name_format_string = "RPT={}"
     for repeat_number in range(num_experiment_repeats):
         for subexperiment_index, user_cell_group_defns in enumerate(
@@ -718,10 +711,6 @@ def run_template_experiments(
                             justify_parameters,
                             environment_wide_variable_defns,
                             user_cell_group_defns,
-                            chemoattractant_shielding_effect_length_squared,
-                            chemoattractant_signal_fn_per_subexperiment[
-                                subexperiment_index
-                            ],
                             animation_settings,
                         )
 

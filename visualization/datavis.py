@@ -194,7 +194,7 @@ def graph_group_area_and_cell_separation_over_time_and_determine_subgroups(
 # =============================================================================
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def find_approximate_transient_end(
     group_x_velocities, average_group_x_velocity, next_timesteps_window=60
 ):

@@ -9,7 +9,7 @@ import numba as nb
 import numpy as np
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def stupid_list():
     a_list = []
 

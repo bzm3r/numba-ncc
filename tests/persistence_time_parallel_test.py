@@ -12,7 +12,7 @@ import scipy.optimize as scipio
 import threading
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
     ax, ay = a
     bx, by = b
@@ -36,7 +36,7 @@ def calculate_cos_theta_for_direction_autocorr_coeffs(a, b):
     return ax_ * bx_ + ay_ * by_
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
     N = displacements.shape[0]
 
@@ -69,7 +69,7 @@ def calculate_direction_autocorr_coeffs_for_persistence_time(displacements):
     return all_das[:first_negative_n]
 
 
-@nb.jit(nopython=True, nogil=True)
+#@nb.jit(nopython=True, nogil=True)
 def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacements):
 
     for n in ns:
@@ -88,7 +88,7 @@ def calculate_direction_autocorr_coeff_parallel_worker(N, ns, dacs, displacement
         dacs[n] = (1.0 / m) * sum_cos_thetas
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def find_first_negative_n(dacs):
     for n, dac in enumerate(dacs):
         if n < 0.0:
@@ -146,7 +146,7 @@ def estimate_persistence_time(timestep, positive_das):
     return pt, ts
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def generate_displacements(
     persistence_time,
     num_displacements,
@@ -173,7 +173,7 @@ def generate_displacements(
     return displacements
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_positions(displacements):
     num_displacements = displacements.shape[0]
     positions = np.zeros((num_displacements + 1, 2), dtype=np.float64)

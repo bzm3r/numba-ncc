@@ -9,7 +9,7 @@ import numpy as np
 import numba as nb
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def calculate_polygon_bounding_box(polygon):
     num_vertices = polygon.shape[0]
 
@@ -41,7 +41,7 @@ def calculate_polygon_bounding_box(polygon):
     return min_x, max_x, min_y, max_y
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_point_in_polygon_bounding_box(test_point, num_vertices, polygon):
 
     min_x, max_x, min_y, max_y = calculate_polygon_bounding_box(num_vertices, polygon)
@@ -49,7 +49,7 @@ def is_point_in_polygon_bounding_box(test_point, num_vertices, polygon):
     return is_point_in_polygon_bounding_box(test_point, min_x, max_x, min_y, max_y)
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_point_in_polygon_bounding_box_given_bounding_box(
     test_point, min_x, max_x, min_y, max_y
 ):
@@ -62,7 +62,7 @@ def is_point_in_polygon_bounding_box_given_bounding_box(
         return 0
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_left(p0, p1, p2):
     """
     Input:  three points P0, P1, and P2
@@ -77,7 +77,7 @@ def is_left(p0, p1, p2):
     return (p1x - p0x) * (p2y - p0y) - (p2x - p0x) * (p1y - p0y)
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
     wn = 0
     test_point_y = test_point[1]
@@ -115,7 +115,7 @@ def is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon):
         return 1
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def is_point_in_polygon_given_bounding_box(
     test_point, num_vertices, polygon, min_x, max_x, min_y, max_y
 ):
@@ -129,7 +129,7 @@ def is_point_in_polygon_given_bounding_box(
         return is_point_in_polygon_without_bb_check(test_point, num_vertices, polygon)
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
     results = np.zeros(num_points, dtype=np.int64)
 
@@ -145,7 +145,7 @@ def are_points_inside_polygon(num_points, points, num_poly_vertices, polygon):
     return results
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def check_if_nodes_inside_other_cells(
     this_cell_index, num_nodes, num_cells, all_cells_node_coords
 ):
@@ -193,14 +193,14 @@ result = check_if_nodes_inside_other_cells(
 )
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def testfn0(num_nodes):
     newarray = np.zeros(num_nodes, dtype=np.int64)
 
     return newarray
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def testfn(a, b):
     x = -1 * np.ones((a, b), dtype=np.int64)
 

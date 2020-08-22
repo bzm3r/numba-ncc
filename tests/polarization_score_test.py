@@ -15,7 +15,7 @@ def f(offset, width):
     return lambda x: np.exp(-1.0 * (x - offset) ** 2 / width)
 
 
-@nb.jit(nopython=True)
+#@nb.jit(nopython=True)
 def piecewise_linear_function(x):
     defining_xs = [0.0, 0.2, 0.33, 0.7, 0.9, 1.0]
     defining_ys = [0.0, 0.2, 1.0, 1.0, 0.2, 0.0]
