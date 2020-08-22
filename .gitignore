@@ -13,3 +13,5 @@ venv/Lib
 venv/Scripts
 
 numba-ncc.sublime-project
+
+out_euler.txt
