@@ -132,8 +132,8 @@ if __name__ == "__main__":
     ]
     test_num_cells_responsive_to_chemoattractant = [-1]
 
-    test_cell_group_sizes = [1]
-    test_cell_group_widths = [1]
+    test_cell_group_sizes = [2]
+    test_cell_group_widths = [2]
     test_cell_group_heights = [1]
     num_experiment_repeats = [1]
     #intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     test_variants = []
     info_tag = ""
 
-    #        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
+    #        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\Desktop\\numba-ncc\\output", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
 
     ets.rust_comparison_test(
         date_str,
@@ -156,51 +156,51 @@ if __name__ == "__main__":
         num_cells_responsive_to_chemoattractant=-1,
         uniform_initial_polarization=False,
         no_randomization=True,
-        base_output_dir="C:\\Users\\bhmer\\Desktop\\numba-ncc\\output",
-        total_time_in_hours=6.0,
+        base_output_dir="B:\\numba-ncc\\output",
+        total_time_in_hours=3.0,
         timestep_length=2,
         verbose=True,
         integration_params=integration_params,
         max_timepoints_on_ram=max_timepoints_on_ram,
         seed=None,
         allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-        default_coa=0,
-        default_cil=0,
+        default_coa=24.0,
+        default_cil=60.0,
         num_experiment_repeats=1,
         timesteps_between_generation_of_intermediate_visuals=None,
-        produce_animation=True,
+        produce_animation=False,
         produce_polarization_animation=False,
         produce_graphs={
-            "cell specific": True,
-            "all cell speeds": True,
-            "group area/cell separation": True,
+            "cell specific": False,
+            "all cell speeds": False,
+            "group area/cell separation": False,
             "centroid related data": {
-                "velocity alignment": True,
-                "persistence time": True,
-                "general group info": True,
-                "centroid drift": True,
-                "old interaction quantification": True,
-                "simple interaction quantification": True,
+                "velocity alignment": False,
+                "persistence time": False,
+                "general group info": False,
+                "centroid drift": False,
+                "old interaction quantification": False,
+                "simple interaction quantification": False,
             },
-            "protrusion existence": True,
-            "protrusion bias": True,
+            "protrusion existence": False,
+            "protrusion bias": False,
         },
         specific_timesteps_to_draw=[],
         full_print=True,
         delete_and_rerun_experiments_without_stored_env=True,
-        box_width=1,
+        box_width=2,
         box_height=1,
         box_y_placement_factor=0.0,
         cell_placement_method="",
         max_placement_distance_factor=1.0,
         init_random_cell_placement_x_factor=0.25,
-        num_cells=1,
+        num_cells=2,
         run_experiments=True,
         remake_graphs=False,
         remake_animation=False,
         remake_polarization_animation=False,
         remake_specific_timestep_snapshots=False,
-        do_final_analysis=True,
+        do_final_analysis=False,
         remake_final_analysis_graphs=False,
         biased_rgtpase_distrib_defn_dict={
             "default": ["biased nodes", [0, 1, 2, 3], 0.3]
@@ -213,6 +213,6 @@ if __name__ == "__main__":
         colorscheme="normal",
         chemotaxis_target_radius=-1.0,
         show_centroid_trail=False,
-        show_chemoattractant=True,
-        show_protrusion_existence=True,
+        show_chemoattractant=False,
+        show_protrusion_existence=False,
     )

@@ -849,15 +849,15 @@ class Environment:
 
         for ci in execution_sequence:
             current_cell = environment_cells[ci]
-            if self.verbose == True:
-                if self.full_print:
-                    if ci != first_ci:
-                        print("-" * 40)
-                    else:
-                        print("=" * 40)
+            # if self.verbose == True:
+            #     if self.full_print:
+            #         if ci != first_ci:
+            #             #print("-" * 40)
+            #         else:
+            #             #print("=" * 40)
 
-                    print("Time step: {}/{}".format(t, self.num_timesteps))
-                    print("Executing dyanmics for cell: ", ci)
+                    #print("Time step: {}/{}".format(t, self.num_timesteps))
+                    #print("Executing dyanmics for cell: ", ci)
 
             # this_ci, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
             current_cell.execute_step(
@@ -907,10 +907,10 @@ class Environment:
                     )
                     # cells_node_distance_matrix = geometry.update_distance_squared_matrix_old(ci, self.num_cells, self.num_nodes, environment_cells_node_coords, cells_node_distance_matrix)
 
-            if self.verbose == True:
-                if self.full_print:
-                    if ci == last_ci:
-                        print("=" * 40)
+            # if self.verbose == True:
+            #     if self.full_print:
+            #         if ci == last_ci:
+            #             #print("=" * 40)
 
         return (
             cells_node_distance_matrix,

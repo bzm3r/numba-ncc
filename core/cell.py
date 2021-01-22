@@ -258,7 +258,7 @@ class Cell:
             )
 
         self.curr_node_coords = parameters_dict["init_node_coords"] / self.L
-        print("init vertex coords: ", self.curr_node_coords)
+        #print("init vertex coords: ", self.curr_node_coords)
         self.radius_resting = parameters_dict["init_cell_radius"] / self.L
         self.length_edge_resting = parameters_dict["length_edge_resting"] / self.L
         edgeplus_lengths = geometry.calculate_edgeplus_lengths(self.curr_node_coords)
@@ -1122,7 +1122,7 @@ class Cell:
                                ]
 
         random_order_cell_indices = np.arange(num_cells)
-        np.random.shuffle(random_order_cell_indices)
+        #np.random.shuffle(random_order_cell_indices)
 
         coa_signals = chemistry.calculate_coa_signals(
             this_cell_index,
@@ -1187,8 +1187,8 @@ class Cell:
             parameterorg.rho_cytosolic_gdi_bound_index,
         ] = (rho_cytosolic_gdi_bound * insertion_array)
 
-        print("next_update: ", self.next_randomization_event_tpoint)
-        print("rfs: ", list(self.randomization_rac_kgtp_multipliers))
+        #print("next_update: ", self.next_randomization_event_tpoint)
+        #print("rfs: ", list(self.randomization_rac_kgtp_multipliers))
         # print("vertex_coords: ", list(node_coords))
         # print("rac_acts: ", list(rac_membrane_actives))
         # print("rac_acts: ", list(rac_membrane_inactives))

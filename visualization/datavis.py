@@ -48,7 +48,7 @@ def show_or_save_fig(
             save_path = os.path.join(
                 save_dir, "{}{}".format(base_name, extra_label) + ".{}".format(figtype)
             )
-            print("save_path: ", save_path)
+            #print("save_path: ", save_path)
             fig.savefig(
                 save_path, format=figtype, forward=True, bbox_inches="tight", dpi=1000
             )
@@ -58,7 +58,7 @@ def show_or_save_fig(
             save_path = os.path.join(
                 save_dir, "{}{}".format(base_name, extra_label) + ".png"
             )
-            print("save_path: ", save_path)
+            #print("save_path: ", save_path)
             if bbox_inches == "tight":
                 fig.savefig(save_path, forward=True, bbox_inches="tight")
             else:

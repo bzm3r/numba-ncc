@@ -354,7 +354,7 @@ def run_and_score_trial_dicts(
     total_time_in_hours=3.0,
 ):
 
-    print("Preparing tasks (randomization={})...".format(randomization))
+    #print("Preparing tasks (randomization={})...".format(randomization))
     task_list = []
 
     for i, u in enumerate(trial_updates):
@@ -385,17 +385,17 @@ def run_and_score_trial_dicts(
                 )
 
     if worker_pool != None:
-        print("running tasks in parallel...")
+        #print("running tasks in parallel...")
         result_cells = worker_pool.map(
             executils.run_simple_experiment_and_return_cell_worker, task_list
         )
     else:
-        print("running tasks in sequence...")
+        #print("running tasks in sequence...")
         result_cells = [
             executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list
         ]
 
-    print("analyzing results...")
+    #print("analyzing results...")
     i = 0
     result_cells_per_pd = []
     while i < len(task_list):
@@ -437,7 +437,7 @@ def run_and_score_trial_dicts_no_randomization_variant(
     should_be_polarized_by_in_hours=0.5,
 ):
     randomization = False
-    print("Preparing tasks (randomization={})...".format(randomization))
+    #print("Preparing tasks (randomization={})...".format(randomization))
     task_list = []
 
     for i, u in enumerate(trial_updates):
@@ -474,17 +474,17 @@ def run_and_score_trial_dicts_no_randomization_variant(
                 )
 
     if worker_pool != None:
-        print("running tasks in parallel...")
+        #print("running tasks in parallel...")
         result_cells = worker_pool.map(
             executils.run_simple_experiment_and_return_cell_worker, task_list
         )
     else:
-        print("running tasks in sequence...")
+        #print("running tasks in sequence...")
         result_cells = [
             executils.run_simple_experiment_and_return_cell_worker(t) for t in task_list
         ]
 
-    print("analyzing results...")
+    #print("analyzing results...")
     i = 0
     result_cells_per_pd = []
     while i < len(task_list):
@@ -569,7 +569,7 @@ def rate_results_and_find_best_update(
             )  # np.average([combined_score_with_randomization, combined_score_no_randomization])
 
         if combined_score > new_best_score:
-            print(
+            #print(
                 "possible new score: {}, {}, {}".format(
                     combined_score,
                     np.round(score_without_randomization, decimals=4),

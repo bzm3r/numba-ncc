@@ -161,7 +161,7 @@ def make_template_experiment_description_file(
     notes_content.append("======= VARIABLE SETTINGS =======\n\n")
 
     for n, cell_group_defn in enumerate(user_cell_group_defns):
-        print((list(cell_group_defn.keys())))
+        #print((list(cell_group_defn.keys())))
         pd = cell_group_defn["parameter_dict"]
         sorted_pd_keys = sorted(pd.keys())
         tuple_list = [(key, pd[key]) for key in sorted_pd_keys]
@@ -316,13 +316,13 @@ def run_experiments(
             )
             an_environment = None
             if os.path.exists(environment_dir):
-                print((PO_set_string + " directory exists."))
+                #print((PO_set_string + " directory exists."))
 
                 storefile_path = os.path.join(environment_dir, "store.hdf5")
                 env_pkl_path = os.path.join(environment_dir, "environment.pkl")
 
                 if os.path.exists(storefile_path) and os.path.exists(env_pkl_path):
-                    print((PO_set_string + " stored environment exists."))
+                    #print((PO_set_string + " stored environment exists."))
                     an_environment = retrieve_environment(
                         env_pkl_path,
                         produce_graphs,
@@ -331,51 +331,51 @@ def run_experiments(
                         simulation_execution_enabled=run_experiments,
                     )
                     if run_experiments:
-                        print("Checking to see if simulation has been completed...")
+                        #print("Checking to see if simulation has been completed...")
                         if an_environment.simulation_complete() == True:
 
                             if extend_simulation != True:
-                                print("Simulation has been completed. Continuing...")
+                                #print("Simulation has been completed. Continuing...")
                                 del an_environment
                                 continue
                             else:
                                 assert new_num_timesteps != None
                                 assert new_num_timesteps >= an_environment.num_timesteps
-                                print("Extending simulation run time...")
+                                #print("Extending simulation run time...")
                                 an_environment.extend_simulation_runtime(
                                     new_num_timesteps
                                 )
                                 assert an_environment.simulation_complete() == False
                         else:
-                            print("Simulation incomplete. Finishing...")
+                            #print("Simulation incomplete. Finishing...")
                             if extend_simulation == True:
                                 assert new_num_timesteps != None
                                 assert new_num_timesteps >= an_environment.num_timesteps
-                                print("Extending simulation run time...")
+                                #print("Extending simulation run time...")
                                 an_environment.extend_simulation_runtime(
                                     new_num_timesteps
                                 )
                                 assert an_environment.simulation_complete() == False
                 else:
                     if delete_and_rerun_experiments_without_stored_env == True:
-                        print(
-                            (
-                                PO_set_string
-                                + " directory exists, but stored environment missing -- deleting and re-running experiment."
-                            )
-                        )
+                        #print(
+                        #     (
+                        #         PO_set_string
+                        #         + " directory exists, but stored environment missing -- deleting and re-running experiment."
+                        #     )
+                        # )
                         shutil.rmtree(environment_dir)
                     else:
-                        print(
-                            (
-                                PO_set_string
-                                + " directory exists, but stored environment missing. Continuing regardless."
-                            )
-                        )
+                        #print(
+                        #     (
+                        #         PO_set_string
+                        #         + " directory exists, but stored environment missing. Continuing regardless."
+                        #     )
+                        # )
                         continue
 
-            print(("RUNNING " + PO_set_string))
-            print(("environment_dir: {}".format(environment_dir)))
+            #print(("RUNNING " + PO_set_string))
+            #print(("environment_dir: {}".format(environment_dir)))
 
             if an_environment == None:
                 os.makedirs(environment_dir)
@@ -388,7 +388,7 @@ def run_experiments(
                     user_cell_group_defns,
                 )
 
-                print("Creating environment...")
+                #print("Creating environment...")
                 parameter_overrides = [
                     x["parameter_override_dict"] for x in user_cell_group_defns
                 ]
@@ -415,7 +415,7 @@ def run_experiments(
                 elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations,
             )
 
-            print(("Simulation run time: {}s".format(simulation_time)))
+            #print(("Simulation run time: {}s".format(simulation_time)))
 
 
 # =======================================================================
@@ -690,7 +690,7 @@ def run_template_experiments(
                 run_experiments,
             )
 
-            print(("{}: {}".format(environment_name, message)))
+            #print(("{}: {}".format(environment_name, message)))
 
             if message in [
                 "environment dir does not exist",
@@ -725,7 +725,7 @@ def run_template_experiments(
                         elapsed_timesteps_before_producing_intermediate_graphs=elapsed_timesteps_before_producing_intermediate_graphs,
                         elapsed_timesteps_before_producing_intermediate_animations=elapsed_timesteps_before_producing_intermediate_animations,
                     )
-                    print(("Simulation run time: {}s".format(simulation_time)))
+                    #print(("Simulation run time: {}s".format(simulation_time)))
 
             if (
                 message == "simulation incomplete" and run_experiments

@@ -1417,7 +1417,7 @@ def analyze_cell_motion(
 
     centroids_persistences_speeds_protrusionlifetimes = []
     for n in range(num_cells):
-        print("    Analyzing cell {}...".format(n))
+        #print("    Analyzing cell {}...".format(n))
         if n == 48:
             pass
 

@@ -12,6 +12,11 @@ from . import chemistry
 from . import geometry
 from . import mechanics
 import general.utilities as general_utilities
+import os
+
+write_file_path = 'B:\\rust-ncc\\output\\model_comparison\\out_py.dat'
+if os.path.exists(write_file_path):
+    os.remove(write_file_path)
 
 # ----------------------------------------------------------------------------------------
 def pack_state_array(
@@ -421,21 +426,23 @@ def cell_dynamics(
     #                 success_condition_stay_in,
     #             )
 
-    print("++++++++++++++++++++++++++++++")
-    print("vertex_coords: ", [list(x) for x in node_coords])
-    print("rac_acts: ", list(rac_membrane_actives))
-    print("rac_inacts: ", list(rac_membrane_inactives))
-    print("rho_acts: ", list(rho_membrane_actives))
-    print("rho_inacts: ", list(rho_membrane_inactives))
-    print("tot_forces: ", [list([x, y]) for x, y in zip(F_x, F_y)])
-    print("rgtp_forces: ", [list(x) for x in F_rgtpase])
-    print("edge_forces: ", [list(x) for x in EFplus])
-    print("cyto_forces: ", [list(x) for x in F_cytoplasmic])
-    print("kgtps_rac: ", list(kgtps_rac))
-    print("kdgtps_rac: ", list(kdgtps_rac))
-    print("kgtps_rho: ", list(kgtps_rho))
-    print("kdgtps_rho: ", list(kdgtps_rho))
-    print("++++++++++++++++++++++++++++++")
+    with open(write_file_path, 'a') as f:
+        f.write("++++++++++++++++++++++++++++++\n")
+        f.write("ci: {}\n".format(this_cell_index))
+        f.write("vertex_coords: {}\n".format([list(x) for x in node_coords]))
+        f.write("rac_acts: {}\n".format(rac_membrane_actives))
+        f.write("rac_inacts: {}\n".format(rac_membrane_inactives))
+        f.write("rho_acts: {}\n".format(rho_membrane_actives))
+        f.write("rho_inacts: {}\n".format(rho_membrane_inactives))
+        f.write("tot_forces: {}\n".format([list([x, y]) for x, y in zip(F_x, F_y)]))
+        f.write("rgtp_forces: {}\n".format([list(x) for x in F_rgtpase]))
+        f.write("edge_forces: {}\n".format([list(x) for x in EFplus]))
+        f.write("cyto_forces: {}\n".format([list(x) for x in F_cytoplasmic]))
+        f.write("kgtps_rac: {}\n".format(kgtps_rac))
+        f.write("kdgtps_rac: {}\n".format(kdgtps_rac))
+        f.write("kgtps_rho: {}\n".format(kgtps_rho))
+        f.write("kdgtps_rho: {}\n".format(kdgtps_rho))
+        f.write("++++++++++++++++++++++++++++++\n")
 
     for ni in range(num_nodes):
         new_coord = new_node_coords[ni]

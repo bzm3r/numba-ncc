@@ -1,4 +1,4 @@
-import cairo
+import cairocffi as cairo
 import numpy as np
 import numba as nb
 import core.geometry as geometry
@@ -563,7 +563,7 @@ def get_simplified_polygon_matrices_and_coa_data(
             gp_process_percentage = np.round(
                 100 * np.sum(gps_processing_status) / num_gps, decimals=6
             )
-            print("gps processed: {}%".format(gp_process_percentage))
+            #print("gps processed: {}%".format(gp_process_percentage))
             coa_data = []
 
             gpi_indices = []
