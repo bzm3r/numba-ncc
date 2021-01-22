@@ -51,8 +51,6 @@ output_chem_labels = [
     "migr_bdry_contact_factor_mag",
     "randomization_event_occurred",
     "randomization_rac_kgtp_multipliers",
-    "chemoattractant_signal_on_nodes",
-    "chemoattractant_shielding_effect_factor_on_nodes",
 ]
 
 output_info_labels = output_mech_labels + output_chem_labels
@@ -72,7 +70,6 @@ g_var_labels = [
     "exponent",
     "threshold",
     "diffusion",
-    "space",
     "eta",
     "length",
     "stiffness",
@@ -124,8 +121,6 @@ mech_parameter_labels = [
     "force_adh_const",
 ]
 
-space_parameter_labels = ["space_physical_bdry_polygon", "space_migratory_bdry_polygon"]
-
 interaction_parameter_labels = [
     "interaction_factor_migr_bdry_contact",
     "interaction_factors_intercellular_contact_per_celltype",
@@ -135,10 +130,6 @@ interaction_parameter_labels = [
     "max_coa_signal",
     "coa_sensing_dist_at_value",
     "coa_sensing_value_at_dist",
-    "chemoattractant_mediated_coa_dampening_factor",
-    "chemoattractant_mediated_coa_production_factor",
-    "max_chemoattractant_signal",
-    "enable_chemoattractant_shielding_effect",
 ]
 
 randomization_parameter_labels = [
@@ -161,7 +152,6 @@ model_run_parameter_labels = [
 all_parameter_labels = (
     rho_gtpase_parameter_labels
     + mech_parameter_labels
-    + space_parameter_labels
     + interaction_parameter_labels
     + randomization_parameter_labels
     + model_run_parameter_labels
@@ -198,9 +188,6 @@ user_rho_gtpase_biochemistry_parameters = {
     "kdgtp_rac_mediated_rho_inhib_multiplier": [1, 2000],
     "kdgtp_rho_mediated_rac_inhib_multiplier": [1, 2000],
     "threshold_rac_activity_multiplier": [0.01, 1],
-    "max_chemoattractant_signal": None,
-    "chemoattractant_mediated_coa_dampening_factor": [0.0, 1.0],
-    "chemoattractant_mediated_coa_production_factor": [0.0, np.inf],
 }
 
 
@@ -208,16 +195,8 @@ user_interaction_parameters = {
     "interaction_factors_intercellular_contact_per_celltype": None,
     "interaction_factor_migr_bdry_contact": None,
     "interaction_factors_coa_per_celltype": None,
-    "closeness_dist_squared_criteria": [(0.25e-6) ** 2, (5e-6) ** 2],
+    "closeness_dist_squared_criteria": [0.25e-6 ** 2, 5e-6 ** 2],
     "coa_intersection_exponent": [0.0, 1000.0],
-    "chemoattractant_shielding_effect_length_squared": None,
-    "enable_chemoattractant_shielding_effect": None,
-    "num_cells_responsive_to_chemoattractant": [-1, -1],
-}
-
-user_space_parameters = {
-    "space_physical_bdry_polygon": None,
-    "space_migratory_bdry_polygon": None,
 }
 
 user_mechanical_parameters = {
@@ -251,7 +230,6 @@ for parameter_dict in [
     polygon_model_parameters,
     user_rho_gtpase_biochemistry_parameters,
     user_interaction_parameters,
-    user_space_parameters,
     user_mechanical_parameters,
     user_randomization_parameters,
     user_model_run_parameters,
@@ -268,7 +246,7 @@ def verify_user_parameters(justify_parameters, user_parameter_dict):
         except:
             raise Exception("Unknown parameter given: {}".format(key))
 
-        if justify_parameters and justification != None:
+        if justify_parameters and justification is not None:
             value = user_parameter_dict[key]
 
             if type(justification) == list:
@@ -406,20 +384,6 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     cell_parameter_dict["coa_intersection_exponent"] = user_parameter_dict[
         "coa_intersection_exponent"
     ]
-    cell_parameter_dict[
-        "chemoattractant_mediated_coa_dampening_factor"
-    ] = user_parameter_dict["chemoattractant_mediated_coa_dampening_factor"]
-    cell_parameter_dict[
-        "chemoattractant_mediated_coa_production_factor"
-    ] = user_parameter_dict["chemoattractant_mediated_coa_production_factor"]
-
-    cell_parameter_dict["max_chemoattractant_signal"] = user_parameter_dict[
-        "max_chemoattractant_signal"
-    ]
-    cell_parameter_dict[
-        "enable_chemoattractant_shielding_effect"
-    ] = user_parameter_dict["enable_chemoattractant_shielding_effect"]
-
     num_nodes, init_cell_radius = (
         user_parameter_dict["num_nodes"],
         user_parameter_dict["init_cell_radius"],
@@ -481,13 +445,6 @@ def make_cell_group_parameter_dict(justify_parameters, user_parameter_dict):
     ] = user_parameter_dict["interaction_factors_intercellular_contact_per_celltype"]
     cell_parameter_dict["interaction_factors_coa_per_celltype"] = user_parameter_dict[
         "interaction_factors_coa_per_celltype"
-    ]
-    # --------------
-    cell_parameter_dict["space_physical_bdry_polygon"] = user_parameter_dict[
-        "space_physical_bdry_polygon"
-    ]
-    cell_parameter_dict["space_migratory_bdry_polygon"] = user_parameter_dict[
-        "space_migratory_bdry_polygon"
     ]
     # --------------
     randomization_scheme = user_parameter_dict["randomization_scheme"]
@@ -598,32 +555,21 @@ def find_undefined_labels(cell_group_parameter_dict):
 
 
 def make_environment_given_user_cell_group_defns(
-    animation_settings,
-    environment_name="",
-    num_timesteps=0,
-    user_cell_group_defns=[],
-    space_physical_bdry_polygon=np.array([]),
-    space_migratory_bdry_polygon=np.array([]),
-    chemoattractant_shielding_effect_length_squared=0.0,
-    chemoattractant_signal_fn=lambda x: 0,
-    verbose=False,
-    environment_dir="B:\\numba-ncc\\output",
-    T=(1 / 0.5),
-    integration_params={},
-    persist=True,
-    parameter_explorer_run=False,
-    max_timepoints_on_ram=1000,
-    seed=None,
-    allowed_drift_before_geometry_recalc=1.0,
-    parameter_explorer_init_rho_gtpase_conditions=None,
-    justify_parameters=True,
-    cell_placement_method="r",
-    max_placement_distance_factor=1.0,
-    init_random_cell_placement_x_factor=0.25,
-    convergence_test=False,
-    graph_group_centroid_splits=False,
+        environment_name="",
+        num_timesteps=0,
+        user_cell_group_defns=None,
+        environment_dir="B:\\numba-ncc\\output",
+        T=(1 / 0.5),
+        integration_params=None,
+        allowed_drift_before_geometry_recalc=1.0,
+        justify_parameters=True,
+        max_placement_distance_factor=1.0,
 ):
 
+    if user_cell_group_defns is None:
+        user_cell_group_defns = []
+    if integration_params is None:
+        integration_params = {}
     num_cell_groups = len(user_cell_group_defns)
 
     for cell_group_defn_index, user_cell_group_defn in enumerate(user_cell_group_defns):
@@ -650,25 +596,11 @@ def make_environment_given_user_cell_group_defns(
         environment_name=environment_name,
         num_timesteps=num_timesteps,
         cell_group_defns=user_cell_group_defns,
-        space_physical_bdry_polygon=space_physical_bdry_polygon,
-        space_migratory_bdry_polygon=space_migratory_bdry_polygon,
         environment_dir=environment_dir,
-        verbose=verbose,
         T=T,
         integration_params=integration_params,
-        persist=persist,
-        parameter_explorer_run=parameter_explorer_run,
-        chemoattractant_shielding_effect_length_squared=chemoattractant_shielding_effect_length_squared,
-        chemoattractant_signal_fn=chemoattractant_signal_fn,
-        max_timepoints_on_ram=max_timepoints_on_ram,
-        seed=seed,
         allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
-        parameter_explorer_init_rho_gtpase_conditions=parameter_explorer_init_rho_gtpase_conditions,
-        cell_placement_method=cell_placement_method,
         max_placement_distance_factor=max_placement_distance_factor,
-        init_random_cell_placement_x_factor=init_random_cell_placement_x_factor,
-        convergence_test=convergence_test,
-        graph_group_centroid_splits=graph_group_centroid_splits,
     )
 
     return the_environment

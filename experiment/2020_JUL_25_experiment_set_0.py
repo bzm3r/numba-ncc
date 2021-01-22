@@ -1,13 +1,12 @@
-import numpy as np
+import os
+
 import general.exec_utils as eu
 import general.experiment_templates as ets
-import os
-import copy
 
 scriptname = os.path.basename(__file__)[:-3]
 date_str, experiment_number = eu.get_date_and_experiment_number(scriptname)
 
-closeness_dist_squared_criteria = (0.5e-6) ** 2
+closeness_dist_squared_criteria = 0.5e-6 ** 2
 
 parameter_dict = dict(
     [
@@ -55,15 +54,11 @@ parameter_dict = dict(
         ("coa_intersection_exponent", 2.0),
         ("strain_calculation_type", 0),
         ("max_coa_signal", -1.0),
-        ("max_chemoattractant_signal", 0.0),
     ]
 )
 
 randomization_time_mean_m = 40.0
 randomization_time_variance_factor_m = 0.1
-
-max_timepoints_on_ram = 6000
-seed = 2836
 allowed_drift_before_geometry_recalc = 20.0
 
 remake_animation = False
@@ -94,10 +89,6 @@ parameter_dict.update(
         ("randomization_time_variance_factor", 0.1),
         ("randomization_magnitude", 12.0),
         ("randomization_node_percentage", 0.25),
-        ("enable_chemoattractant_shielding_effect", False),
-        ("chemoattractant_shielding_effect_length_squared", (40e-6) ** 2),
-        ("chemoattractant_mediated_coa_dampening_factor", 0.0),
-        ("chemoattractant_mediated_coa_production_factor", 0.0),
     ]
 )
 
@@ -107,13 +98,8 @@ coa_dict = {49: 8.0, 36: 9.0, 25: 12.0, 16: 14.0, 9: 16.0, 4: 24.0, 2: 24.0, 1: 
 
 if __name__ == "__main__":
     uniform_initial_polarization = False
-    test_chemotaxis_magnitude = 2.75
-    slope = 0.02 / 40.0
-    x_offset_in_corrdior = 625.0
     parameter_dict.update(
         [
-            ("chemoattractant_mediated_coa_dampening_factor", 0.0),
-            ("enable_chemoattractant_shielding_effect", False),
             ("randomization_scheme", "m"),
         ]
     )
@@ -126,93 +112,26 @@ if __name__ == "__main__":
     ]
     parameter_dict.update(standard_rps)
 
-    test_chemotaxis_magnitudes = [0.0]
-    test_randomization_parameters = [
-        [("randomization_scheme", None)],
-    ]
-    test_num_cells_responsive_to_chemoattractant = [-1]
-
-    test_cell_group_sizes = [2]
-    test_cell_group_widths = [2]
-    test_cell_group_heights = [1]
-    num_experiment_repeats = [1]
-    #intercellular_interaction_knockdown_cases = [(1.0, 1.0)]
-    intercellular_interaction_knockdown_cases = [
-        (0.0, 0.0),
-    ]
-    #intercellular_interaction_knockdown_cases = [(0.0, 1.0), (0.1, 1.0), (0.15, 1.0), (0.2, 1.0), (0.25, 1.0), (0.5, 1.0), (0.75, 1.0), (1.0, 1.0)]
-    # intercellular_interaction_knockdown_cases = cil_knockdown + [(1.0, 1.0), (1.0, 0.75), (1.0, 0.5), (1.0, 0.25), (1.0, 0.0)]
-    # intercellular_interaction_knockdown_cases =
-    test_variants = []
-    info_tag = ""
-
-    #        ets.many_cells_coa_test(date_str, experiment_number, 1, copy.deepcopy(parameter_dict), no_randomization=True, base_output_dir="B:\\Desktop\\numba-ncc\\output", total_time_in_hours=10., timestep_length=2, verbose=True, integration_params=integration_params, max_timepoints_on_ram=max_timepoints_on_ram, seed=None, allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc, default_coa=coa_dict[16], default_cil=default_cil, num_experiment_repeats=1, timesteps_between_generation_of_intermediate_visuals=None, produce_graphs=True, produce_animation=True, full_print=True, delete_and_rerun_experiments_without_stored_env=True, box_width=4, box_height=4, num_cells=16, remake_graphs=False, remake_animation=True, show_centroid_trail=True)
-
     ets.rust_comparison_test(
         date_str,
         experiment_number,
         sub_experiment_number,
         parameter_dict,
-        num_cells_responsive_to_chemoattractant=-1,
         uniform_initial_polarization=False,
         no_randomization=True,
         base_output_dir="B:\\numba-ncc\\output",
         total_time_in_hours=3.0,
         timestep_length=2,
-        verbose=True,
         integration_params=integration_params,
-        max_timepoints_on_ram=max_timepoints_on_ram,
-        seed=None,
         allowed_drift_before_geometry_recalc=allowed_drift_before_geometry_recalc,
         default_coa=24.0,
         default_cil=60.0,
         num_experiment_repeats=1,
-        timesteps_between_generation_of_intermediate_visuals=None,
-        produce_animation=False,
-        produce_polarization_animation=False,
-        produce_graphs={
-            "cell specific": False,
-            "all cell speeds": False,
-            "group area/cell separation": False,
-            "centroid related data": {
-                "velocity alignment": False,
-                "persistence time": False,
-                "general group info": False,
-                "centroid drift": False,
-                "old interaction quantification": False,
-                "simple interaction quantification": False,
-            },
-            "protrusion existence": False,
-            "protrusion bias": False,
-        },
-        specific_timesteps_to_draw=[],
-        full_print=True,
-        delete_and_rerun_experiments_without_stored_env=True,
         box_width=2,
         box_height=1,
-        box_y_placement_factor=0.0,
-        cell_placement_method="",
-        max_placement_distance_factor=1.0,
-        init_random_cell_placement_x_factor=0.25,
         num_cells=2,
-        run_experiments=True,
-        remake_graphs=False,
-        remake_animation=False,
-        remake_polarization_animation=False,
-        remake_specific_timestep_snapshots=False,
-        do_final_analysis=False,
-        remake_final_analysis_graphs=False,
         biased_rgtpase_distrib_defn_dict={
             "default": ["biased nodes", [0, 1, 2, 3], 0.3]
         },
-        graph_group_centroid_splits=False,
-        global_scale=1,
-        show_coa_overlay=False,
-        coa_overlay_resolution=10,
         justify_parameters=True,
-        colorscheme="normal",
-        chemotaxis_target_radius=-1.0,
-        show_centroid_trail=False,
-        show_chemoattractant=False,
-        show_protrusion_existence=False,
     )

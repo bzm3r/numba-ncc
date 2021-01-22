@@ -14,7 +14,7 @@ from . import mechanics
 import general.utilities as general_utilities
 import os
 
-write_file_path = 'B:\\rust-ncc\\output\\model_comparison\\out_py.dat'
+write_file_path = 'B:\\rust-ncc\\output\\out_py.dat'
 if os.path.exists(write_file_path):
     os.remove(write_file_path)
 
@@ -33,7 +33,7 @@ def pack_state_array(
 
 
 # ----------------------------------------------------------------------------------------
-def unpack_state_array(num_nodal_phase_var_indices, num_nodes, state_array):
+def unpack_state_array(num_nodal_phase_var_indices, state_array):
     # reversing append
     node_phase_var_array = state_array
     ode_cellwide_phase_vars = np.array([])
@@ -80,12 +80,11 @@ def eulerint(f, current_state, tpoints, args, num_int_steps):
 
     for i in range(tpoint_pairs.shape[0]):
         init_t, end_t = tpoint_pairs[i]
-        done = False
         current_state = states[i]
         dt = (end_t - init_t)/num_int_steps
 
         for j in range(num_int_steps):
-            current_state = current_state + dt*f(current_state, 0, *args)
+            current_state = current_state + dt*f(current_state, *args)
 
         states[i + 1] = current_state
 
@@ -94,13 +93,10 @@ def eulerint(f, current_state, tpoints, args, num_int_steps):
 #@nb.jit()
 def cell_dynamics(
     state_array,
-    t0,
-    state_parameters,
-    this_cell_index,
+        this_cell_index,
     num_nodes,
     num_nodal_phase_vars,
-    num_ode_cellwide_phase_vars,
-    nodal_rac_membrane_active_index,
+        nodal_rac_membrane_active_index,
     length_edge_resting,
     nodal_rac_membrane_inactive_index,
     nodal_rho_membrane_active_index,
@@ -129,41 +125,20 @@ def cell_dynamics(
     exponent_rac_mediated_rho_inhib,
     diffusion_const_active,
     diffusion_const_inactive,
-    nodal_intercellular_contact_factor_magnitudes_index,
-    nodal_migr_bdry_contact_index,
-    eta,
-    num_cells,
-    all_cells_node_coords,
-    all_cells_node_forces,
-    all_cells_centres,
-    intercellular_squared_dist_array,
-    stiffness_edge,
+        eta,
+        stiffness_edge,
     threshold_force_rac_activity,
     threshold_force_rho_activity,
     max_force_rac,
     max_force_rho,
-    force_adh_constant,
-    closeness_dist_criteria,
-    area_resting,
+        area_resting,
     stiffness_cytoplasmic,
     transduced_coa_signals,
-    space_physical_bdry_polygon,
-    exists_space_physical_bdry_polygon,
-    are_nodes_inside_other_cells,
-    close_point_on_other_cells_to_each_node_exists,
-    close_point_on_other_cells_to_each_node,
-    close_point_on_other_cells_to_each_node_indices,
-    close_point_on_other_cells_to_each_node_projection_factors,
-    close_point_smoothness_factors,
+        close_point_smoothness_factors,
     intercellular_contact_factors,
     tension_mediated_rac_inhibition_half_strain,
     tension_mediated_rac_inhibition_magnitude,
-    strain_calculation_type,
-    chemoattractant_mediated_coa_dampening,
-    chemoattractant_signal_on_nodes,
-    intercellular_contact_factor_magnitudes,
-    randomization_rac_kgtp_multipliers,
-    chemoattractant_mediated_coa_dampening_factor,
+        randomization_rac_kgtp_multipliers,
 ):
 
     nodal_phase_vars = state_array
@@ -223,8 +198,6 @@ def cell_dynamics(
 
     F, EFplus, EFminus, F_rgtpase, F_cytoplasmic, local_strains, unit_inside_pointing_vectors = mechanics.calculate_forces(
         num_nodes,
-        num_cells,
-        this_cell_index,
         node_coords,
         rac_membrane_actives,
         rho_membrane_actives,
@@ -234,22 +207,12 @@ def cell_dynamics(
         threshold_force_rho_activity,
         max_force_rac,
         max_force_rho,
-        force_adh_constant,
         area_resting,
         stiffness_cytoplasmic,
-        close_point_on_other_cells_to_each_node_exists,
-        close_point_on_other_cells_to_each_node,
-        close_point_on_other_cells_to_each_node_indices,
-        close_point_on_other_cells_to_each_node_projection_factors,
-        all_cells_centres,
-        all_cells_node_forces,
-        closeness_dist_criteria,
     )
 
     F_x = F[:, 0]
     F_y = F[:, 1]
-
-    migr_bdry_contact_factors = state_parameters[nodal_migr_bdry_contact_index]
 
     only_tensile_local_strains = np.zeros_like(local_strains)
     for i in range(num_nodes):
@@ -273,8 +236,6 @@ def cell_dynamics(
         kgtp_rac_baseline,
         kgtp_rac_autoact_baseline,
         transduced_coa_signals,
-        chemoattractant_mediated_coa_dampening,
-        chemoattractant_signal_on_nodes,
         randomization_rac_kgtp_multipliers,
         intercellular_contact_factors,
         close_point_smoothness_factors,
@@ -292,10 +253,8 @@ def cell_dynamics(
         kdgtp_rac_baseline,
         kdgtp_rho_mediated_rac_inhib_baseline,
         intercellular_contact_factors,
-        migr_bdry_contact_factors,
         tension_mediated_rac_inhibition_half_strain,
         tension_mediated_rac_inhibition_magnitude,
-        strain_calculation_type,
         only_tensile_local_strains,
     )
 
@@ -305,7 +264,6 @@ def cell_dynamics(
         num_nodes,
         conc_rho_membrane_actives,
         intercellular_contact_factors,
-        migr_bdry_contact_factors,
         exponent_rho_autoact,
         threshold_rho_autoact,
         kgtp_rho_baseline,
@@ -335,28 +293,24 @@ def cell_dynamics(
         conc_rac_membrane_actives,
         diffusion_const_active,
         edgeplus_lengths,
-        avg_edge_lengths,
     )
     diffusion_rac_membrane_inactive = chemistry.calculate_diffusion(
         num_nodes,
         conc_rac_membrane_inactives,
         diffusion_const_inactive,
         edgeplus_lengths,
-        avg_edge_lengths,
     )
     diffusion_rho_membrane_active = chemistry.calculate_diffusion(
         num_nodes,
         conc_rho_membrane_actives,
         diffusion_const_active,
         edgeplus_lengths,
-        avg_edge_lengths,
     )
     diffusion_rho_membrane_inactive = chemistry.calculate_diffusion(
         num_nodes,
         conc_rho_membrane_inactives,
         diffusion_const_active,
         edgeplus_lengths,
-        avg_edge_lengths,
     )
 
     delta_rac_activated = np.zeros(num_nodes, dtype=np.float64)
@@ -372,8 +326,8 @@ def cell_dynamics(
     delta_nodal_x = np.zeros(num_nodes, dtype=np.float64)
     delta_nodal_y = np.zeros(num_nodes, dtype=np.float64)
     new_node_coords = np.zeros((num_nodes, 2), dtype=np.float64)
-    new_coord = np.zeros(2, dtype=np.float64)
-    old_coord = np.zeros(2, dtype=np.float64)
+    np.zeros(2, dtype=np.float64)
+    np.zeros(2, dtype=np.float64)
 
     for ni in range(num_nodes):
         old_coord = node_coords[ni]
@@ -430,18 +384,18 @@ def cell_dynamics(
         f.write("++++++++++++++++++++++++++++++\n")
         f.write("ci: {}\n".format(this_cell_index))
         f.write("vertex_coords: {}\n".format([list(x) for x in node_coords]))
-        f.write("rac_acts: {}\n".format(rac_membrane_actives))
-        f.write("rac_inacts: {}\n".format(rac_membrane_inactives))
-        f.write("rho_acts: {}\n".format(rho_membrane_actives))
-        f.write("rho_inacts: {}\n".format(rho_membrane_inactives))
+        f.write("rac_acts: {}\n".format(list(rac_membrane_actives)))
+        f.write("rac_inacts: {}\n".format(list(rac_membrane_inactives)))
+        f.write("rho_acts: {}\n".format(list(rho_membrane_actives)))
+        f.write("rho_inacts: {}\n".format(list(rho_membrane_inactives)))
         f.write("tot_forces: {}\n".format([list([x, y]) for x, y in zip(F_x, F_y)]))
         f.write("rgtp_forces: {}\n".format([list(x) for x in F_rgtpase]))
         f.write("edge_forces: {}\n".format([list(x) for x in EFplus]))
         f.write("cyto_forces: {}\n".format([list(x) for x in F_cytoplasmic]))
-        f.write("kgtps_rac: {}\n".format(kgtps_rac))
-        f.write("kdgtps_rac: {}\n".format(kdgtps_rac))
-        f.write("kgtps_rho: {}\n".format(kgtps_rho))
-        f.write("kdgtps_rho: {}\n".format(kdgtps_rho))
+        f.write("kgtps_rac: {}\n".format(list(kgtps_rac)))
+        f.write("kdgtps_rac: {}\n".format(list(kdgtps_rac)))
+        f.write("kgtps_rho: {}\n".format(list(kgtps_rho)))
+        f.write("kdgtps_rho: {}\n".format(list(kdgtps_rho)))
         f.write("++++++++++++++++++++++++++++++\n")
 
     for ni in range(num_nodes):
@@ -538,7 +492,7 @@ def determine_volume_exclusion_effects(
     # if we have reached here, then we know that the old_coord is in the polygon, and the new coord is not in the polygon
     a = old_coord
     b = new_coord
-    test_coord = np.zeros(2, dtype=np.float64)
+    np.zeros(2, dtype=np.float64)
 
     for i in range(num_bisection_iterations):
         test_coord = 0.5 * (a + b)

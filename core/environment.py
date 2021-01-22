@@ -2,17 +2,9 @@ import numpy as np
 from . import cell
 from . import parameterorg
 from . import geometry
-import os
-import visualization.datavis as datavis
-from . import utilities as cu
-import visualization.animator as animator
-import dill
-import pickle
 import numba as nb
 import time
-import core.hardio as hardio
 import copy
-import warnings
 
 """
 Environment of cells.s
@@ -31,30 +23,6 @@ def custom_floor(fp_number, roundoff_distance):
         return b
     else:
         return a
-    # -----------------------------------------------------------------
-
-
-@nb.jit(nopython=True)
-def calc_dist_squared_bw_points(p1, p2):
-    x_disp = p1[0] - p2[0]
-    y_disp = p1[1] - p2[1]
-
-    return x_disp * x_disp + y_disp * y_disp
-
-
-# -----------------------------------------------------------------
-
-
-def calc_bounding_box(node_coords):
-    return np.array(
-        [
-            np.min(node_coords[0]),
-            np.max(node_coords[0]),
-            np.min(node_coords[1]),
-            np.max(node_coords[1]),
-        ]
-    )
-
 
 # -----------------------------------------------------------------
 
@@ -64,296 +32,6 @@ def calc_bounding_box_centre(bb):
     y = bb[2] + (bb[3] - bb[2]) * 0.5
 
     return np.array([x, y])
-
-
-# -----------------------------------------------------------------
-
-
-def calculate_bounding_boxes(node_coords_per_cell):
-    bounding_boxes = [
-        calc_bounding_box(node_coords) for node_coords in node_coords_per_cell
-    ]
-
-    return bounding_boxes
-
-
-# -----------------------------------------------------------------
-
-
-def place_init_cell_randomly(
-    cell_centers,
-    cell_diameter,
-    corridor_origin,
-    corridor_height,
-    box_height,
-    box_width,
-    init_random_cell_placement_x_factor,
-):
-    if init_random_cell_placement_x_factor < 0.0:
-        raise Exception(
-            "negative init_random_cell_placement_x_factor given: {}".format(
-                init_random_cell_placement_x_factor
-            )
-        )
-    center_x = (
-        corridor_origin[0]
-        + 0.5 * cell_diameter
-        + np.random.rand()
-        * init_random_cell_placement_x_factor
-        * (box_width - cell_diameter)
-    )
-    center_y = (
-        corridor_origin[1]
-        + 0.5 * cell_diameter
-        + np.random.rand() * (box_height - cell_diameter)
-    )
-
-    cell_centers[0] = np.array([center_x, center_y])
-
-    return cell_centers
-
-
-# -----------------------------------------------------------------
-
-
-def generate_theta_bin_boundaries(num_bins):
-    theta_bins = np.zeros((num_bins, 2), dtype=np.float64)
-    delta_theta = 2 * np.pi / num_bins
-
-    for n in range(num_bins):
-        if n == 0:
-            last_boundary = 0.0
-        else:
-            last_boundary = theta_bins[n - 1][1]
-
-        theta_bins[n][0] = last_boundary
-        theta_bins[n][1] = last_boundary + delta_theta
-
-    return theta_bins
-
-
-# -----------------------------------------------------------------
-
-
-def generate_trial_theta(theta_bin_boundaries, theta_bin_probabilities):
-    tbin_index = np.random.choice(
-        np.arange(theta_bin_boundaries.shape[0]), p=theta_bin_probabilities
-    )
-
-    return theta_bin_boundaries[tbin_index][0] + np.random.rand() * (
-        theta_bin_boundaries[tbin_index][1] - theta_bin_boundaries[tbin_index][0]
-    )
-
-
-# -----------------------------------------------------------------
-
-
-def update_theta_bin_probabilities(target_bin_index, theta_bin_probabilities):
-    num_bins = theta_bin_probabilities.shape[0]
-    avg_p = np.average(theta_bin_probabilities)
-    orig_p = theta_bin_probabilities[target_bin_index]
-    new_p = 0.5 * orig_p
-    theta_bin_probabilities[target_bin_index] = new_p
-
-    interesting_bins = []
-    for n in range(num_bins):
-        if n == target_bin_index:
-            continue
-        else:
-            if theta_bin_probabilities[n] < avg_p:
-                continue
-            else:
-                interesting_bins.append(n)
-
-    num_interesting_bins = len(interesting_bins)
-
-    if num_interesting_bins == 0:
-        interesting_bins = [n for n in range(num_bins) if n != target_bin_index]
-        num_interesting_bins = len(interesting_bins)
-    delta_p = new_p / num_interesting_bins
-
-    for n in interesting_bins:
-        theta_bin_probabilities[n] += delta_p
-
-    if np.abs(1.0 - np.sum(theta_bin_probabilities)) > 1e-6:
-        raise Exception(
-            "theta_bin_probabilities: {}\nsum: {}\ndelta_p: {}\ninterestin_bins: {}".format(
-                theta_bin_probabilities,
-                np.sum(theta_bin_probabilities),
-                delta_p,
-                interesting_bins,
-            )
-        )
-
-    return theta_bin_probabilities
-
-
-# -----------------------------------------------------------------
-
-
-def find_relevant_bin_index(theta, theta_bins):
-    for n, tbin in enumerate(theta_bins):
-        if tbin[0] <= theta < tbin[1]:
-            return n
-
-    raise Exception("could not find a bin for theta = {}! {}".format(theta, theta_bins))
-
-
-# -----------------------------------------------------------------
-
-
-def is_collision(
-    last_placed_ci,
-    cell_centers,
-    cell_diameter,
-    corridor_origin,
-    corridor_height,
-    center_x,
-    center_y,
-):
-    if (
-        center_y > corridor_origin[1] + (corridor_height - 0.5 * cell_diameter)
-        or center_y < corridor_origin[1] + 0.5 * cell_diameter
-    ):
-        return True
-    if center_x < corridor_origin[0] + 0.5 * cell_diameter:
-        return True
-
-    for n in range(last_placed_ci + 1):
-        other_x, other_y = cell_centers[n]
-
-        if (
-            np.sqrt((other_x - center_x) ** 2 + (other_y - center_y) ** 2)
-            - cell_diameter
-            < -1e-8
-        ):
-            return True
-
-    return False
-
-
-# -----------------------------------------------------------------
-
-
-def try_placing_cell_randomly(
-    last_successful_anchor_index,
-    last_placed_ci,
-    cell_centers,
-    theta_bins,
-    cell_diameter,
-    corridor_origin,
-    corridor_height,
-    box_height,
-    box_width,
-    max_placement_dist,
-):
-    num_trials = 2 * theta_bins.shape[0]
-
-    theta_bin_probabilities = (
-        np.ones(theta_bins.shape[0], dtype=np.float64) / theta_bins.shape[0]
-    )
-
-    center_x, center_y = cell_centers[last_successful_anchor_index]
-
-    for ti in range(num_trials):
-        theta = generate_trial_theta(theta_bins, theta_bin_probabilities)
-        placement_distance = cell_diameter * (
-            (max_placement_dist - 1.0) * np.random.rand() + 1.0
-        )
-        dx, dy = placement_distance * np.cos(theta), placement_distance * np.sin(theta)
-        test_x, test_y = center_x + dx, center_y + dy
-        if is_collision(
-            last_placed_ci,
-            cell_centers,
-            cell_diameter,
-            corridor_origin,
-            corridor_height,
-            test_x,
-            test_y,
-        ):
-            theta_bin_probabilities = update_theta_bin_probabilities(
-                find_relevant_bin_index(theta, theta_bins), theta_bin_probabilities
-            )
-        else:
-            ci = last_placed_ci + 1
-            cell_centers[ci] = np.array([test_x, test_y])
-
-            return ci, cell_centers
-
-    return -1, cell_centers
-
-
-# -----------------------------------------------------------------
-
-
-def place_cells_randomly(
-    num_cells,
-    cell_diameter,
-    corridor_origin,
-    corridor_height,
-    box_width,
-    box_height,
-    init_random_cell_placement_x_factor,
-    max_placement_distance_factor,
-    num_theta_bins=20,
-):
-    if max_placement_distance_factor < 1.0:
-        raise Exception(
-            "max placement distance cannot be < 1.0! Given: {}".format(
-                max_placement_distance_factor
-            )
-        )
-    cell_centers = np.nan * np.ones((num_cells, 2), dtype=np.float64)
-    cell_centers = place_init_cell_randomly(
-        cell_centers,
-        cell_diameter,
-        corridor_origin,
-        corridor_height,
-        box_height,
-        box_width,
-        init_random_cell_placement_x_factor,
-    )
-
-    num_cells_placed = 1
-    possible_anchor_indices = [0]
-    trial_anchor_index = 0
-    theta_bins = generate_theta_bin_boundaries(num_theta_bins)
-
-    while num_cells_placed != num_cells:
-        ci, cell_centers = try_placing_cell_randomly(
-            possible_anchor_indices[trial_anchor_index],
-            num_cells_placed - 1,
-            cell_centers,
-            theta_bins,
-            cell_diameter,
-            corridor_origin,
-            corridor_height,
-            box_height,
-            box_width,
-            max_placement_distance_factor,
-        )
-
-        if ci != -1:
-            num_cells_placed += 1
-            possible_anchor_indices.append(ci)
-        else:
-            trial_anchor_index = (trial_anchor_index + 1) % len(possible_anchor_indices)
-
-    return cell_centers
-
-
-# -----------------------------------------------------------------
-
-
-def generate_bounding_boxes_from_centers(radius, centers):
-    bounding_boxes = np.zeros((centers.shape[0], 4), dtype=np.float64)
-
-    for i, bb in enumerate(centers):
-        x, y = centers[i]
-        bounding_boxes[i] = np.array([x - radius, x + radius, y - radius, y + radius])
-
-    return bounding_boxes
-
 
 # -----------------------------------------------------------------
 
@@ -366,79 +44,22 @@ class Environment:
         self,
         environment_name="",
         num_timesteps=0,
-        space_physical_bdry_polygon=np.array([], dtype=np.float64),
-        space_migratory_bdry_polygon=np.array([], dtype=np.float64),
-        chemoattractant_shielding_effect_length_squared=0.0,
-        chemoattractant_signal_fn=lambda x: 0.0,
         cell_group_defns=None,
         environment_dir=None,
-        verbose=True,
-        T=(1 / 0.5),
-        integration_params={},
-        full_print=False,
-        persist=True,
-        parameter_explorer_run=False,
-        parameter_explorer_init_rho_gtpase_conditions=None,
-        max_timepoints_on_ram=1000,
-        seed=None,
+        integration_params=None,
         allowed_drift_before_geometry_recalc=1.0,
         max_geometry_recalc_skips=1000,
         cell_placement_method="",
         max_placement_distance_factor=1.0,
-        init_random_cell_placement_x_factor=0.25,
-        convergence_test=False,
         shell_environment=False,
-        graph_group_centroid_splits=False,
+        T=0.0,
     ):
 
-        self.graph_group_centroid_splits = graph_group_centroid_splits
-        self.convergence_test = convergence_test
+        if integration_params is None:
+            integration_params = {}
 
-        self.simulation_execution_enabled = True
-
-        self.last_timestep_when_animations_made = None
-        self.last_timestep_when_environment_hard_saved = None
-        self.last_timestep_when_graphs_made = None
-
-        self.parameter_explorer_run = parameter_explorer_run
-        self.parameter_explorer_init_rho_gtpase_conditions = (
-            parameter_explorer_init_rho_gtpase_conditions
-        )
-        if parameter_explorer_run == True:
-            self.verbose = False
-            self.environment_name = None
-            self.environment_dir = None
-            self.full_print = False
-            self.persist = False
-            self.max_timepoints_on_ram = None
-        else:
-            self.verbose = verbose
-            self.environment_name = environment_name
-            self.environment_dir = environment_dir
-            self.full_print = full_print
-            self.persist = persist
-            self.max_timepoints_on_ram = max_timepoints_on_ram
-
-        if self.environment_dir != None:
-            self.init_random_state(seed)
-            self.storefile_path = os.path.join(self.environment_dir, "store.hdf5")
-            self.empty_self_pickle_path = os.path.join(
-                self.environment_dir, "environment.pkl"
-            )
-            self.data_dict_pickle_path = os.path.join(
-                self.environment_dir, "general_data_dict.pkl"
-            )
-        else:
-            self.storefile_path = None
-            self.empty_self_pickle_path = None
-            self.data_dict_pickle_path = None
-
-        self.space_physical_bdry_polygon = space_physical_bdry_polygon
-        self.space_migratory_bdry_polygon = space_migratory_bdry_polygon
-        self.chemoattractant_shielding_effect_length_squared = (
-            chemoattractant_shielding_effect_length_squared
-        )
-        self.chemoattractant_signal_fn = chemoattractant_signal_fn
+        self.environment_name = environment_name
+        self.environment_dir = environment_dir
         self.cell_group_defns = cell_group_defns
 
         self.curr_tpoint = 0
@@ -452,8 +73,6 @@ class Environment:
 
         self.cell_placement_method = cell_placement_method
         self.max_placement_distance_factor = max_placement_distance_factor
-        self.init_random_cell_placement_x_factor = init_random_cell_placement_x_factor
-
         self.micrometer = 1e-6
 
         if not shell_environment:
@@ -487,7 +106,7 @@ class Environment:
             self.num_nodes = 0
 
         if not shell_environment:
-            self.full_output_dicts = [[] for cell in self.cells_in_environment]
+            self.full_output_dicts = [[] for _ in self.cells_in_environment]
         else:
             self.full_output_dicts = None
 
@@ -495,16 +114,6 @@ class Environment:
         self.exec_orders = np.zeros(
             (self.num_timepoints, self.num_cells), dtype=np.int64
         )
-        self.full_print = full_print
-
-        for ci in range(self.num_cells):
-            if self.environment_dir != None:
-                hardio.create_cell_dataset(
-                    ci,
-                    self.storefile_path,
-                    self.num_nodes,
-                    parameterorg.num_info_labels,
-                )
 
         self.all_geometry_tasks = np.array(
             geometry.create_dist_and_line_segment_interesection_test_args(
@@ -524,40 +133,6 @@ class Environment:
 
         self.mode = MODE_EXECUTE
         self.animation_settings = None
-
-    # -----------------------------------------------------------------
-    def load_from_pickle(self, pickle_fp):
-        env = None
-        with open(pickle_fp, "rb") as f:
-            env = dill.load(f)
-
-        if env == None:
-            raise Exception(
-                "Couldn't open pickled environment at: {}".format(pickle_fp)
-            )
-        else:
-            self.__dict__.update(copy.deepcopy(env.__dict__))
-        del env
-
-    # -----------------------------------------------------------------
-    def write_random_state_file(self, random_state_fp):
-        with open(random_state_fp, "wb") as f:
-            pickle.dump(np.random.get_state(), f)
-
-    def set_random_state_from_file(self, random_state_fp):
-        with open(random_state_fp, "rb") as f:
-            np.random.set_state(pickle.load(f))
-
-    def init_random_state(self, seed):
-        if self.environment_dir != None:
-            random_state_fp = os.path.join(self.environment_dir, "random_state.pkl")
-            if os.path.exists(random_state_fp):
-                self.set_random_state_from_file(random_state_fp)
-            else:
-                np.random.seed(seed)
-                self.write_random_state_file(random_state_fp)
-        else:
-            np.random.seed(seed)
 
     # -----------------------------------------------------------------
 
@@ -606,18 +181,6 @@ class Environment:
         cell_group_name = cell_group_defn["cell_group_name"]
         num_cells = cell_group_defn["num_cells"]
         cell_group_bounding_box = cell_group_defn["cell_group_bounding_box"]
-        num_cells_responsive_to_chemoattractant = cell_group_defn[
-            "num_cells_responsive_to_chemoattractant"
-        ]
-        if not (
-            num_cells_responsive_to_chemoattractant < 0
-            or num_cells_responsive_to_chemoattractant >= num_cells
-        ):
-            responsive_cells = np.random.choice(
-                np.arange(num_cells), size=num_cells_responsive_to_chemoattractant
-            )
-        else:
-            responsive_cells = np.arange(num_cells)
 
         cell_parameter_dict = copy.deepcopy(cell_group_defn["parameter_dict"])
         init_cell_radius = cell_parameter_dict["init_cell_radius"]
@@ -632,7 +195,6 @@ class Environment:
             num_cells,
             init_cell_radius,
             cell_group_bounding_box,
-            cell_placement_method=self.cell_placement_method,
         )
 
         cells_in_group = []
@@ -662,8 +224,6 @@ class Environment:
 
             ci = ci_offset + cell_number
 
-            # cell_label, cell_group_index, ci, integration_params, num_timesteps, T, num_cells_in_environment, max_timepoints_on_ram, verbose, parameters_dict
-
             undefined_labels = parameterorg.find_undefined_labels(cell_parameter_dict)
             if len(undefined_labels) > 0:
                 raise Exception(
@@ -672,38 +232,17 @@ class Environment:
                     )
                 )
 
-            if (
-                self.parameter_explorer_run
-                and self.parameter_explorer_init_rho_gtpase_conditions != None
-            ):
-                new_cell = cell.Cell(
-                    str(cell_group_name) + "_" + str(ci),
-                    cell_group_index,
-                    ci,
-                    integration_params,
-                    num_timesteps,
-                    self.T,
-                    self.num_cells,
-                    self.max_timepoints_on_ram,
-                    self.verbose,
-                    cell_parameter_dict,
-                    init_rho_gtpase_conditions=self.parameter_explorer_init_rho_gtpase_conditions,
-                    responsive_to_chemoattractant=(cell_number in responsive_cells),
+            new_cell = cell.Cell(
+                str(cell_group_name) + "_" + str(ci),
+                cell_group_index,
+                ci,
+                integration_params,
+                num_timesteps,
+                self.T,
+                self.num_cells,
+                cell_parameter_dict,
                 )
-            else:
-                new_cell = cell.Cell(
-                    str(cell_group_name) + "_" + str(ci),
-                    cell_group_index,
-                    ci,
-                    integration_params,
-                    num_timesteps,
-                    self.T,
-                    self.num_cells,
-                    self.max_timepoints_on_ram,
-                    self.verbose,
-                    cell_parameter_dict,
-                    responsive_to_chemoattractant=(cell_number in responsive_cells),
-                )
+
 
             cells_in_group.append(new_cell)
 
@@ -711,12 +250,11 @@ class Environment:
 
     # -----------------------------------------------------------------
 
+    @staticmethod
     def calculate_cell_bounding_boxes(
-        self,
-        num_cells,
+            num_cells,
         init_cell_radius,
         cell_group_bounding_box,
-        cell_placement_method="",
     ):
 
         cell_bounding_boxes = np.zeros((num_cells, 4), dtype=np.float64)
@@ -734,67 +272,42 @@ class Environment:
             raise Exception(
                 "Cell group bounding box is not big enough to contain all cells given init_cell_radius constraint."
             )
+        num_cells_along_x = custom_floor(x_length / cell_diameter, 1e-6)
+        num_cells_along_y = custom_floor(y_length / cell_diameter, 1e-6)
 
-        if cell_placement_method == "":
-            num_cells_along_x = custom_floor(x_length / cell_diameter, 1e-6)
-            num_cells_along_y = custom_floor(y_length / cell_diameter, 1e-6)
+        cell_x_coords = (
+            xmin + np.sign(x_length) * np.arange(num_cells_along_x) * cell_diameter
+        )
+        cell_y_coords = (
+            ymin + np.sign(y_length) * np.arange(num_cells_along_y) * cell_diameter
+        )
+        x_step = np.sign(x_length) * cell_diameter
+        y_step = np.sign(y_length) * cell_diameter
 
-            cell_x_coords = (
-                xmin + np.sign(x_length) * np.arange(num_cells_along_x) * cell_diameter
-            )
-            cell_y_coords = (
-                ymin + np.sign(y_length) * np.arange(num_cells_along_y) * cell_diameter
-            )
-            x_step = np.sign(x_length) * cell_diameter
-            y_step = np.sign(y_length) * cell_diameter
+        xi = 0
+        yi = 0
+        for ci in range(num_cells):
+            cell_bounding_boxes[ci] = [
+                cell_x_coords[xi],
+                cell_x_coords[xi] + x_step,
+                cell_y_coords[yi],
+                cell_y_coords[yi] + y_step,
+            ]
 
-            xi = 0
-            yi = 0
-            for ci in range(num_cells):
-                cell_bounding_boxes[ci] = [
-                    cell_x_coords[xi],
-                    cell_x_coords[xi] + x_step,
-                    cell_y_coords[yi],
-                    cell_y_coords[yi] + y_step,
-                ]
-
-                if yi == (num_cells_along_y - 1):
-                    yi = 0
-                    xi += 1
-                else:
-                    yi += 1
-        elif cell_placement_method == "r":
-            if len(self.space_migratory_bdry_polygon) == 0:
-                corridor_height = -1.0
+            if yi == (num_cells_along_y - 1):
+                yi = 0
+                xi += 1
             else:
-                corridor_height = (
-                    self.space_migratory_bdry_polygon[2][1]
-                    - self.space_migratory_bdry_polygon[0][1]
-                )
+                yi += 1
 
-            box_width = cell_group_bounding_box[1] - cell_group_bounding_box[0]
-            box_height = cell_group_bounding_box[3] - cell_group_bounding_box[2]
-
-            cell_bounding_boxes = generate_bounding_boxes_from_centers(
-                0.5 * cell_diameter,
-                place_cells_randomly(
-                    self.num_cells,
-                    cell_diameter,
-                    self.space_migratory_bdry_polygon[0],
-                    corridor_height,
-                    box_width,
-                    box_height,
-                    self.init_random_cell_placement_x_factor,
-                    self.max_placement_distance_factor,
-                ),
-            )
 
         return cell_bounding_boxes
 
     # -----------------------------------------------------------------
 
+    @staticmethod
     def create_default_init_cell_node_coords(
-        self, bounding_box, init_cell_radius, num_nodes
+            bounding_box, init_cell_radius, num_nodes
     ):
         cell_centre = calc_bounding_box_centre(bounding_box)
 
@@ -836,7 +349,6 @@ class Environment:
         environment_cells_node_coords,
         environment_cells_node_forces,
         environment_cells,
-        centroid_drifts,
         recalc_geometry,
     ):
         execution_sequence = self.cell_indices
@@ -844,22 +356,9 @@ class Environment:
 
         self.exec_orders[t] = np.copy(execution_sequence)
 
-        first_ci = execution_sequence[0]
-        last_ci = execution_sequence[-1]
-
         for ci in execution_sequence:
             current_cell = environment_cells[ci]
-            # if self.verbose == True:
-            #     if self.full_print:
-            #         if ci != first_ci:
-            #             #print("-" * 40)
-            #         else:
-            #             #print("=" * 40)
 
-                    #print("Time step: {}/{}".format(t, self.num_timesteps))
-                    #print("Executing dyanmics for cell: ", ci)
-
-            # this_ci, num_nodes, all_cells_node_coords, all_cells_node_forces, intercellular_squared_dist_array, line_segment_intersection_matrix, chemoattractant_signal_fn, be_talkative=False
             current_cell.execute_step(
                 ci,
                 self.num_nodes,
@@ -867,12 +366,9 @@ class Environment:
                 environment_cells_node_forces,
                 cells_node_distance_matrix[ci],
                 cells_line_segment_intersection_matrix[ci],
-                self.chemoattractant_shielding_effect_length_squared,
-                self.chemoattractant_signal_fn,
-                be_talkative=self.full_print,
             )
 
-            if current_cell.skip_dynamics == False:
+            if not current_cell.skip_dynamics:
                 this_cell_coords = current_cell.curr_node_coords * current_cell.L
                 this_cell_forces = current_cell.curr_node_forces * current_cell.ML_T2
 
@@ -887,21 +383,15 @@ class Environment:
                     geometry.update_line_segment_intersection_and_dist_squared_matrices(
                         4,
                         self.geometry_tasks_per_cell[ci],
-                        self.num_cells,
-                        self.num_nodes,
                         environment_cells_node_coords,
                         cells_bounding_box_array,
                         cells_node_distance_matrix,
                         cells_line_segment_intersection_matrix,
-                        self.space_migratory_bdry_polygon,
-                        self.space_physical_bdry_polygon,
                     )
                 else:
                     geometry.update_distance_squared_matrix(
                         4,
                         self.geometry_tasks_per_cell[ci],
-                        self.num_cells,
-                        self.num_nodes,
                         environment_cells_node_coords,
                         cells_node_distance_matrix,
                     )
@@ -919,620 +409,112 @@ class Environment:
             environment_cells_node_coords,
             environment_cells_node_forces,
         )
-
-    # -----------------------------------------------------------------
-
-    def do_data_analysis_and_make_visuals(
-        self,
-        t,
-        save_dir,
-        animation_settings,
-        animation_obj,
-        produce_graphs,
-        produce_animation,
-        produce_polarization_animation,
-        produce_specific_timestep_snapshots,
-        num_polar_graph_bins=10,
-    ):
-        if self.environment_dir == None:
-            raise Exception("self.environment_dir is None!")
-
-        data_dict = {}
-
-        datavis.add_to_general_data_structure(data_dict, [("T", self.T)])
-
-        cell_Ls = np.array([a_cell.L for a_cell in self.cells_in_environment]) / 1e-6
-
-        some_graph_to_be_made = np.any(
-            [
-                b if type(b) != dict else np.any([c for c in b.values()])
-                for b in produce_graphs.values()
-            ]
-        )
-        all_graphs_to_be_made = np.all(
-            [
-                b if type(b) != dict else np.all([c for c in b.values()])
-                for b in produce_graphs.values()
-            ]
-        )
-        if some_graph_to_be_made:
-            data_dict = {}
-
-            if produce_graphs["cell specific"]:
-                for ci in range(self.num_cells):
-                    this_cell = self.cells_in_environment[ci]
-                    save_dir_for_cell = os.path.join(save_dir, "cell_{}".format(ci))
-
-                    if this_cell.skip_dynamics == True:
-                        continue
-
-                    if not os.path.exists(save_dir_for_cell):
-                        os.makedirs(save_dir_for_cell)
-                        
-                    save_dir_for_cell = os.path.join(
-                        save_dir, "cell_{}".format(ci)
-                    )
-
-                    (
-                        averaged_score,
-                        scores_per_tstep,
-                    ) = cu.calculate_rgtpase_polarity_score(
-                        ci,
-                        self.storefile_path,
-                        significant_difference=0.2,
-                        max_tstep=t,
-                    )
-                    #
-
-                    data_dict = datavis.graph_important_cell_variables_over_time(
-                        self.T / 60.0,
-                        cell_Ls[ci],
-                        ci,
-                        self.storefile_path,
-                        polarity_scores=scores_per_tstep,
-                        save_name="C={}".format(ci)
-                        + "_important_cell_vars_graph_T={}".format(t - 1),
-                        save_dir=save_dir_for_cell,
-                        max_tstep=t,
-                        general_data_structure=data_dict,
-                        convergence_test=self.convergence_test,
-                    )
-                    datavis.graph_rates(
-                        self.T / 60.0,
-                        this_cell.kgtp_rac_baseline,
-                        this_cell.kgtp_rho_baseline,
-                        this_cell.kdgtp_rac_baseline,
-                        this_cell.kdgtp_rho_baseline,
-                        ci,
-                        self.storefile_path,
-                        save_name="C={}".format(ci)
-                        + "_rates_graph_T={}".format(t - 1),
-                        save_dir=save_dir_for_cell,
-                        max_tstep=t,
-                    )
-                    data_dict = datavis.graph_edge_and_areal_strains(
-                        self.T / 60.0,
-                        ci,
-                        self.storefile_path,
-                        save_name="C={}".format(ci)
-                        + "_strain_graph_T={}".format(t - 1),
-                        save_dir=save_dir_for_cell,
-                        max_tstep=t,
-                        general_data_structure=data_dict,
-                    )
-
-            if produce_graphs["all cell speeds"]:
-                data_dict = datavis.graph_cell_speed_over_time(
-                    self.num_cells,
-                    self.T / 60.0,
-                    cell_Ls,
-                    self.storefile_path,
-                    save_name="cell_velocities_T={}".format(t - 1),
-                    save_dir=save_dir,
-                    max_tstep=t,
-                    general_data_structure=data_dict,
-                    convergence_test=self.convergence_test,
-                )
-
-            if produce_graphs["group area/cell separation"]:
-                data_dict = datavis.graph_group_area_and_cell_separation_over_time_and_determine_subgroups(
-                    self.num_cells,
-                    self.num_nodes,
-                    t,
-                    self.T / 60.0,
-                    self.storefile_path,
-                    save_dir=save_dir,
-                    general_data_structure=data_dict,
-                    graph_group_centroid_splits=self.graph_group_centroid_splits,
-                )
-
-            if np.any([b for b in produce_graphs["centroid related data"].values()]):
-                data_dict = datavis.graph_centroid_related_data(
-                    [c.skip_dynamics for c in self.cells_in_environment],
-                    self.num_cells,
-                    self.num_timepoints,
-                    self.T / 60.0,
-                    "min.",
-                    cell_Ls,
-                    self.storefile_path,
-                    save_name="centroid_data_T={}".format(t - 1),
-                    save_dir=save_dir,
-                    max_tstep=t,
-                    general_data_structure=data_dict,
-                    graphs_to_produce=produce_graphs["centroid related data"],
-                )
-
-            if produce_graphs["protrusion existence"]:
-                (
-                    protrusion_existence_per_tstep_per_cell,
-                    protrusion_lifetime_and_average_directions_per_cell,
-                    protrusion_group_directions,
-                ) = cu.collate_protrusion_data(
-                    self.num_cells, self.T, self.storefile_path, max_tstep=t
-                )
-                datavis.add_to_general_data_structure(
-                    data_dict,
-                    [
-                        (
-                            "all_cell_protrusion_lifetimes_and_directions",
-                            protrusion_lifetime_and_average_directions_per_cell,
-                        ),
-                        (
-                            "all_cell_protrusion_group_directions",
-                            protrusion_group_directions,
-                        ),
-                        (
-                            "all_cell_protrusion_existence",
-                            np.array(protrusion_existence_per_tstep_per_cell),
-                        ),
-                    ],
-                )
-
-            if produce_graphs["protrusion bias"]:
-                datavis.graph_protrusion_bias_vectors(
-                    protrusion_lifetime_and_average_directions_per_cell,
-                    num_polar_graph_bins,
-                    t * self.T / 60.0,
-                    save_dir=save_dir,
-                    save_name="protrusion_bias_vector",
-                )
-
-                all_cell_protrusion_lifetime_and_direction_data = []
-
-                for cell_data in protrusion_lifetime_and_average_directions_per_cell:
-                    for pd in cell_data:
-                        all_cell_protrusion_lifetime_and_direction_data.append(pd)
-
-                all_cell_protrusion_lifetime_and_direction_data = np.array(
-                    all_cell_protrusion_lifetime_and_direction_data
-                )
-                datavis.graph_protrusion_lifetimes_radially(
-                    all_cell_protrusion_lifetime_and_direction_data,
-                    num_polar_graph_bins,
-                    t * self.T / 60.0,
-                    save_dir=save_dir,
-                    save_name="protrusion_dirn_and_lifetime",
-                )
-
-            #            forward_cones = [(7*np.pi/4, 2*np.pi), (0.0, np.pi/4)]
-            #            backward_cones = [(3*np.pi/4, 5*np.pi/4)]
-            #            protrusion_node_index_and_tpoint_start_ends = [x[0] for x in protrusion_data_per_cell]
-            #            datavis.graph_forward_backward_protrusions_per_timestep(t, protrusion_node_index_and_tpoint_start_ends, protrusion_lifetime_and_direction_data, self.T, forward_cones, backward_cones, self.num_nodes, save_dir=save_dir)
-            #            all_cell_speeds_and_directions = cu.calculate_all_cell_speeds_and_directions_until_tstep(self.num_cells, t, self.storefile_path, self.T/60.0, cell_Ls)
-        #            datavis.graph_forward_backward_cells_per_timestep(t - 1, all_cell_speeds_and_directions, self.T, forward_cones, backward_cones, save_dir=save_dir)
-
-        if all_graphs_to_be_made or not os.path.exists(self.data_dict_pickle_path):
-            if os.path.exists(self.data_dict_pickle_path):
-                os.remove(self.data_dict_pickle_path)
-
-            with open(self.data_dict_pickle_path, "wb") as f:
-                dill.dump(data_dict, f)
-        else:
-            if not os.path.exists(self.data_dict_pickle_path):
-                raise Exception("general data dict does not exist!")
-
-            existing_data_dict = None
-            with open(self.data_dict_pickle_path, "rb") as f:
-                existing_data_dict = dill.load(f)
-
-            existing_data_dict.update(data_dict)
-            os.remove(self.data_dict_pickle_path)
-
-            with open(self.data_dict_pickle_path, "wb") as f:
-                dill.dump(existing_data_dict, f)
-
-        if produce_animation:
-            animation_obj.create_animation_from_data(
-                save_dir, "animation.mp4", timestep_to_draw_till=t
-            )
-        if produce_polarization_animation:
-            animation_obj.create_polarization_animation_from_data(
-                save_dir, "polarization-animation.mp4", timestep_to_draw_till=t
-            )
-        if produce_specific_timestep_snapshots and len(animation_obj.specific_timesteps_to_draw) > 0:
-            animation_obj.draw_specific_timesteps(save_dir, image_format=".svg")
-
-    # -----------------------------------------------------------------
-    def get_empty_cell(self, ci):
-        empty_cell = copy.deepcopy(self.cells_in_environment[ci])
-
-        empty_cell.system_history = None
-
-        return empty_cell
-
-    # -----------------------------------------------------------------
-
-    def get_empty_cells(self):
-        return [self.get_empty_cell(ci) for ci in range(self.num_cells)]
-
-    # -----------------------------------------------------------------
-
-    def get_empty_self_copy(self):
-        empty_self = copy.deepcopy(self)
-
-        empty_self.cells_in_environment = self.get_empty_cells()
-
-        return empty_self
-
-    # -----------------------------------------------------------------
-
-    def is_empty(self):
-        for a_cell in self.cells_in_environment:
-            if a_cell.system_history != None:
-                return False
-
-        return True
-
-    # -----------------------------------------------------------------
-
-    def empty_self(self, preserve_cell_structure=True):
-        self.cells_in_environment = self.get_empty_cells()
-
-    # -----------------------------------------------------------------
-
-    def dump_to_store(self, tpoint):
-        random_state_fp = os.path.join(self.environment_dir, "random_state.pkl")
-        self.write_random_state_file(random_state_fp)
-
-        access_index = self.get_system_history_index(self.curr_tpoint)
-
-        for ci in range(self.num_cells):
-            this_cell = self.cells_in_environment[ci]
-            if this_cell.last_trim_timestep < 0:
-                hardio.append_cell_data_to_dataset(
-                    ci,
-                    this_cell.system_history[: access_index + 1],
-                    self.storefile_path,
-                )
-                this_cell.trim_system_history(tpoint)
-            elif this_cell.last_trim_timestep < tpoint:
-                hardio.append_cell_data_to_dataset(
-                    ci,
-                    this_cell.system_history[1 : access_index + 1],
-                    self.storefile_path,
-                )
-                this_cell.trim_system_history(tpoint)
-            else:
-                continue
-
-        self.timestep_offset_due_to_dumping = self.curr_tpoint
-
-        with open(self.empty_self_pickle_path, "wb") as f:
-            dill.dump(self.get_empty_self_copy(), f)
-
-    # -----------------------------------------------------------------
-
-    def init_from_store(
-        self,
-        environment_wide_variable_defns,
-        tpoint=None,
-        simulation_execution_enabled=True,
-    ):
-        self.init_random_state(None)
-        self.storefile_path = os.path.join(self.environment_dir, "store.hdf5")
-        self.data_dict_pickle_path = os.path.join(
-            self.environment_dir, "general_data_dict.pkl"
-        )
-        self.empty_self_pickle_path = os.path.join(
-            self.environment_dir, "environment.pkl"
-        )
-
-        if tpoint == None:
-            tpoint = self.curr_tpoint
-
-        old_num_timesteps = self.num_timesteps
-        self.__dict__.update(environment_wide_variable_defns)
-        new_num_timesteps = environment_wide_variable_defns["num_timesteps"]
-
-        if old_num_timesteps > new_num_timesteps:
-            self.num_timesteps = old_num_timesteps
-
-        if old_num_timesteps < new_num_timesteps:
-            self.extend_simulation_runtime(new_num_timesteps)
-
-        self.simulation_execution_enabled = simulation_execution_enabled
-        if simulation_execution_enabled:
-            for a_cell in self.cells_in_environment:
-                a_cell.init_from_storefile(tpoint, self.storefile_path)
-
-            self.last_timestep_when_environment_hard_saved = tpoint
-
-    # -----------------------------------------------------------------
-
-    def load_curr_tpoint(self):
-        self.mode = MODE_OBSERVE
-        self.empty_self()
-        self.init_from_store(tpoint=self.curr_tpoint)
-
-    def load_next_tpoint(self):
-        self.mode = MODE_OBSERVE
-        self.empty_self()
-        self.orig_tpoint = self.curr_tpoint
-        self.curr_tpoint += 1
-        self.load_curr_tpoint()
-
-    def load_last_tpoint(self):
-        self.mode = MODE_OBSERVE
-        self.empty_self()
-        if self.curr_tpoint == 0:
-            warnings.warn("Already at timestep 0!")
-        else:
-            self.orig_tpoint = self.curr_tpoint
-            self.curr_tpoint -= 1
-            self.load_curr_tpoint()
-
-    def load_at_tpoint(self, tpoint):
-        self.mode = MODE_OBSERVE
-        self.empty_self()
-        if tpoint < 0:
-            warnings.warn("Given tstep is less than 0!")
-        elif tpoint > self.get_storefile_tstep_range():
-            warnings.warn("Given tstep is greater than range of data in storefile!")
-        else:
-            self.orig_tpoint = self.curr_tpoint
-            self.curr_tpoint = tpoint
-            self.load_curr_tpoint()
-
-    def get_storefile_tstep_range(self):
-        return hardio.get_storefile_tstep_range(self.num_cells, self.storefile_path)
-
     # -----------------------------------------------------------------
 
     def execute_system_dynamics(
         self,
-        animation_settings,
-        produce_intermediate_visuals=True,
-        produce_graphs={
-            "cell specific": True,
-            "all cell speeds": True,
-            "group area/cell separation": True,
-            "centroid related data": {
-                "velocity alignment": True,
-                "persistence time": True,
-                "general group info": True,
-                "centroid drift": True,
-            },
-            "protrusion existence": True,
-            "protrusion bias": True,
-        },
-        produce_animation=True,
-        produce_polarization_animation=True,
-        elapsed_timesteps_before_producing_intermediate_graphs=2500,
-        elapsed_timesteps_before_producing_intermediate_animations=5000,
-        given_pool_for_making_visuals=None,
     ):
-        self.animation_settings = animation_settings
+        allowed_drift_before_geometry_recalc = (
+            self.allowed_drift_before_geometry_recalc
+        )
 
-        if self.mode == MODE_EXECUTE and self.simulation_execution_enabled:
-            allowed_drift_before_geometry_recalc = (
-                self.allowed_drift_before_geometry_recalc
-            )
+        centroid_drifts = np.zeros(self.num_cells, dtype=np.float64)
+        recalc_geometry = np.ones(self.num_cells, dtype=np.bool)
 
-            centroid_drifts = np.zeros(self.num_cells, dtype=np.float64)
-            recalc_geometry = np.ones(self.num_cells, dtype=np.bool)
+        simulation_st = time.time()
+        num_cells = self.num_cells
+        num_nodes = self.num_nodes
 
-            simulation_st = time.time()
-            num_cells = self.num_cells
-            num_nodes = self.num_nodes
+        environment_cells = self.cells_in_environment
+        environment_cells_node_coords = np.array(
+            [x.curr_node_coords * x.L for x in environment_cells]
+        )
+        environment_cells_node_forces = np.array(
+            [x.curr_node_forces * x.ML_T2 for x in environment_cells]
+        )
 
-            environment_cells = self.cells_in_environment
-            environment_cells_node_coords = np.array(
-                [x.curr_node_coords * x.L for x in environment_cells]
-            )
-            environment_cells_node_forces = np.array(
-                [x.curr_node_forces * x.ML_T2 for x in environment_cells]
-            )
+        curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
 
-            curr_centroids = geometry.calculate_centroids(environment_cells_node_coords)
+        cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(
+            num_cells, environment_cells_node_coords
+        )
+        # num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords
+        (
+            cells_node_distance_matrix,
+            cells_line_segment_intersection_matrix,
+        ) = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(
+            num_cells,
+            num_nodes,
+            cells_bounding_box_array,
+            environment_cells_node_coords,
+        )
 
-            cells_bounding_box_array = geometry.create_initial_bounding_box_polygon_array(
-                num_cells, num_nodes, environment_cells_node_coords
-            )
-            # num_cells, num_nodes_per_cell, init_cells_bounding_box_array, init_all_cells_node_coords
-            (
-                cells_node_distance_matrix,
-                cells_line_segment_intersection_matrix,
-            ) = geometry.create_initial_line_segment_intersection_and_dist_squared_matrices_old(
-                num_cells,
-                num_nodes,
-                cells_bounding_box_array,
-                environment_cells_node_coords,
-                self.space_migratory_bdry_polygon,
-                self.space_physical_bdry_polygon,
-            )
+        # cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
 
-            # cells_node_distance_matrix = geometry.create_initial_distance_squared_matrix(num_cells, num_nodes, environment_cells_node_coords)
+        cell_group_indices = []
+        cell_Ls = []
+        cell_Ts = []
+        cell_etas = []
+        cell_skip_dynamics = []
 
-            if self.environment_dir == None:
-                animation_obj = None
-                produce_intermediate_visuals = False
-                produce_graphs = {
-                    "cell specific": False,
-                    "all cell speeds": False,
-                    "group area/cell separation": False,
-                    "centroid related data": {
-                        "velocity alignment": False,
-                        "persistence time": False,
-                        "general group info": False,
-                        "centroid drift": False,
-                    },
-                    "protrusion existence": False,
-                    "protrusion bias": False,
-                }
-                produce_animation = False
-                produce_polarization_animation = False
-            else:
-                cell_group_indices = []
-                cell_Ls = []
-                cell_Ts = []
-                cell_etas = []
-                cell_skip_dynamics = []
+        for a_cell in self.cells_in_environment:
+            cell_group_indices.append(a_cell.cell_group_index)
+            cell_Ls.append(a_cell.L / 1e-6)
+            cell_Ts.append(a_cell.T)
+            cell_etas.append(a_cell.eta)
+            cell_skip_dynamics.append(a_cell.skip_dynamics)
 
-                for a_cell in self.cells_in_environment:
-                    cell_group_indices.append(a_cell.cell_group_index)
-                    cell_Ls.append(a_cell.L / 1e-6)
-                    cell_Ts.append(a_cell.T)
-                    cell_etas.append(a_cell.eta)
-                    cell_skip_dynamics.append(a_cell.skip_dynamics)
+        if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
+            for t in self.timepoints[self.curr_tpoint : -1]:
 
-                if produce_animation or produce_polarization_animation:
-                    animation_obj = animator.EnvironmentAnimation(
-                        self.environment_dir,
-                        self.environment_name,
-                        self.num_cells,
-                        self.num_nodes,
-                        self.num_timepoints,
-                        cell_group_indices,
-                        cell_Ls,
-                        cell_Ts,
-                        cell_etas,
-                        cell_skip_dynamics,
-                        self.storefile_path,
-                        self.data_dict_pickle_path,
-                        **animation_settings
-                    )
+                (
+                    cells_node_distance_matrix,
+                    cells_bounding_box_array,
+                    cells_line_segment_intersection_matrix,
+                    environment_cells_node_coords,
+                    environment_cells_node_forces,
+                ) = self.execute_system_dynamics_in_random_sequence(
+                    t,
+                    cells_node_distance_matrix,
+                    cells_bounding_box_array,
+                    cells_line_segment_intersection_matrix,
+                    environment_cells_node_coords,
+                    environment_cells_node_forces,
+                    environment_cells,
+                    recalc_geometry,
+                )
+
+                prev_centroids = copy.deepcopy(curr_centroids)
+                curr_centroids = geometry.calculate_centroids(
+                    environment_cells_node_coords
+                )
+                delta_drifts = (
+                    geometry.calculate_centroid_dift(prev_centroids, curr_centroids)
+                    / 1e-6
+                )
+                if np.all(recalc_geometry):
+                    centroid_drifts = np.zeros_like(centroid_drifts)
+                    recalc_geometry = np.zeros_like(recalc_geometry)
                 else:
-                    animation_obj = None
+                    centroid_drifts = centroid_drifts + delta_drifts
 
-            if self.curr_tpoint == 0 or self.curr_tpoint < self.num_timesteps:
-                if self.last_timestep_when_environment_hard_saved == None:
-                    self.last_timestep_when_environment_hard_saved = self.curr_tpoint
-                for t in self.timepoints[self.curr_tpoint : -1]:
-                    if (
-                        t - self.last_timestep_when_environment_hard_saved
-                        >= self.max_timepoints_on_ram
-                    ):
-                        self.last_timestep_when_environment_hard_saved = t
+                if np.max(centroid_drifts) > allowed_drift_before_geometry_recalc:
+                    recalc_geometry = np.ones_like(recalc_geometry)
+                #                    centroid_drifts = np.where(recalc_geometry, 0.0, centroid_drifts + delta_drifts)
+                #                    recalc_geometry = centroid_drifts > allowed_drift_before_geometry_recalc
 
-                        if self.environment_dir != None:
-                            self.dump_to_store(t)
-
-                    if type(produce_intermediate_visuals) == np.ndarray:
-                        if t != 0 and t in produce_intermediate_visuals:
-                            self.last_timestep_when_environment_hard_saved = t
-
-                            if self.environment_dir != None:
-                                self.dump_to_store(t)
-
-                            data_save_dir = os.path.join(
-                                self.environment_dir, "T={}".format(t)
-                            )
-                            if not os.path.exists(data_save_dir):
-                                os.makedirs(data_save_dir)
-
-                            self.do_data_analysis_and_make_visuals(
-                                t,
-                                data_save_dir,
-                                animation_settings,
-                                animation_obj,
-                                produce_graphs,
-                                produce_animation,
-                                produce_polarization_animation,
-                            )
-
-                    (
-                        cells_node_distance_matrix,
-                        cells_bounding_box_array,
-                        cells_line_segment_intersection_matrix,
-                        environment_cells_node_coords,
-                        environment_cells_node_forces,
-                    ) = self.execute_system_dynamics_in_random_sequence(
-                        t,
-                        cells_node_distance_matrix,
-                        cells_bounding_box_array,
-                        cells_line_segment_intersection_matrix,
-                        environment_cells_node_coords,
-                        environment_cells_node_forces,
-                        environment_cells,
-                        centroid_drifts,
-                        recalc_geometry,
-                    )
-
-                    prev_centroids = copy.deepcopy(curr_centroids)
-                    curr_centroids = geometry.calculate_centroids(
-                        environment_cells_node_coords
-                    )
-                    delta_drifts = (
-                        geometry.calculate_centroid_dift(prev_centroids, curr_centroids)
-                        / 1e-6
-                    )
-                    if np.all(recalc_geometry):
-                        centroid_drifts = np.zeros_like(centroid_drifts)
-                        recalc_geometry = np.zeros_like(recalc_geometry)
-                    else:
-                        centroid_drifts = centroid_drifts + delta_drifts
-
-                    if np.max(centroid_drifts) > allowed_drift_before_geometry_recalc:
-                        recalc_geometry = np.ones_like(recalc_geometry)
-                    #                    centroid_drifts = np.where(recalc_geometry, 0.0, centroid_drifts + delta_drifts)
-                    #                    recalc_geometry = centroid_drifts > allowed_drift_before_geometry_recalc
-
-                    self.curr_tpoint += 1
-            else:
-                raise Exception("max_t has already been reached.")
-
-            simulation_et = time.time()
-
-            if self.environment_dir != None:
-                self.dump_to_store(self.curr_tpoint)
-
-            produce_some_graphs = np.any(
-                np.array(
-                    [
-                        b if type(b) != dict else np.any([c for c in b.values()])
-                        for b in produce_graphs.values()
-                    ]
-                )
-            )
-            if produce_some_graphs or produce_animation or produce_polarization_animation:
-                t = self.num_timepoints
-                data_save_dir = os.path.join(self.environment_dir, "T={}".format(t))
-
-                if not os.path.exists(data_save_dir):
-                    os.makedirs(data_save_dir)
-
-                    print("Preparing final visualizations...")
-                    self.do_data_analysis_and_make_visuals(
-                        t,
-                        data_save_dir,
-                        animation_settings,
-                        animation_obj,
-                        produce_graphs,
-                        produce_animation,
-                        produce_polarization_animation,
-                        [],
-                    )
-
-            simulation_time = np.round(simulation_et - simulation_st, decimals=2)
-
-            if self.verbose == True:
-                print(
-                    ("Time taken to complete simulation: {}s".format(simulation_time))
-                )
-
-            return simulation_time
+                self.curr_tpoint += 1
         else:
-            return 0.0
+            raise Exception("max_t has already been reached.")
+
+        simulation_et = time.time()
+
+        simulation_time = np.round(simulation_et - simulation_st, decimals=2)
+
+        print(
+            ("Time taken to complete simulation: {}s".format(simulation_time))
+        )
+
 
 
 # -----------------------------------------------------------------

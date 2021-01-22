@@ -28,7 +28,7 @@ def linear_function(max_x, x):
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
 def calculate_phys_space_bdry_contact_factors(
-    num_nodes, this_cell_coords, space_physical_bdry_polygons
+        this_cell_coords, space_physical_bdry_polygons
 ):
 
     if space_physical_bdry_polygons.size == 0:
@@ -60,22 +60,6 @@ def calculate_migr_bdry_contact_factors(
             result[i] = migr_bdry_contact_factor_mag
 
     return result
-
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_local_strains(this_cell_coords, length_edge_resting):
-    average_edge_lengths = geometry.calculate_average_edge_lengths(this_cell_coords)
-
-    num_nodes = this_cell_coords.shape[0]
-    local_strains = np.empty(num_nodes, dtype=np.float64)
-
-    for i in range(num_nodes):
-        local_strains[i] = (
-            average_edge_lengths[i] - length_edge_resting
-        ) / length_edge_resting
-
-    return local_strains
 
 
 # -----------------------------------------------------------------
@@ -183,8 +167,7 @@ def determine_rac_rho_domination(rac_membrane_actives, rho_membrane_actives):
 #@nb.jit(nopython=True)
 def calculate_rgtpase_mediated_forces(
     num_nodes,
-    this_cell_coords,
-    rac_membrane_actives,
+        rac_membrane_actives,
     rho_membrane_actives,
     threshold_force_rac_activity,
     threshold_force_rho_activity,
@@ -195,7 +178,6 @@ def calculate_rgtpase_mediated_forces(
     rgtpase_mediated_force_mags = np.zeros(num_nodes, dtype=np.float64)
 
     for ni in range(num_nodes):
-        force_mag = 0.0
         rac_activity = rac_membrane_actives[ni]
         rho_activity = rho_membrane_actives[ni]
 
@@ -215,7 +197,7 @@ def calculate_rgtpase_mediated_forces(
 
         rgtpase_mediated_force_mags[ni] = -1 * force_mag
 
-    result = np.empty((num_nodes, 2), dtype=np.float64)
+    np.empty((num_nodes, 2), dtype=np.float64)
     result = geometry.multiply_vectors_by_scalars(
         unit_inside_pointing_vectors, rgtpase_mediated_force_mags
     )
@@ -251,14 +233,13 @@ def calculate_adhesion_forces(
     close_point_on_other_cells_to_each_node,
     close_point_on_other_cells_to_each_node_indices,
     close_point_on_other_cells_to_each_node_projection_factors,
-    all_cells_centres,
-    all_cells_node_forces,
+        all_cells_node_forces,
     closeness_dist_criteria,
     unit_inside_pointing_vectors,
     max_force_adh,
 ):
     F_adh = np.zeros((num_nodes, 2), dtype=np.float64)
-    close_point_force = np.zeros(2, dtype=np.float64)
+    np.zeros(2, dtype=np.float64)
 
     for ni in range(num_nodes):
         this_this_cell_coords = this_cell_coords[ni]
@@ -335,18 +316,14 @@ def calculate_external_forces(
     num_cells,
     this_ci,
     close_point_on_other_cells_to_each_node_exists,
-    close_point_on_other_cells_to_each_node,
-    close_point_on_other_cells_to_each_node_indices,
-    close_point_on_other_cells_to_each_node_projection_factors,
-    all_cells_centres,
-    all_cells_node_forces,
-    closeness_dist_criteria,
-    unit_inside_pointing_vectors,
+        close_point_on_other_cells_to_each_node_indices,
+        all_cells_node_forces,
+        unit_inside_pointing_vectors,
 ):
     F_external = np.zeros((num_nodes, 2), dtype=np.float64)
 
     for ni in range(num_nodes):
-        close_point_force = np.zeros(2, dtype=np.float64)
+        np.zeros(2, dtype=np.float64)
         uiv = unit_inside_pointing_vectors[ni]
 
         for ci in range(num_cells):
@@ -395,9 +372,7 @@ def calculate_external_forces(
 #@nb.jit(nopython=True)
 def calculate_forces(
     num_nodes,
-    num_cells,
-    this_ci,
-    this_cell_coords,
+        this_cell_coords,
     rac_membrane_actives,
     rho_membrane_actives,
     length_edge_resting,
@@ -406,16 +381,8 @@ def calculate_forces(
     threhsold_force_rho_activity,
     max_force_rac,
     max_force_rho,
-    force_adh_constant,
-    area_resting,
+        area_resting,
     stiffness_cytoplasmic,
-    close_point_on_other_cells_to_each_node_exists,
-    close_point_on_other_cells_to_each_node,
-    close_point_on_other_cells_to_each_node_indices,
-    close_point_on_other_cells_to_each_node_projection_factors,
-    all_cells_centres,
-    all_cells_node_forces,
-    closeness_dist_criteria,
 ):
 
     unit_inside_pointing_vectors = geometry.calculate_unit_inside_pointing_vecs(
@@ -424,7 +391,6 @@ def calculate_forces(
 
     rgtpase_mediated_forces = calculate_rgtpase_mediated_forces(
         num_nodes,
-        this_cell_coords,
         rac_membrane_actives,
         rho_membrane_actives,
         threhsold_force_rac_activity,

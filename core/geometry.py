@@ -74,8 +74,8 @@ def determine_rotation_matrix_to_rotate_vector1_to_lie_along_vector2(vector1, ve
     cross_prod_mag = u1 * v2 - u2 * v1
 
     mag1_times_mag2 = mag1 * mag2
-    sin_theta = cross_prod_mag / (mag1_times_mag2)
-    cos_theta = dot_prod / (mag1_times_mag2)
+    sin_theta = cross_prod_mag / mag1_times_mag2
+    cos_theta = dot_prod / mag1_times_mag2
 
     rotation_matrix = np.zeros((2, 2), dtype=np.float64)
 
@@ -544,7 +544,7 @@ def calculate_bounding_box_polygon(polygon):
 # -----------------------------------------------------------------
 # @nb.jit(nopython=True)
 def create_initial_bounding_box_polygon_array(
-    num_cells, num_vertices_per_cell, environment_cells_node_coords
+    num_cells, environment_cells_node_coords
 ):
     bounding_box_polygon_array = np.zeros((num_cells, 4), dtype=np.float64)
 
@@ -931,9 +931,7 @@ def update_distance_squared_matrix_old(
 def update_distance_squared_matrix(
     num_threads,
     given_tasks,
-    num_cells,
-    num_vertices_per_cell,
-    all_cells_node_coords,
+        all_cells_node_coords,
     distance_squared_matrix,
 ):
 
@@ -1069,7 +1067,7 @@ def calculate_closest_point_dist_squared(
     minus1_vector = closest_nc_minus1 - closest_nc
 
     proj_for_plus1 = calculate_projection_of_a_on_b(closest_to_this, plus1_vector)
-    if 0 < proj_for_plus1 and proj_for_plus1 < 1:
+    if 0 < proj_for_plus1 < 1:
         closest_pc = closest_nc + proj_for_plus1 * plus1_vector
         closest_point_node_indices[1] = closest_ni_plus1
         return (
@@ -1080,7 +1078,7 @@ def calculate_closest_point_dist_squared(
         )
 
     proj_for_minus1 = calculate_projection_of_a_on_b(closest_to_this, minus1_vector)
-    if 0 < proj_for_minus1 and proj_for_minus1 < 1:
+    if 0 < proj_for_minus1 < 1:
         closest_pc = closest_nc + proj_for_minus1 * minus1_vector
         closest_point_node_indices[1] = closest_ni_minus1
         return (
@@ -1416,8 +1414,6 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
     vi_b,
     all_polygon_coords,
     all_polygons_bounding_box_coords,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
 ):
     coords_a = all_polygon_coords[pi_a, vi_a]
     coords_b = all_polygon_coords[pi_b, vi_b]
@@ -1438,31 +1434,6 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_vertex_of_another_
         == 1
     ):
         return 100000
-    else:
-        if space_migratory_bdry_polygon.size != 0:
-            if (
-                check_if_line_segment_intersects_polygon(
-                    coords_a,
-                    coords_b,
-                    normal_to_line_segment,
-                    space_migratory_bdry_polygon,
-                    -1,
-                )
-                == 1
-            ):
-                return 100000
-        if space_physical_bdry_polygon.size != 0:
-            if (
-                check_if_line_segment_intersects_polygon(
-                    coords_a,
-                    coords_b,
-                    normal_to_line_segment,
-                    space_migratory_bdry_polygon,
-                    -1,
-                )
-                == 1
-            ):
-                return 100000
 
     num_intersections = 0
     num_polygons = all_polygon_coords.shape[0]
@@ -1502,41 +1473,10 @@ def check_if_line_segment_going_from_vertex_of_one_polygon_to_point_passes_throu
     point,
     all_polygon_coords,
     all_polygons_bounding_box_coords,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
 ):
-    num_intersections = 0
     coords_a = all_polygon_coords[pi_a, vi_a]
 
     normal_to_line_segment = rotate_2D_vector_CCW(point - coords_a)
-
-    #    if check_if_line_segment_from_node_self_intersects(coords_a, point, all_polygon_coords[pi_a], vi_a) == 1:
-    #        return 100000
-    #    else:
-    if space_migratory_bdry_polygon.shape[0] > 0:
-        if (
-            check_if_line_segment_intersects_polygon(
-                coords_a,
-                point,
-                normal_to_line_segment,
-                space_migratory_bdry_polygon,
-                -1,
-            )
-            == 1
-        ):
-            return 100000
-    if space_physical_bdry_polygon.shape[0] > 0:
-        if (
-            check_if_line_segment_intersects_polygon(
-                coords_a,
-                point,
-                normal_to_line_segment,
-                space_migratory_bdry_polygon,
-                -1,
-            )
-            == 1
-        ):
-            return 100000
 
     num_intersections = 0
     num_polygons = all_polygon_coords.shape[0]
@@ -1684,8 +1624,6 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices_old(
     num_vertices_per_cell,
     init_cells_bounding_box_array,
     init_all_cells_node_coords,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
 ):
     distance_squared_matrix = -1 * np.ones(
         (num_cells, num_vertices_per_cell, num_cells, num_vertices_per_cell),
@@ -1717,8 +1655,6 @@ def create_initial_line_segment_intersection_and_dist_squared_matrices_old(
                                 other_ni,
                                 init_all_cells_node_coords,
                                 init_cells_bounding_box_array,
-                                space_migratory_bdry_polygon,
-                                space_physical_bdry_polygon,
                             )
 
                             line_segment_intersection_matrix[ci][ni][other_ci][
@@ -1751,8 +1687,6 @@ def dist_squared_and_line_segment_calculation_worker(
     line_segment_intersect_matrix,
     polygon_bounding_boxes,
     polygons,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
     task_addresses,
 ):
     for n in range(task_addresses.shape[0]):
@@ -1772,8 +1706,6 @@ def dist_squared_and_line_segment_calculation_worker(
             b_ni,
             polygons,
             polygon_bounding_boxes,
-            space_migratory_bdry_polygon,
-            space_physical_bdry_polygon,
         )
 
         dist_squared_matrix[a_ci][a_ni][b_ci][b_ni] = dist_squared
@@ -2009,14 +1941,10 @@ def update_line_segment_intersection_and_dist_squared_matrices_old(
 def update_line_segment_intersection_and_dist_squared_matrices(
     num_threads,
     given_tasks,
-    num_cells,
-    num_vertices_per_cell,
-    all_cells_node_coords,
+        all_cells_node_coords,
     cells_bounding_box_array,
     distance_squared_matrix,
     line_segment_intersection_matrix,
-    space_migratory_bdry_polygon,
-    space_physical_bdry_polygon,
     sequential=False,
 ):
 
@@ -2034,8 +1962,6 @@ def update_line_segment_intersection_and_dist_squared_matrices(
                     line_segment_intersection_matrix,
                     cells_bounding_box_array,
                     all_cells_node_coords,
-                    space_migratory_bdry_polygon,
-                    space_physical_bdry_polygon,
                     relevant_tasks,
                 )
             )

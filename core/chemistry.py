@@ -8,17 +8,6 @@ Created on Tue May 12 13:27:54 2015
 import numpy as np
 import numba as nb
 
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_coa_sensitivity_exponent(
-    coa_distribution_exponent, percent_drop_over_cell_diameter, cell_diameter
-):
-    coa_sensitivity_exponent = np.log(percent_drop_over_cell_diameter) / (
-        1 - np.exp(coa_distribution_exponent * cell_diameter)
-    )
-
-    return coa_sensitivity_exponent
-
 
 # -----------------------------------------------------------------
 @nb.jit(nopython=True)
@@ -87,101 +76,6 @@ def generate_randomization_width(
 
     return width
 
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_rac_randomization(
-    cell_index,
-    t,
-    num_nodes,
-    rac_actives,
-    rac_inactives,
-    randomization_width_baseline,
-    randomization_width_halfmax_threshold,
-    randomization_width_hf_exponent,
-    randomization_centre,
-    randomization_width,
-    randomization_depth,
-    randomization_function_type,
-):
-    flatness = 4
-
-    randomized_rac_actives = np.zeros_like(rac_actives)
-    randomized_rac_inactives = np.zeros_like(rac_inactives)
-
-    randomization_factors_rac_active = np.zeros(num_nodes, dtype=np.float64)
-
-    for ni in range(num_nodes):
-        nodal_rac_active = rac_actives[ni]
-        nodal_rac_inactive = rac_inactives[ni]
-
-        uniform_distribution_width = generate_randomization_width(
-            nodal_rac_active,
-            randomization_width_baseline,
-            randomization_width_hf_exponent,
-            randomization_width_halfmax_threshold,
-            randomization_centre,
-            randomization_width,
-            randomization_depth,
-            flatness,
-            randomization_function_type,
-        )
-
-        randomization_factors_rac_active[ni] = generate_random_factor(
-            uniform_distribution_width
-        )
-
-    for ni in range(num_nodes):
-        nodal_rac_active = rac_actives[ni]
-        nodal_rac_inactive = rac_inactives[ni]
-
-        # randomization_factor_rac_inactive = generate_random_factor(randomization_width)
-        randomization_factor_rac_active = randomization_factors_rac_active[ni]
-        delta_rac_active = randomization_factor_rac_active * nodal_rac_active
-        # delta_rac_inactive = randomization_factor_rac_inactive*nodal_rac_inactive
-
-        if delta_rac_active > nodal_rac_inactive:
-            delta_rac_active = nodal_rac_inactive
-
-        randomized_rac_actives[ni] = (
-            nodal_rac_active + delta_rac_active
-        )  # + delta_rac_inactive
-        randomized_rac_inactives[ni] = (
-            nodal_rac_inactive - delta_rac_active
-        )
-    return randomized_rac_actives, randomized_rac_inactives
-
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_strain_mediated_rac_activation_reduction_using_neg_exp(
-    strain, tension_mediated_rac_inhibition_exponent
-):
-    return np.exp(-1 * tension_mediated_rac_inhibition_exponent * strain)
-
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_strain_mediated_rac_activation_reduction_using_inv_fn(
-    strain, tension_mediated_rac_inhibition_multiplier
-):
-    return 1.0 / (1 + tension_mediated_rac_inhibition_multiplier * strain)
-
-
-# -----------------------------------------------------------------
-@nb.jit(nopython=True)
-def calculate_strain_mediated_rac_activation_reduction_using_hill_fn(
-    strain,
-    tension_mediated_rac_hill_exponent,
-    tension_mediated_rac_inhibition_half_strain,
-):
-    return 1 - hill_function(
-        tension_mediated_rac_hill_exponent,
-        tension_mediated_rac_inhibition_half_strain,
-        strain,
-    )
-
-
 # -----------------------------------------------------------------
 #@nb.jit(nopython=True)
 def calculate_kgtp_rac(
@@ -191,8 +85,6 @@ def calculate_kgtp_rac(
     kgtp_rac_baseline,
     kgtp_rac_autoact_baseline,
     coa_signals,
-    chemoattractant_mediated_coa_dampening,
-    chemoattractant_signal_on_nodes,
     randomization_factors,
     intercellular_contact_factors,
     close_point_smoothness_factors,
@@ -212,8 +104,6 @@ def calculate_kgtp_rac(
         smooth_factor = np.max(close_point_smoothness_factors[i])
         coa_signal = coa_signals[i]
 
-        chemoattractant_signal_at_node = chemoattractant_signal_on_nodes[i]
-
         if cil_factor > 0.0 or smooth_factor > 1e-6:
             coa_signal = 0.0
 
@@ -223,13 +113,12 @@ def calculate_kgtp_rac(
         kgtp_rac_autoact = (
             kgtp_rac_autoact_baseline
             * rac_autoact_hill_effect
-            * (1.0 + chemoattractant_signal_at_node)
         )
 
         if kgtp_rac_autoact > 1.25 * kgtp_rac_autoact_baseline:
             kgtp_rac_autoact = 1.25 * kgtp_rac_autoact_baseline
 
-        kgtp_rac_base = (1.0 + randomization_factors[i]) * kgtp_rac_baseline
+        kgtp_rac_base = (1.0 + randomization_factors[i] + coa_signal) * kgtp_rac_baseline
         result[i] = kgtp_rac_base + kgtp_rac_autoact
 
     return result
@@ -241,7 +130,6 @@ def calculate_kgtp_rho(
     num_nodes,
     conc_rho_membrane_active,
     intercellular_contact_factors,
-    migr_bdry_contact_factors,
     exponent_rho_autoact,
     threshold_rho_autoact,
     kgtp_rho_baseline,
@@ -263,16 +151,9 @@ def calculate_kgtp_rho(
             + intercellular_contact_factors[i_minus1]
         ) / 3.0
 
-        migr_bdry_factor = (
-            migr_bdry_contact_factors[i]
-            + migr_bdry_contact_factors[i_plus1]
-            + migr_bdry_contact_factors[i_minus1]
-        ) / 3.0
-
         result[i] = (
-            1.0 + migr_bdry_factor + cil_factor
-        ) * kgtp_rho_baseline + kgtp_rho_autoact  # (migr_bdry_factor)*(cil_factor)*(kgtp_rho_autoact + kgtp_rho_baseline)
-
+            1.0 + cil_factor
+        ) * kgtp_rho_baseline + kgtp_rho_autoact
     return result
 
 
@@ -286,11 +167,9 @@ def calculate_kdgtp_rac(
     kdgtp_rac_baseline,
     kdgtp_rho_mediated_rac_inhib_baseline,
     intercellular_contact_factors,
-    migr_bdry_contact_factors,
     tension_mediated_rac_inhibition_half_strain,
     tension_mediated_rac_inhibition_magnitude,
-    strain_calculation_type,
-    local_strains,
+        local_strains,
 ):
     result = np.empty(num_nodes, dtype=np.float64)
 
@@ -320,14 +199,8 @@ def calculate_kdgtp_rac(
             + intercellular_contact_factors[i_minus1]
         ) / 3.0
 
-        migr_bdry_factor = (
-            migr_bdry_contact_factors[i]
-            + migr_bdry_contact_factors[i_plus1]
-            + migr_bdry_contact_factors[i_minus1]
-        ) / 3.0
-
         result[i] = (
-            1.0 + cil_factor + migr_bdry_factor + strain_inhibition
+            1.0 + cil_factor + strain_inhibition
         ) * kdgtp_rac_baseline + kdgtp_rho_mediated_rac_inhib
 
     return result
@@ -375,7 +248,7 @@ def calculate_concentrations(num_nodes, species, avg_edge_lengths):
 # -----------------------------------------------------------------
 #@nb.jit(nopython=True)
 def calculate_flux_terms(
-    num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths
+    num_nodes, concentrations, diffusion_constant, edgeplus_lengths
 ):
     result = np.empty(num_nodes, dtype=np.float64)
 
@@ -394,7 +267,7 @@ def calculate_flux_terms(
 # -----------------------------------------------------------------
 #@nb.jit(nopython=True)
 def calculate_diffusion(
-    num_nodes, concentrations, diffusion_constant, edgeplus_lengths, avg_edge_lengths
+    num_nodes, concentrations, diffusion_constant, edgeplus_lengths
 ):
     result = np.empty(num_nodes, dtype=np.float64)
 
@@ -403,7 +276,6 @@ def calculate_diffusion(
         concentrations,
         diffusion_constant,
         edgeplus_lengths,
-        avg_edge_lengths,
     )
 
     for i in range(num_nodes):
@@ -421,9 +293,7 @@ def calculate_intercellular_contact_factors(
     num_nodes,
     num_cells,
     intercellular_contact_factor_magnitudes,
-    are_nodes_inside_other_cells,
-    close_point_on_other_cells_to_each_node_exists,
-    close_point_smoothness_factors,
+        close_point_smoothness_factors,
 ):
 
     intercellular_contact_factors = np.zeros(num_nodes, dtype=np.float64)
@@ -440,7 +310,6 @@ def calculate_intercellular_contact_factors(
 
                 if new_ic_mag > current_ic_mag:
                     intercellular_contact_factors[ni] = new_ic_mag
-                    current_ic_mag = new_ic_mag
 
     return intercellular_contact_factors
 
@@ -450,15 +319,13 @@ def calculate_intercellular_contact_factors(
 def calculate_coa_signals(
     this_cell_index,
     num_nodes,
-    num_cells,
-    random_order_cell_indices,
+        random_order_cell_indices,
     coa_distribution_exponent,
     cell_dependent_coa_signal_strengths,
     max_coa_signal,
     intercellular_dist_squared_matrix,
     line_segment_intersection_matrix,
-    closeness_dist_squared_criteria,
-    intersection_exponent,
+        intersection_exponent,
 ):
     coa_signals = np.zeros(num_nodes, dtype=np.float64)
     too_close_dist_squared = 1e-6
